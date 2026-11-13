@@ -197,6 +197,11 @@ def main():
         for ring in (f.get("geometry") or {}).get("rings", []):
             if len(ring) > 3:
                 r["geom"].append([r5(c) for c in ring])
+    # Wide rivers also appear in the lake layer as polygons with the same WB_ID.
+    # The stream centreline (with per-reach species) represents them, so drop the polygon.
+    stream_ids = {k[1:] for k in wb if k[0] == "s"}
+    for k in [k for k in wb if k[0] == "l" and k[1:] in stream_ids]:
+        del wb[k]
     # Lakes keep their SPECIES_PRES list (undated) - a lake is one body of water.
     for r in wb.values():
         if r["kind"] == "lake":

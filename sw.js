@@ -1,5 +1,5 @@
 /* Offline support: app shell + data are cached; map tiles are cached as you view them. */
-const SHELL = 'shell-v4';
+const SHELL = 'shell-v5';
 const TILES = 'tiles-v1';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest',
   'data/species.json', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css',

@@ -79,6 +79,7 @@
     if (it.st) Object.entries(it.st).forEach(([c, yrs]) => { if (!F.since || !yrs.length || yrs[yrs.length - 1] >= F.since) sp.add(c); });
     return [...sp].sort();
   }
+  const selOnly = sp => { const sel = F.species || []; return sp.filter(c => sel.includes(c)); };
   const selMatch = sp => { const sel = F.species || []; if (!sel.length || !sp.length) return false; return F.match === 'all' ? sel.every(c => sp.includes(c)) : sp.some(c => sel.includes(c)); };
   function passes(it) {
     if (it.k === 'l' ? !F.lakes : !F.streams) return false;
@@ -89,7 +90,7 @@
   const rarest = sp => RARITY.find(c => sp.includes(c)) || sp[0];
   const colorOfSp = sp => { const t = rarest(sp); return t ? spColor(t) : NO_REC; };
   const topSpecies = it => rarest(allSp(it));
-  const colorOf = it => colorOfSp(allSp(it));
+  const colorOf = it => colorOfSp(selOnly(allSp(it)).length ? selOnly(allSp(it)) : allSp(it));
   const yrs = (it, c) => { const r = (it.yr || {})[c]; return r && r[1] ? (r[0] && r[0] !== r[1] ? `${r[0]}–${r[1]}` : `${r[1]}`) : ''; };
 
   /* ---------------- Chunk loading ---------------- */
@@ -155,8 +156,8 @@
       if (!f) continue;
       if (it.k === 'l') {
         const col = colorOf(it);
-        L.polygon(swap(f.g), { renderer: canvas, color: col, weight: 2, fillColor: col, fillOpacity: 0.35 }).on('click', () => select(it.id, false)).addTo(waterLayer);
-        labels.push([it.c[1], it.c[0], allSp(it), 1000]);
+        L.polygon(swap(f.g), { renderer: canvas, color: colorOfSp(selOnly(allSp(it))), weight: 2, fillColor: colorOfSp(selOnly(allSp(it))), fillOpacity: 0.35 }).on('click', () => select(it.id, false)).addTo(waterLayer);
+        labels.push([it.c[1], it.c[0], selOnly(allSp(it)), 1000]);
         continue;
       }
       // Streams: each stretch (reach) shows only the species caught on that stretch.
@@ -164,10 +165,10 @@
         const sp = spIn(r.y);
         const w = Math.min(1 + (r.o || it.o || 1) * 0.7, 6);
         const lyr = selMatch(sp)
-          ? L.polyline(swap(r.g), { renderer: canvas, color: colorOfSp(sp), weight: w, opacity: 0.95 })
+          ? L.polyline(swap(r.g), { renderer: canvas, color: colorOfSp(selOnly(sp)), weight: w, opacity: 0.95 })
           : L.polyline(swap(r.g), { renderer: canvas, color: '#6f8f9a', weight: Math.max(1, w - 2), opacity: 0.55, dashArray: '4 5' });
-        lyr.on('click', () => select(it.id, false)).addTo(waterLayer);
-        if (sp.length) { const m = mid(r.g); labels.push([m[1], m[0], sp, r.o || 1]); }
+        lyr.on('click', () => select(it.id, false, r)).addTo(waterLayer);
+        if (selOnly(sp).length) { const m = mid(r.g); labels.push([m[1], m[0], selOnly(sp), r.o || 1]); }
       }
     }
     if (F.sites && z >= 11) drawSites(keys, items);
@@ -222,12 +223,13 @@
       <tr data-id="${it.id}" class="${it.id === selectedId ? 'sel' : ''}">
         <td>${esc(dispName(it))}${it.st ? '<span class="badge pc">stocked</span>' : ''}
           <div class="sub">${it.k === 'l' ? 'Lake' : 'Stream' + (it.o ? ', order ' + it.o : '')}${it.pk ? ' · ' + esc(Object.keys(it.pk).join(', ')) + ' NP' : ''}${it.a && it.n ? ' · ' + esc(it.a) : ''}</div></td>
-        <td class="codes">${allSp(it).map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ')}</td>
+        <td class="codes">${selOnly(allSp(it)).map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ')}</td>
       </tr>`).join('') || '<tr><td colspan="2" class="hint">Nothing matches. Select more species, widen the filters or pan the map.</td></tr>';
   }
 
   /* ---------------- Details ---------------- */
-  async function select(id, pan = true) {
+  const chips = (list, it) => list.map(c => `<span class="chip"><span class="dot" style="background:${spColor(c)}"></span><b class="code">${c}</b> ${esc(spName(c))}${it && yrs(it, c) ? ` <span class="hint">${yrs(it, c)}</span>` : ''}</span>`).join('');
+  async function select(id, pan = true, reach = null) {
     selectedId = id;
     const it = BYID[id];
     await loadChunk(it.ch);
@@ -245,9 +247,12 @@
     $('#tab-detail').innerHTML = `<div class="detail">
       <h2>${esc(dispName(it))}</h2>
       <div class="sub hint">${it.k === 'l' ? 'Lake / pond / reservoir' : 'River / stream' + (it.o ? `, Strahler order ${it.o}` : '')}${it.a && it.n ? ' · also called ' + esc(it.a) : ''}${it.pk ? ' · ' + esc(Object.keys(it.pk).join(', ')) + ' National Park' : ''}</div>
-      <h3 class="dh">${it.k === 's' ? 'Species caught at survey sites on this stream' : 'Species recorded in this lake'}${F.since ? ` (since ${F.since})` : ''}</h3>
-      <div>${sp.length ? sp.map(c => `<span class="chip"><span class="dot" style="background:${spColor(c)}"></span><b class="code">${c}</b> ${esc(spName(c))}${yrs(it, c) ? ` <span class="hint">${yrs(it, c)}</span>` : ''}</span>`).join('') : '<span class="hint">No records.</span>'}</div>
-      ${it.k === 's' ? '<p class="hint">On the map each stretch is coloured only by what was caught on that stretch. Dashed stretches have no survey record of the selected species.</p>' : ''}
+      ${reach ? `<h3 class="dh">This stretch${F.since ? ` (since ${F.since})` : ''}</h3>
+      <div>${spIn(reach.y).length ? chips(selOnly(spIn(reach.y)).concat(spIn(reach.y).filter(c => !selOnly([c]).length))) : '<span class="hint">No survey records on this stretch.</span>'}</div>` : ''}
+      <h3 class="dh">${it.k === 's' ? (reach ? 'Whole stream, all stretches' : 'Caught at survey sites along this stream') : 'Recorded in this lake'}${F.since ? ` (since ${F.since})` : ''}</h3>
+      <div>${selOnly(sp).length ? chips(selOnly(sp), it) : '<span class="hint">None of the selected species.</span>'}</div>
+      ${sp.filter(c => !selOnly([c]).length).length ? `<details><summary class="hint">Other fish recorded (${sp.filter(c => !selOnly([c]).length).length})</summary>${chips(sp.filter(c => !selOnly([c]).length), it)}</details>` : ''}
+      ${it.k === 's' ? '<p class="hint">Tap a stretch on the map to see what was caught on that stretch. Dashed stretches have no survey record of the selected species.</p>' : ''}
       ${stocked ? `<h3 class="dh">Stocking records</h3><ul class="stock">${stocked}</ul>` : ''}
       ${sites.length ? `<h3 class="dh">Survey sites (${sites.length})</h3><ul class="stock">${sites.slice(0, 40).map(s => `<li><span class="code">${Object.keys(s[2]).sort().join(' ')}</span> · ${Math.max(0, ...Object.values(s[2])) || 'undated'}${s[4].startsWith('pc:') ? ' · Parks Canada' : ''}${s[5] && s[5].length ? ' · ' + esc(s[5].join(', ')) : ''}</li>`).join('')}${sites.length > 40 ? '<li class="hint">…</li>' : ''}</ul>` : ''}
       ${it.pres && it.pres.length ? `<details><summary class="hint">FWMIS list for the whole river system, not location-specific (${it.pres.length})</summary><p class="code">${it.pres.join(' ')}</p></details>` : ''}
