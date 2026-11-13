@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['scripts/build_fwmis.py', '.github/workflows/build-data.yml']
+    paths: ['scripts/build_fwmis.py', 'scripts/fetch_parks.py', '.github/workflows/build-data.yml']
   schedule:
     - cron: '0 9 1 * *'   # monthly refresh
 permissions:
@@ -19,13 +19,15 @@ jobs:
         with: { python-version: '3.12' }
       - name: Download lakes, streams and species from FWMIS
         run: python3 scripts/build_fwmis.py
+      - name: Download Parks Canada fish datasets (Banff, Jasper, Waterton)
+        run: python3 scripts/fetch_parks.py
       - name: Size report
         run: du -sh data/water && ls data/water | wc -l
       - name: Commit data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/water
+          git add data/water data/parks
           git diff --cached --quiet && exit 0
           git commit -m "Update FWMIS water data"
           git pull --rebase
