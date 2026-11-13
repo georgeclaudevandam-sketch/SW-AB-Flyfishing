@@ -1,8 +1,8 @@
 /* Offline support: app shell + data are cached; map tiles are cached as you view them. */
-const SHELL = 'shell-v1';
+const SHELL = 'shell-v2';
 const TILES = 'tiles-v1';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest',
-  'data/sites.json', 'data/species.json', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css',
+  'data/species.json', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css',
   'vendor/leaflet/images/layers.png', 'vendor/leaflet/images/layers-2x.png', 'icons/icon.svg', 'icons/icon-192.png'];
 const TILE_HOSTS = /opentopomap\.org|tile\.openstreetmap\.org|cyclosm|arcgisonline\.com|waymarkedtrails\.org|geogratis\.gc\.ca/;
 

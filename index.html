@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Eastern Slopes Trout Map</title>
-<meta name="description" content="Fly-fishing sites on Alberta's Eastern Slopes, Grande Cache to the US border, filtered by trout species, trip type, distance and month.">
+<meta name="description" content="Every lake and stream on Alberta's Eastern Slopes, Grande Cache to the US border, with fish species from the Alberta FWMIS database.">
 <meta name="theme-color" content="#1d3b2a">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -40,35 +40,14 @@
     </section>
 
     <section>
-      <h2>Trip type</h2>
-      <label class="chk"><input type="checkbox" name="access" value="roadside" checked> Roadside / walk-in</label>
-      <label class="chk"><input type="checkbox" name="access" value="day" checked> Day hike</label>
-      <label class="chk"><input type="checkbox" name="access" value="multiday" checked> Multi-day / remote</label>
-      <label class="range">Max round trip: <b id="kmOut">Any</b>
-        <input type="range" id="km" min="0" max="80" step="5" value="80"></label>
-    </section>
-
-    <section>
-      <h2>When</h2>
-      <label class="sel">Month
-        <select id="month">
-          <option value="0">Any month</option>
-          <option value="1">January</option><option value="2">February</option><option value="3">March</option>
-          <option value="4">April</option><option value="5">May</option><option value="6">June</option>
-          <option value="7">July</option><option value="8">August</option><option value="9">September</option>
-          <option value="10">October</option><option value="11">November</option><option value="12">December</option>
-        </select></label>
-      <button class="link" id="thisMonth">Use this month</button>
-      <p class="hint">Hides waters that are normally closed or frozen that month (approximate).</p>
-    </section>
-
-    <section>
-      <h2>Area &amp; permits</h2>
-      <label class="sel">Drainage
-        <select id="region"><option value="">All drainages</option></select></label>
-      <label class="chk"><input type="checkbox" id="permAB" checked> Alberta licence waters</label>
-      <label class="chk"><input type="checkbox" id="permPC" checked> National parks (Parks Canada permit)</label>
-      <label class="chk"><input type="checkbox" id="onlyConfirmed"> Hide sites marked "verify"</label>
+      <h2>Waters</h2>
+      <label class="chk"><input type="checkbox" id="showLakes" checked> Lakes, ponds &amp; reservoirs</label>
+      <label class="chk"><input type="checkbox" id="showStreams" checked> Rivers, creeks &amp; streams</label>
+      <label class="range">Smallest stream size shown: <b id="ordOut">all</b>
+        <input type="range" id="minOrder" min="1" max="6" step="1" value="1"></label>
+      <p class="hint">Stream size is Strahler order: 1 is a tiny headwater trickle, 5+ is a main river.</p>
+      <label class="chk"><input type="checkbox" id="showNoRecord"> Also show waters with no fish records</label>
+      <label class="chk"><input type="checkbox" id="onlyStocked"> Only lakes with stocking records</label>
     </section>
 
     <section>
@@ -80,11 +59,11 @@
     <section>
       <h2>Legend</h2>
       <div id="legend"></div>
-      <p class="hint"><span class="ring sample"></span> Marker colour = rarest species at the site. Dashed ring = needs verifying. Square = national park.</p>
+      <p class="hint">Each water is coloured by the rarest species recorded in it. Grey = no fish records.</p>
     </section>
 
     <section class="disclaimer">
-      Locations, seasons and species are <b>approximate</b> and for planning only. Always check the current
+      Waters and species come from the Government of Alberta <a href="https://www.alberta.ca/fisheries-and-wildlife-management-information-system-overview" target="_blank" rel="noopener">FWMIS</a> database: a species is listed if it has ever been recorded anywhere in that waterbody. National parks are not covered by FWMIS. <span id="dataInfo"></span><br><br>Seasons, limits and closures: always check the current
       <a href="https://albertaregulations.ca/fishingregs/" target="_blank" rel="noopener">Alberta Guide to Sportfishing Regulations</a>,
       <a href="https://mywildalberta.ca/fishing/" target="_blank" rel="noopener">My Wild Alberta</a> and, in national parks,
       <a href="https://parks.canada.ca/voyage-travel/experience/peche-fishing" target="_blank" rel="noopener">Parks Canada fishing rules</a>.
@@ -101,15 +80,17 @@
       <button data-tab="route">Route</button>
     </nav>
     <div class="tab" id="tab-list">
-      <input type="search" id="q" placeholder="Search sites…" aria-label="Search sites">
+      <input type="search" id="q" placeholder="Search lakes and streams…" aria-label="Search waters">
+      <label class="chk"><input type="checkbox" id="inView" checked> Only waters in the map view</label>
+      <div class="hint" id="listInfo"></div>
       <table class="sites">
         <thead><tr>
-          <th data-sort="name">Site</th><th data-sort="codes">Species</th><th data-sort="rtKm">km</th>
+          <th data-sort="name">Water</th><th data-sort="codes">Species</th>
         </tr></thead>
         <tbody id="siteRows"></tbody>
       </table>
     </div>
-    <div class="tab" id="tab-detail" hidden><p class="hint">Tap a site on the map or in the list.</p></div>
+    <div class="tab" id="tab-detail" hidden><p class="hint">Tap a lake or stream on the map, or one in the list.</p></div>
     <div class="tab" id="tab-route" hidden>
       <p class="hint" id="routeHint">Turn on drawing, then tap the map to add points. Drag points to adjust; tap a point to remove it.</p>
       <div class="route-btns">
@@ -133,13 +114,17 @@
 <dialog id="tools">
   <form method="dialog">
     <h2>Tools</h2>
-    <h3>Export sites (current filter)</h3>
+    <h3>Export waters (current filter, in view)</h3>
     <p class="hint">Load into Gaia GPS, onX, CalTopo or Avenza for full offline topo.</p>
     <div class="route-btns">
       <button type="button" id="xGpx">GPX</button>
       <button type="button" id="xKml">KML</button>
       <button type="button" id="xJson">GeoJSON</button>
     </div>
+    <h3>Offline water data</h3>
+    <p class="hint">Downloads every lake and stream in the data set so the map works without signal.</p>
+    <div class="route-btns"><button type="button" id="oData" class="primary">Download all water data</button></div>
+    <div id="oDataStatus" class="hint"></div>
     <h3>Offline map tiles</h3>
     <p class="hint">Saves the current basemap for the area on screen, from this zoom to 3 levels closer. Tiles you browse are also kept. Save small areas only; tile servers are free community services.</p>
     <div class="route-btns">

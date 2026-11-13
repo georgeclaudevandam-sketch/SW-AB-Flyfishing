@@ -53,7 +53,8 @@ a{color:var(--accent)}
 .tabs button.on{border-color:var(--accent);color:var(--ink);font-weight:600}
 .tab{padding:10px 14px;overflow-y:auto;flex:1}
 #q{width:100%;padding:7px;border:1px solid var(--line);border-radius:6px;background:var(--bg);margin-bottom:6px}
-table.sites{width:100%;border-collapse:collapse;font-size:13px}
+table.sites{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
+.sites th:last-child{width:42%}
 .sites th{text-align:left;font-size:11px;color:var(--muted);cursor:pointer;padding:4px;border-bottom:1px solid var(--line);user-select:none}
 .sites th.sorted::after{content:" ▾"}
 .sites th.sorted.desc::after{content:" ▴"}
@@ -113,3 +114,6 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
   .tb-btn{padding:7px 8px;font-size:13px}
 }
 @media (max-width: 420px){ .topbar h1{display:none} }
+.detail h3.dh{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:12px 0 4px}
+.stock{margin:0;padding-left:18px;font-size:13px}
+details.sp-group summary{cursor:pointer;font-size:12px;color:var(--muted);font-weight:600;margin:8px 0 2px}

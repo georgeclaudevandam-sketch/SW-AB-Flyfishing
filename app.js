@@ -1,14 +1,9 @@
-/* Eastern Slopes Trout Map. Data lives in data/sites.json and data/species.json. */
+/* Eastern Slopes Trout Map.
+   Waters and species come from data/water/ (built from Alberta FWMIS by scripts/build_fwmis.py). */
 (function () {
   'use strict';
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
-  const MONTHS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
-  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const ACCESS = { roadside: 'Roadside / walk-in', day: 'Day hike', multiday: 'Multi-day / remote' };
-  // Rarest first: decides marker colour.
-  const RARITY = ['GOTR','ATRT','YSCT','ARGR','CTBW','WSCT','BLTR','LKTR','MNWH','BNTR','RNTR','BKTR'];
-  const CR = ['WSCT','BLTR','ATRT'];
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
@@ -16,13 +11,20 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const toast = (msg, ms = 2500) => { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), ms); };
   const isMobile = () => matchMedia('(max-width: 820px)').matches;
+  const NO_REC = '#9aa3a0';
+  const LABEL_ZOOM = 11, MAX_LABELS = 300;
 
-  let SPECIES = [], SP = {}, SITES = [], visible = [], selectedId = null;
-  const markers = {};
-  const sort = store.get('sort', { key: 'name', desc: false });
+  let SPECIES = [], SP = {}, META = null, ITEMS = [], BYID = {}, RARITY = [];
+  let passing = new Set(), selectedId = null;
+  const chunkData = {};      // chunk key -> {id: geometry}
+  const chunkLoading = {};
+  const sort = store.get('sort2', { key: 'name', desc: false });
+  const spName = c => (SP[c] ? SP[c].name : c);
+  const spColor = c => (SP[c] ? SP[c].color : '#666');
 
   /* ---------------- Map and layers ---------------- */
-  const map = L.map('map', { zoomControl: true, preferCanvas: false }).setView([51.3, -115.6], 7);
+  const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([51.3, -115.6], 7);
+  const canvas = L.canvas({ padding: 0.3, tolerance: 6 });
   const osmAttr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   const bases = {
     'Topo (OpenTopoMap)': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, subdomains: 'abc', attribution: osmAttr + ', SRTM | &copy; <a href="https://opentopomap.org">OpenTopoMap</a>' }),
@@ -44,155 +46,202 @@
   L.control.layers(bases, overlays, { position: 'topright', collapsed: true }).addTo(map);
   L.control.scale({ imperial: false }).addTo(map);
   map.on('baselayerchange', e => { baseName = e.name; store.set('base', e.name); });
-  const saveOverlays = () => store.set('overlays', Object.keys(overlays).filter(n => map.hasLayer(overlays[n])));
-  map.on('overlayadd overlayremove', saveOverlays);
-  const siteLayer = L.layerGroup().addTo(map);
+  map.on('overlayadd overlayremove', () => store.set('overlays', Object.keys(overlays).filter(n => map.hasLayer(overlays[n]))));
+  const waterLayer = L.layerGroup().addTo(map);
+  const labelLayer = L.layerGroup().addTo(map);
+  let hiLayer = null;
 
   /* ---------------- Filters ---------------- */
-  const defaults = { species: null, match: 'any', access: ['roadside','day','multiday'], km: 80, month: 0, region: '', permAB: true, permPC: true, onlyConfirmed: false, labels: true };
-  const F = Object.assign({}, defaults, store.get('filters', {}));
-
+  const F = Object.assign({ species: null, match: 'any', lakes: true, streams: true, minOrder: 1, noRecord: false, onlyStocked: false, labels: true }, store.get('filters2', {}));
   function readFilters() {
     F.species = $$('#speciesList input:checked').map(i => i.value);
     F.match = $('input[name=match]:checked').value;
-    F.access = $$('input[name=access]:checked').map(i => i.value);
-    F.km = +$('#km').value;
-    F.month = +$('#month').value;
-    F.region = $('#region').value;
-    F.permAB = $('#permAB').checked; F.permPC = $('#permPC').checked;
-    F.onlyConfirmed = $('#onlyConfirmed').checked;
+    F.lakes = $('#showLakes').checked; F.streams = $('#showStreams').checked;
+    F.minOrder = +$('#minOrder').value;
+    F.noRecord = $('#showNoRecord').checked; F.onlyStocked = $('#onlyStocked').checked;
     F.labels = $('#labels').checked;
-    store.set('filters', F);
+    store.set('filters2', F);
   }
   function writeFilters() {
     $$('#speciesList input').forEach(i => { i.checked = !F.species || F.species.includes(i.value); });
     $$('input[name=match]').forEach(i => { i.checked = i.value === F.match; });
-    $$('input[name=access]').forEach(i => { i.checked = F.access.includes(i.value); });
-    $('#km').value = F.km; $('#month').value = F.month; $('#region').value = F.region;
-    $('#permAB').checked = F.permAB; $('#permPC').checked = F.permPC;
-    $('#onlyConfirmed').checked = F.onlyConfirmed; $('#labels').checked = F.labels;
+    $('#showLakes').checked = F.lakes; $('#showStreams').checked = F.streams;
+    $('#minOrder').value = F.minOrder; $('#showNoRecord').checked = F.noRecord; $('#onlyStocked').checked = F.onlyStocked;
+    $('#labels').checked = F.labels;
   }
-  function passes(s) {
+  const allSp = it => it.st ? [...new Set(it.sp.concat(Object.keys(it.st)))] : it.sp;
+  function passes(it) {
+    if (it.k === 'l' ? !F.lakes : !F.streams) return false;
+    if (it.k === 's' && (it.o || 1) < F.minOrder) return false;
+    if (F.onlyStocked && !it.st) return false;
+    const sp = allSp(it);
+    if (!sp.length) return F.noRecord;
     const sel = F.species || [];
     if (!sel.length) return false;
-    if (F.match === 'all' ? !sel.every(c => s.species.includes(c)) : !s.species.some(c => sel.includes(c))) return false;
-    if (!F.access.includes(s.access)) return false;
-    if (F.km < 80 && (s.rtKm || 0) > F.km) return false;
-    if (F.month && !(s.openMonths.includes(F.month) && s.iceFreeMonths.includes(F.month))) return false;
-    if (F.region && s.region !== F.region) return false;
-    const pc = s.permit === 'Parks Canada';
-    if (pc ? !F.permPC : !F.permAB) return false;
-    if (F.onlyConfirmed && s.verify) return false;
-    return true;
+    return F.match === 'all' ? sel.every(c => sp.includes(c)) : sp.some(c => sel.includes(c));
+  }
+  const topSpecies = it => { const sp = allSp(it); return RARITY.find(c => sp.includes(c)) || sp[0]; };
+  const colorOf = it => { const t = topSpecies(it); return t ? spColor(t) : NO_REC; };
+
+  /* ---------------- Chunk loading ---------------- */
+  function chunksInView() {
+    const b = map.getBounds().pad(0.1), d = META.chunkDeg;
+    const keys = new Set();
+    // Any item whose bbox intersects the view pulls in its chunk (rivers can be long).
+    for (const it of ITEMS) {
+      if (!passing.has(it.id)) continue;
+      const bb = it.b;
+      if (bb[2] < b.getWest() || bb[0] > b.getEast() || bb[3] < b.getSouth() || bb[1] > b.getNorth()) continue;
+      keys.add(it.ch);
+    }
+    return [...keys].filter(k => META.chunks.includes(k));
+  }
+  function loadChunk(k) {
+    if (chunkData[k]) return Promise.resolve();
+    if (chunkLoading[k]) return chunkLoading[k];
+    return (chunkLoading[k] = fetch(`data/water/c_${k}.json`).then(r => r.json()).then(arr => {
+      const m = {}; arr.forEach(f => m[f.id] = f.g); chunkData[k] = m;
+    }).catch(() => { delete chunkLoading[k]; }));
   }
 
-  function topSpecies(s) { return RARITY.find(c => s.species.includes(c)) || s.species[0]; }
-
-  function makeMarker(s) {
-    const color = (SP[topSpecies(s)] || {}).color || '#555';
-    const cls = ['site-mk', s.verify ? 'verify' : '', s.permit === 'Parks Canada' ? 'park' : ''].join(' ');
-    const m = L.marker([s.lat, s.lng], {
-      icon: L.divIcon({ className: '', html: `<div class="${cls}" style="background:${color}"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] }),
-      title: s.name, keyboard: true
-    });
-    m.bindTooltip(s.species.join(' '), { permanent: true, direction: 'right', offset: [8, 0], className: 'codes-lbl' });
-    m.on('click', () => { if (route.drawing) { route.add(L.latLng(s.lat, s.lng)); return; } select(s.id, false); });
-    return m;
-  }
-
-  function applyLabels() {
-    const show = F.labels && map.getZoom() >= 8;
-    visible.forEach(s => { const t = markers[s.id].getTooltip(); if (!t) return; show ? markers[s.id].openTooltip() : markers[s.id].closeTooltip(); });
-  }
-  map.on('zoomend', applyLabels);
-
-  function render() {
-    visible = SITES.filter(passes);
-    siteLayer.clearLayers();
-    visible.forEach(s => siteLayer.addLayer(markers[s.id]));
-    applyLabels();
-    $('#count').textContent = `${visible.length} of ${SITES.length} sites`;
-    $('#kmOut').textContent = F.km >= 80 ? 'Any' : F.km + ' km';
+  /* ---------------- Drawing ---------------- */
+  let drawToken = 0;
+  async function draw() {
+    if (!META) return;
+    const token = ++drawToken;
+    const keys = chunksInView();
+    const z = map.getZoom();
+    if (keys.length > 40 && z < 9) {
+      // Too far out to draw full geometry: show centroids instead.
+      waterLayer.clearLayers(); labelLayer.clearLayers();
+      const b = map.getBounds();
+      ITEMS.forEach(it => {
+        if (!passing.has(it.id) || !b.contains([it.c[1], it.c[0]])) return;
+        if (it.k === 's' && (it.o || 1) < Math.max(F.minOrder, 4)) return;
+        L.circleMarker([it.c[1], it.c[0]], { renderer: canvas, radius: it.k === 'l' ? 4 : 3, weight: 1, color: '#fff', fillColor: colorOf(it), fillOpacity: 1 })
+          .on('click', () => select(it.id, false)).addTo(waterLayer);
+      });
+      $('#listInfo').textContent = 'Zoom in to see full lake and stream outlines.';
+      return renderList();
+    }
+    await Promise.all(keys.map(loadChunk));
+    if (token !== drawToken) return;
+    waterLayer.clearLayers();
+    const b = map.getBounds().pad(0.1);
+    const lakes = [], streams = [];
+    for (const it of ITEMS) {
+      if (!passing.has(it.id)) continue;
+      const bb = it.b;
+      if (bb[2] < b.getWest() || bb[0] > b.getEast() || bb[3] < b.getSouth() || bb[1] > b.getNorth()) continue;
+      const g = (chunkData[it.ch] || {})[it.id];
+      if (!g) continue;
+      (it.k === 'l' ? lakes : streams).push([it, g]);
+    }
+    const swap = g => g.map(part => part.map(c => [c[1], c[0]]));
+    streams.sort((a, b2) => (a[0].o || 1) - (b2[0].o || 1));
+    for (const [it, g] of lakes) {
+      const col = colorOf(it);
+      L.polygon(swap(g), { renderer: canvas, color: col, weight: 2, fillColor: col, fillOpacity: 0.35 }).on('click', () => select(it.id, false)).addTo(waterLayer);
+    }
+    for (const [it, g] of streams) {
+      const o = it.o || 1;
+      L.polyline(swap(g), { renderer: canvas, color: colorOf(it), weight: Math.min(1 + o * 0.8, 6), opacity: it.sp.length ? 0.95 : 0.6 }).on('click', () => select(it.id, false)).addTo(waterLayer);
+    }
+    drawLabels();
     renderList();
   }
+  function drawLabels() {
+    labelLayer.clearLayers();
+    if (!F.labels || map.getZoom() < LABEL_ZOOM) return;
+    const b = map.getBounds();
+    let n = 0;
+    const cand = ITEMS.filter(it => passing.has(it.id) && allSp(it).length && b.contains([it.c[1], it.c[0]]))
+      .sort((a, c) => (c.k === 'l') - (a.k === 'l') || (c.o || 0) - (a.o || 0));
+    for (const it of cand) {
+      if (n++ >= MAX_LABELS) break;
+      const sp = allSp(it);
+      L.tooltip({ permanent: true, direction: 'right', className: 'codes-lbl', offset: [4, 0], interactive: false })
+        .setLatLng([it.c[1], it.c[0]]).setContent(sp.join(' ')).addTo(labelLayer);
+    }
+  }
+  map.on('moveend', () => { draw(); });
 
-  /* ---------------- Site list ---------------- */
+  function applyFilters() {
+    passing = new Set(ITEMS.filter(passes).map(it => it.id));
+    $('#count').textContent = `${passing.size.toLocaleString()} of ${ITEMS.length.toLocaleString()} waters`;
+    $('#ordOut').textContent = F.minOrder <= 1 ? 'all' : `order ${F.minOrder}+`;
+    draw();
+  }
+
+  /* ---------------- List ---------------- */
   function renderList() {
+    if (!META) return;
     const q = $('#q').value.trim().toLowerCase();
-    let rows = visible.filter(s => !q || (s.name + ' ' + s.region + ' ' + s.species.join(' ') + ' ' + s.trailhead).toLowerCase().includes(q));
-    const k = sort.key;
-    rows.sort((a, b) => {
-      let x, y;
-      if (k === 'rtKm') { x = a.rtKm || 0; y = b.rtKm || 0; }
-      else if (k === 'codes') { x = RARITY.indexOf(topSpecies(a)); y = RARITY.indexOf(topSpecies(b)); }
-      else { x = a.name.toLowerCase(); y = b.name.toLowerCase(); }
-      return (x < y ? -1 : x > y ? 1 : 0) * (sort.desc ? -1 : 1);
-    });
-    $$('.sites th').forEach(th => { th.classList.toggle('sorted', th.dataset.sort === k); th.classList.toggle('desc', th.dataset.sort === k && sort.desc); });
-    $('#siteRows').innerHTML = rows.map(s => `
-      <tr data-id="${s.id}" class="${s.id === selectedId ? 'sel' : ''}">
-        <td>${esc(s.name)}${s.permit === 'Parks Canada' ? '<span class="badge pc">NP</span>' : ''}${s.verify ? '<span class="badge">verify</span>' : ''}
-          <div class="sub">${esc(s.region)} · ${ACCESS[s.access]}</div></td>
-        <td class="codes">${s.species.map(c => `<span style="color:${SP[c].color}">${c}</span>`).join(' ')}</td>
-        <td>${s.rtKm ? s.rtKm : '–'}</td>
-      </tr>`).join('') || '<tr><td colspan="3" class="hint">No sites match. Try selecting more species or widening the filters.</td></tr>';
+    const inView = $('#inView').checked, b = map.getBounds();
+    let rows = ITEMS.filter(it => passing.has(it.id) &&
+      (!inView || b.contains([it.c[1], it.c[0]])) &&
+      (!q || ((it.n || '') + ' ' + (it.a || '') + ' ' + allSp(it).join(' ')).toLowerCase().includes(q)));
+    const total = rows.length;
+    if (sort.key === 'codes') rows.sort((a, c) => (RARITY.indexOf(topSpecies(a)) + 1 || 99) - (RARITY.indexOf(topSpecies(c)) + 1 || 99));
+    else rows.sort((a, c) => (a.n || '~').localeCompare(c.n || '~'));
+    if (sort.desc) rows.reverse();
+    rows = rows.slice(0, 300);
+    $$('.sites th').forEach(th => { th.classList.toggle('sorted', th.dataset.sort === sort.key); th.classList.toggle('desc', th.dataset.sort === sort.key && sort.desc); });
+    if (map.getZoom() >= 9 || !inView) $('#listInfo').textContent = `${total.toLocaleString()} waters${total > 300 ? ' (showing first 300)' : ''}`;
+    $('#siteRows').innerHTML = rows.map(it => `
+      <tr data-id="${it.id}" class="${it.id === selectedId ? 'sel' : ''}">
+        <td>${esc(it.n || 'Unnamed ' + (it.k === 'l' ? 'lake' : 'stream'))}${it.st ? '<span class="badge pc">stocked</span>' : ''}
+          <div class="sub">${it.k === 'l' ? 'Lake' : 'Stream' + (it.o ? ', order ' + it.o : '')}${it.a ? ' · ' + esc(it.a) : ''}</div></td>
+        <td class="codes">${allSp(it).map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ') || '<span class="hint">no records</span>'}</td>
+      </tr>`).join('') || '<tr><td colspan="2" class="hint">Nothing matches. Select more species, widen the filters or pan the map.</td></tr>';
   }
 
   /* ---------------- Details ---------------- */
-  function monthsBar(s) {
-    return '<div class="months">' + MONTHS.map((m, i) => {
-      const o = s.openMonths.includes(i + 1), f = s.iceFreeMonths.includes(i + 1);
-      return `<span class="${o && f ? 'both' : o ? 'frozen' : f ? 'open' : ''}" title="${MONTH_NAMES[i]}: ${o ? 'open season' : 'closed'}, ${f ? 'usually ice-free' : 'usually frozen'}">${m}</span>`;
-    }).join('') + '</div><div class="mkey">Dark green = open and ice-free · blue = open but usually frozen · light green = ice-free but closed</div>';
-  }
-  function regsFor(s) {
-    const out = [];
-    const cr = s.species.filter(c => CR.includes(c));
-    if (cr.length) out.push(`${cr.map(c => SP[c].name).join(', ')}: catch-and-release.`);
-    if (s.permit === 'Parks Canada') out.push('National park: Parks Canada fishing permit required (Alberta licence not valid). Park-specific seasons and limits.');
-    else out.push('Alberta sportfishing licence required. Check the waterbody table for season, bait ban and limits.');
-    if (s.regs) out.push(s.regs);
-    return out.map(r => `<li>${esc(r)}</li>`).join('');
-  }
-  function select(id, pan = true) {
+  async function select(id, pan = true) {
     selectedId = id;
-    const s = SITES.find(x => x.id === id);
-    Object.values(markers).forEach(m => { const el = m.getElement(); el && el.firstChild && el.firstChild.classList.remove('sel'); });
-    const el = markers[id].getElement(); el && el.firstChild && el.firstChild.classList.add('sel');
-    if (pan) map.setView([s.lat, s.lng], Math.max(map.getZoom(), 11));
-    const gmaps = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`;
+    const it = BYID[id];
+    await loadChunk(it.ch);
+    if (hiLayer) map.removeLayer(hiLayer);
+    const g = (chunkData[it.ch] || {})[id];
+    if (g) {
+      const ll = g.map(p => p.map(c => [c[1], c[0]]));
+      hiLayer = (it.k === 'l' ? L.polygon(ll, { color: '#ffeb3b', weight: 5, fill: false }) : L.polyline(ll, { color: '#ffeb3b', weight: 8, opacity: 0.7 })).addTo(map);
+      hiLayer.bringToBack && hiLayer.bringToBack();
+      if (pan) map.fitBounds(hiLayer.getBounds(), { maxZoom: 13, padding: [30, 30] });
+    } else if (pan) map.setView([it.c[1], it.c[0]], 12);
+    const name = it.n || 'Unnamed ' + (it.k === 'l' ? 'lake' : 'stream');
+    const stocked = it.st ? Object.entries(it.st).map(([c, yrs]) => `<li><b class="code">${c}</b> ${esc(spName(c))}${yrs.length ? `: ${yrs.length > 6 ? yrs[0] + '–' + yrs[yrs.length - 1] + ` (${yrs.length} years)` : yrs.join(', ')}` : ''}</li>`).join('') : '';
+    const other = it.sp.filter(c => !SP[c]);
     $('#tab-detail').innerHTML = `<div class="detail">
-      <h2>${esc(s.name)}</h2>
-      <div class="sub hint">${esc(s.region)} · ${s.type}${s.permit === 'Parks Canada' ? ' <span class="badge pc">National park</span>' : ''}${s.verify ? ' <span class="badge">verify</span>' : ''}</div>
-      <div style="margin:8px 0">${s.species.map(c => `<span class="chip"><span class="dot" style="background:${SP[c].color}"></span><b class="code">${c}</b> ${esc(SP[c].name)}</span>`).join('')}</div>
+      <h2>${esc(name)}</h2>
+      <div class="sub hint">${it.k === 'l' ? 'Lake / pond / reservoir' : 'River / stream' + (it.o ? `, Strahler order ${it.o}` : '')}${it.a ? ' · also called ' + esc(it.a) : ''}</div>
+      <h3 class="dh">Species recorded (FWMIS)</h3>
+      <div>${it.sp.length ? it.sp.filter(c => SP[c]).map(c => `<span class="chip"><span class="dot" style="background:${spColor(c)}"></span><b class="code">${c}</b> ${esc(spName(c))}</span>`).join('') : '<span class="hint">No fish records in FWMIS.</span>'}</div>
+      ${other.length ? `<p class="hint">Other species codes: <span class="code">${other.join(' ')}</span></p>` : ''}
+      ${stocked ? `<h3 class="dh">Stocking records</h3><ul class="stock">${stocked}</ul>` : ''}
       <dl>
-        <dt>Access</dt><dd>${ACCESS[s.access]}${s.rtKm ? ` · about ${s.rtKm} km round trip` : ''}</dd>
-        <dt>Trailhead</dt><dd>${esc(s.trailhead)}</dd>
-        <dt>Season</dt><dd>${esc(s.season)}${monthsBar(s)}</dd>
-        <dt>Regulations</dt><dd><ul style="margin:0;padding-left:18px">${regsFor(s)}</ul></dd>
-        <dt>Flies</dt><dd>${s.flies ? esc(s.flies) : '<span class="hint">Not known yet. Add yours in data/sites.json.</span>'}</dd>
-        ${s.notes ? `<dt>Notes</dt><dd>${esc(s.notes)}</dd>` : ''}
-        <dt>Location</dt><dd><span class="code">${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}</span> (approximate)</dd>
+        <dt>Waterbody ID</dt><dd class="code">${id.slice(1)}</dd>
+        ${it.h ? `<dt>Watershed</dt><dd class="code">HUC ${esc(it.h)}</dd>` : ''}
+        <dt>Location</dt><dd class="code">${it.c[1].toFixed(4)}, ${it.c[0].toFixed(4)}</dd>
       </dl>
       <div class="route-btns">
         <button id="dRoute" class="primary">Add to route</button>
-        <a href="${gmaps}" target="_blank" rel="noopener"><button>Driving directions</button></a>
+        <a href="https://www.google.com/maps/dir/?api=1&destination=${it.c[1]},${it.c[0]}" target="_blank" rel="noopener"><button>Directions</button></a>
         <button id="dCopy">Copy coordinates</button>
       </div>
-      <p class="hint">${s.verify ? 'This entry is less certain: confirm species and access before you go. ' : ''}Always check the current <a href="https://albertaregulations.ca/fishingregs/" target="_blank" rel="noopener">regulations</a>${s.permit === 'Parks Canada' ? ' and <a href="https://parks.canada.ca/voyage-travel/experience/peche-fishing" target="_blank" rel="noopener">Parks Canada rules</a>' : ''}.</p>
+      <p class="hint">A species is listed if FWMIS has ever recorded it anywhere in this waterbody, not necessarily at this spot or today.
+      Check seasons, limits and closures in the <a href="https://albertaregulations.ca/fishingregs/" target="_blank" rel="noopener">Alberta sportfishing regulations</a>.</p>
     </div>`;
-    $('#dRoute').onclick = () => { route.add(L.latLng(s.lat, s.lng)); showTab('route'); toast('Added to route'); };
-    $('#dCopy').onclick = () => { navigator.clipboard && navigator.clipboard.writeText(`${s.lat}, ${s.lng}`).then(() => toast('Copied')); };
-    showTab('detail');
-    openPanel('side');
-    renderList();
+    $('#dRoute').onclick = () => { route.add(L.latLng(it.c[1], it.c[0])); showTab('route'); toast('Added to route'); };
+    $('#dCopy').onclick = () => { navigator.clipboard && navigator.clipboard.writeText(`${it.c[1]}, ${it.c[0]}`).then(() => toast('Copied')); };
+    showTab('detail'); openPanel('side'); renderList();
   }
 
   /* ---------------- Panels and tabs ---------------- */
   function showTab(name) {
     $$('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
     $$('.tab').forEach(t => { t.hidden = t.id !== 'tab-' + name; });
-    $('#sideTitle').textContent = { list: 'Sites', detail: 'Details', route: 'Route' }[name];
+    $('#sideTitle').textContent = { list: 'Waters', detail: 'Details', route: 'Route' }[name];
   }
   function openPanel(id) { if (!isMobile()) return; $$('.panel').forEach(p => p.classList.toggle('open', p.id === id)); }
   function closePanels() { $$('.panel').forEach(p => p.classList.remove('open')); }
@@ -231,10 +280,8 @@
       this.line.setLatLngs(path);
       let d = 0; for (let i = 1; i < path.length; i++) d += path[i - 1].distanceTo(path[i]);
       const km = d / 1000, rt = $('#rReturn').checked ? km * 2 : km;
-      const hrs = rt / 3.5; // ~3.5 km/h with packs and climbing
       $('#rStats').innerHTML = this.pts.length < 2 ? (this.pts.length ? '1 point. Add another.' : 'No route yet.') :
-        `<b>${km.toFixed(1)} km</b> one way · <b>${rt.toFixed(1)} km</b> ${$('#rReturn').checked ? 'round trip' : 'total'}<br>
-         About ${hrs.toFixed(1)} h moving at 3.5 km/h. ${rt > 40 ? '<b>Over 40 km: plan an overnight.</b>' : ''}`;
+        `<b>${km.toFixed(1)} km</b> one way · <b>${rt.toFixed(1)} km</b> ${$('#rReturn').checked ? 'round trip' : 'total'}${rt > 40 ? '<br><b>Over 40 km: plan an overnight.</b>' : ''}`;
       store.set('routeDraft', this.pts.map(p => [p.lat, p.lng]));
     },
     setDrawing(on) {
@@ -291,16 +338,23 @@
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
   const gpxWrap = body => `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Eastern Slopes Trout Map" xmlns="http://www.topografix.com/GPX/1/1">\n${body}\n</gpx>`;
-  const desc = s => `${s.species.join(' ')} | ${ACCESS[s.access]}${s.rtKm ? ' ~' + s.rtKm + ' km RT' : ''} | ${s.trailhead} | Season: ${s.season}${s.flies ? ' | Flies: ' + s.flies : ''}${s.verify ? ' | VERIFY' : ''}`;
-  $('#xGpx').onclick = () => download('eastern-slopes-trout-sites.gpx', gpxWrap(visible.map(s =>
-    `<wpt lat="${s.lat}" lon="${s.lng}"><name>${esc(s.name)} [${s.species.join(' ')}]</name><desc>${esc(desc(s))}</desc><sym>Fishing Area</sym></wpt>`).join('\n')), 'application/gpx+xml');
-  $('#xKml').onclick = () => download('eastern-slopes-trout-sites.kml', `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Eastern Slopes Trout Map</name>\n` +
-    visible.map(s => `<Placemark><name>${esc(s.name)} [${s.species.join(' ')}]</name><description>${esc(desc(s))}</description><Point><coordinates>${s.lng},${s.lat},0</coordinates></Point></Placemark>`).join('\n') +
+  const exportRows = () => { const b = map.getBounds(); return ITEMS.filter(it => passing.has(it.id) && b.contains([it.c[1], it.c[0]])); };
+  const label = it => `${it.n || 'Unnamed ' + (it.k === 'l' ? 'lake' : 'stream')} [${allSp(it).join(' ')}]`;
+  $('#xGpx').onclick = () => download('eastern-slopes-waters.gpx', gpxWrap(exportRows().map(it =>
+    `<wpt lat="${it.c[1]}" lon="${it.c[0]}"><name>${esc(label(it))}</name><desc>FWMIS waterbody ${it.id.slice(1)}</desc><sym>Fishing Area</sym></wpt>`).join('\n')), 'application/gpx+xml');
+  $('#xKml').onclick = () => download('eastern-slopes-waters.kml', `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Eastern Slopes waters</name>\n` +
+    exportRows().map(it => `<Placemark><name>${esc(label(it))}</name><description>FWMIS waterbody ${it.id.slice(1)}</description><Point><coordinates>${it.c[0]},${it.c[1]},0</coordinates></Point></Placemark>`).join('\n') +
     '\n</Document></kml>', 'application/vnd.google-earth.kml+xml');
-  $('#xJson').onclick = () => download('eastern-slopes-trout-sites.geojson', JSON.stringify({ type: 'FeatureCollection', features: visible.map(s => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [s.lng, s.lat] }, properties: Object.assign({}, s) })) }, null, 1), 'application/geo+json');
+  $('#xJson').onclick = () => download('eastern-slopes-waters.geojson', JSON.stringify({ type: 'FeatureCollection', features: exportRows().map(it => ({ type: 'Feature', geometry: { type: 'Point', coordinates: it.c }, properties: { name: it.n, kind: it.k === 'l' ? 'lake' : 'stream', species: allSp(it), fwmis_id: it.id.slice(1) } })) }), 'application/geo+json');
   $('#btnTools').onclick = () => $('#tools').showModal();
 
-  /* ---------------- Offline tiles ---------------- */
+  /* ---------------- Offline ---------------- */
+  $('#oData').onclick = async () => {
+    if (!META) return;
+    let n = 0;
+    for (const k of META.chunks) { await loadChunk(k); n++; $('#oDataStatus').textContent = `Downloaded ${n} / ${META.chunks.length} areas…`; }
+    $('#oDataStatus').textContent = `All ${ITEMS.length.toLocaleString()} waters saved for offline use.`;
+  };
   function tileUrls() {
     const layer = bases[baseName];
     const z0 = map.getZoom(), z1 = Math.min(z0 + 3, layer.options.maxZoom || 17);
@@ -309,14 +363,15 @@
       const b = map.getPixelBounds(map.getCenter(), z), ts = 256;
       const min = b.min.divideBy(ts).floor(), max = b.max.divideBy(ts).floor();
       for (let x = min.x; x <= max.x; x++) for (let y = min.y; y <= max.y; y++) {
-        const c = L.point(x, y); c.z = z;
+        const c = L.point(x, y);
         if (layer.wmsParams) {
           const nw = map.unproject(c.multiplyBy(ts), z), se = map.unproject(c.add([1, 1]).multiplyBy(ts), z);
           const p1 = L.CRS.EPSG3857.project(nw), p2 = L.CRS.EPSG3857.project(se);
           const params = Object.assign({}, layer.wmsParams, { width: ts, height: ts, srs: 'EPSG:3857', bbox: [p1.x, p2.y, p2.x, p1.y].join(',') });
           urls.push(layer._url + L.Util.getParamString(params, layer._url, true));
         } else {
-          urls.push(L.Util.template(layer._url, { s: (layer.options.subdomains || 'a')[Math.abs(x + y) % (layer.options.subdomains || 'a').length], x, y, z }));
+          const subs = layer.options.subdomains || 'a';
+          urls.push(L.Util.template(layer._url, { s: subs[Math.abs(x + y) % subs.length], x, y, z }));
         }
       }
     }
@@ -330,34 +385,47 @@
     let done = 0, failed = 0, i = 0;
     const worker = async () => { while (i < urls.length) { const u = urls[i++]; try { const r = await fetch(u, { mode: 'cors' }); if (r.ok) await cache.put(u, r); else failed++; } catch (e) { failed++; } done++; $('#oStatus').textContent = `Saving ${done} / ${urls.length} tiles…`; } };
     await Promise.all([worker(), worker(), worker(), worker()]);
-    $('#oStatus').textContent = `Saved ${done - failed} tiles of "${baseName}"${failed ? ` (${failed} failed)` : ''}. They will show without signal.`;
+    $('#oStatus').textContent = `Saved ${done - failed} tiles of "${baseName}"${failed ? ` (${failed} failed)` : ''}.`;
   };
   $('#oClear').onclick = async () => { if ('caches' in window) { await caches.delete('tiles-v1'); $('#oStatus').textContent = 'Saved tiles deleted.'; } };
 
   /* ---------------- Boot ---------------- */
-  Promise.all([fetch('data/species.json').then(r => r.json()), fetch('data/sites.json').then(r => r.json())]).then(([sp, sites]) => {
-    SPECIES = sp; SPECIES.forEach(s => SP[s.code] = s); SITES = sites;
-    const counts = {}; SITES.forEach(s => s.species.forEach(c => counts[c] = (counts[c] || 0) + 1));
-    const groups = [...new Set(SPECIES.map(s => s.group))];
-    $('#speciesList').innerHTML = groups.map(g => `<div class="sp-group"><h3>${esc(g)}</h3>` + SPECIES.filter(s => s.group === g).map(s =>
-      `<label class="sp" title="${esc(s.note)}"><input type="checkbox" value="${s.code}"><span class="dot" style="background:${s.color}"></span><span class="code">${s.code}</span><span class="n">${esc(s.name)}<span class="c">${counts[s.code] || 0}</span></span></label>`).join('') + '</div>').join('');
-    $('#legend').innerHTML = SPECIES.map(s => `<div class="row"><span class="dot" style="background:${s.color}"></span><span class="code">${s.code}</span> ${esc(s.name)}</div>`).join('');
-    [...new Set(SITES.map(s => s.region))].forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r; $('#region').appendChild(o); });
-    SITES.forEach(s => markers[s.id] = makeMarker(s));
-    writeFilters(); readFilters();
-    $('#filters').addEventListener('change', () => { readFilters(); render(); });
-    $('#km').addEventListener('input', () => { readFilters(); render(); });
-    $('#spAll').onclick = () => { $$('#speciesList input').forEach(i => i.checked = true); readFilters(); render(); };
-    $('#spNone').onclick = () => { $$('#speciesList input').forEach(i => i.checked = false); readFilters(); render(); };
-    $('#thisMonth').onclick = () => { $('#month').value = new Date().getMonth() + 1; readFilters(); render(); };
-    $('#q').addEventListener('input', renderList);
-    $$('.sites th').forEach(th => th.onclick = () => { sort.desc = sort.key === th.dataset.sort ? !sort.desc : false; sort.key = th.dataset.sort; store.set('sort', sort); renderList(); });
-    $('#siteRows').addEventListener('click', e => { const tr = e.target.closest('tr[data-id]'); if (tr) select(tr.dataset.id); });
-    render();
-    map.fitBounds(L.latLngBounds(SITES.map(s => [s.lat, s.lng])).pad(0.05));
-    const draft = store.get('routeDraft', []); if (draft.length) { route.pts = draft.map(p => L.latLng(p[0], p[1])); route.redraw(); }
-    renderSaved();
-  }).catch(e => { console.error(e); toast('Could not load site data.', 6000); });
+  Promise.all([fetch('data/species.json').then(r => r.json()), fetch('data/water/index.json').then(r => { if (!r.ok) throw new Error('nodata'); return r.json(); })])
+    .then(([sp, idx]) => {
+      SPECIES = sp; SPECIES.forEach(s => SP[s.code] = s); RARITY = SPECIES.map(s => s.code);
+      META = idx.meta; ITEMS = idx.items; ITEMS.forEach(it => BYID[it.id] = it);
+      const counts = {}; ITEMS.forEach(it => allSp(it).forEach(c => counts[c] = (counts[c] || 0) + 1));
+      // Known species first (in our order), then any other code present in the data.
+      const extra = Object.keys(counts).filter(c => !SP[c]).sort();
+      const groups = [...new Set(SPECIES.map(s => s.group))];
+      $('#speciesList').innerHTML = groups.map(g => `<div class="sp-group"><h3>${esc(g)}</h3>` + SPECIES.filter(s => s.group === g && counts[s.code]).map(s =>
+        `<label class="sp"><input type="checkbox" value="${s.code}"><span class="dot" style="background:${s.color}"></span><span class="code">${s.code}</span><span class="n">${esc(s.name)}<span class="c">${counts[s.code]}</span></span></label>`).join('') + '</div>').join('') +
+        (extra.length ? `<details class="sp-group"><summary>Other species codes (${extra.length})</summary>` + extra.map(c =>
+          `<label class="sp"><input type="checkbox" value="${c}"><span class="dot" style="background:#666"></span><span class="code">${c}</span><span class="n"><span class="c">${counts[c]}</span></span></label>`).join('') + '</details>' : '');
+      $('#legend').innerHTML = SPECIES.filter(s => counts[s.code]).map(s => `<div class="row"><span class="dot" style="background:${s.color}"></span><span class="code">${s.code}</span> ${esc(s.name)}</div>`).join('') +
+        `<div class="row"><span class="dot" style="background:${NO_REC}"></span> No fish records</div>`;
+      $('#dataInfo').textContent = `Data downloaded ${META.built}.`;
+      if (F.species === null) F.species = SPECIES.filter(s => s.group.startsWith('Trout')).map(s => s.code).concat(['MNWH']);
+      writeFilters(); readFilters();
+      $('#filters').addEventListener('change', () => { readFilters(); applyFilters(); });
+      $('#minOrder').addEventListener('input', () => { readFilters(); applyFilters(); });
+      $('#spAll').onclick = () => { $$('#speciesList input').forEach(i => i.checked = true); readFilters(); applyFilters(); };
+      $('#spNone').onclick = () => { $$('#speciesList input').forEach(i => i.checked = false); readFilters(); applyFilters(); };
+      $('#q').addEventListener('input', renderList);
+      $('#inView').addEventListener('change', renderList);
+      $$('.sites th').forEach(th => th.onclick = () => { sort.desc = sort.key === th.dataset.sort ? !sort.desc : false; sort.key = th.dataset.sort; store.set('sort2', sort); renderList(); });
+      $('#siteRows').addEventListener('click', e => { const tr = e.target.closest('tr[data-id]'); if (tr) select(tr.dataset.id); });
+      passing = new Set(ITEMS.filter(passes).map(it => it.id));
+      const xs = ITEMS.map(i => i.c[0]), ys = ITEMS.map(i => i.c[1]);
+      map.fitBounds([[Math.min(...ys), Math.min(...xs)], [Math.max(...ys), Math.max(...xs)]]);
+      applyFilters();
+      const draft = store.get('routeDraft', []); if (draft.length) { route.pts = draft.map(p => L.latLng(p[0], p[1])); route.redraw(); }
+      renderSaved();
+    }).catch(e => {
+      console.error(e);
+      $('#listInfo').textContent = 'The lake and stream data has not been downloaded yet. It is built from Alberta FWMIS by scripts/build_fwmis.py.';
+      toast('Water data not available yet.', 6000);
+    });
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
