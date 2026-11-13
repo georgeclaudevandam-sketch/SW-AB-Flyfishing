@@ -1,0 +1,26 @@
+Data_Field_EN_Champ_de_la_donnee,Data_field_FR_Champ_de_la_donnee,Data_Value_Valeur_de_la_donnee,Value_Description_EN_Description_de_la_valeur,Data_Description_FR_Description_de_la_valeur
+Present Lake Condition,État actuel du lac,R,A lake that has non-native introduced species of fish; a lake that has introduced native fish OUTSIDE a historic watershed.,Lac qui ne renferme aucune espèce de poisson non indigène introduite; lac qui renferme des espèces de poisson indigènes introduites à l’EXTÉRIEUR d’un bassin hydrographique historique
+Present Lake Condition,État actuel du lac,Y,"A lake that historically contained native fish, and still continues to contain fish, but may now also include non-native fish; use yellow if you feel the status of the native fish is currently stable and likely to remain so for the next decade; consider genetic integrity if the mix of fish that are included can interbreed.  If there is negative genetic interactions consider evaluating this lake as red. ","Lac qui a toujours renfermé des poissons indigènes et qui continue d’en contenir, mais qui pourrait aussi contenir des poissons non indigènes; utilisez du jaune si vous croyez que la situation des poissons indigènes est actuellement stable et susceptible de le demeurer pour la prochaine décennie; examinez l’intégrité génétique si l’assemblage de poissons inclus peut s’hybrider. S’il y a un impact négatif des interactions génétiques, envisagez d’évaluer ce lac selon la couleur rouge."
+Present Lake Condition,État actuel du lac,G,A historic fish bearing lake that currently contains only the historic native fish assemblage; a historically fishless lake that is currently fishless.,Lac historiquement poissonneux et qui ne contient actuellement que l’assemblage de poissons indigènes d’autrefois; lac historiquement dépourvu de poissons et qui l’est encore aujourd’hui.
+Score - prestocking/stocking/present,Cote – pré-empoissonnement/empoissonnement/actuel (2011),-2,for each non-native species (including CTTR if not genetically pure Westslope); for native outside historic range .,Pour chaque espèce non indigène (inclure la truite fardée s’il ne s’agit pas de la sous-espèce du versant de l’ouest génétiquement pure); pour les espèces indigènes à l’extérieur de l’aire de répartition historique.
+Score - prestocking/stocking/present,Cote – pré-empoissonnement/empoissonnement/actuel (2011),2,for each native species in historic lake.,Pour chaque espèce indigène dans un lac historique.
+Score - prestocking/stocking/present,Cote – pré-empoissonnement/empoissonnement/actuel (2011),-1,for a native species in historic fishless lake but in historic watershed.,"Pour une espèce indigène dans un lac historiquement dépourvu de poissons, mais dans un bassin hydrographique historique."
+Score - prestocking/stocking/present,Cote – pré-empoissonnement/empoissonnement/actuel (2011),1,for no fish.,Pour aucun poisson.
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),BKTR,Brook Trout,omble de fontaine
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),BLTR,Bull Trout,omble à tête plate
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),BRTR,Brown Trout, truite brune
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),BURB,Burbot,lingue/lotte
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),CTTR,Cutthroat Trout,truite fardée
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),DPSC,Deepwater Sculpin,chabot de profondeur
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),FTMN,Fathead Minnow,tête-de-boule
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),LKCH,Lake Chub,méné de lac
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),LKTR,Lake Trout,truite grise
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),LKWH,Lake Whitefish,grand corégone
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),LNDC,Longnose Dace,naseux des rapides
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),LNSC,Longnose Sucker,meunier rouge
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),MNWH,Mountain Whitefish,ménomini des montagnes
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),NRPK,Northern Pike,grand brochet
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),PGWH,Pygmy Whitefish,corégone pygmée
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),RNTR,Rainbow Trout,truite arc-en-ciel
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),TRPR,Trout-perch,perche-truite
+Species - prestocking/stocking/present,Espèce – pré-empoissonnement/empoissonnement/actuel (2011),WHSC,White Sucker,meunier noir

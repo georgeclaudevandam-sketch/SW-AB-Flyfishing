@@ -1,0 +1,56 @@
+Watershed,Site,Stream,Universal Transverse Mercator Zone,Easting coordinate,Northing coordinate,Stream Order,Wetted Width (meters),Bankful Width (meters),Notes,Repetition,DATE (date/month/year),cutthroat Troat,brook trout,bull trout,rainbow trout,Other
+Bassin hydrographique, Site, Cours d’eau,Zone de la projection transverse universelle de Mercator,Abscisse,Ordonnée, Ordre du cours d'eau, Largeur de la surface mouillée, Largeur à pleins bords, Notes,Répétition, DATE (date/mois/année), truite fardée, omble de fontaine, omble à tête plate, truite arc-en-ciel, Autre
+WATERTON,6,Hell Roaring,12,288118,5433920,2,6,9.7,,1,03/10/2016,0,3,0,0,0
+WATERTON,6,Hell Roaring,12,288118,5433920,2,6,9.7,,2,No Rep,,,,,
+WATERTON,18,Crooked,11,284838,5445388,4,5.3,6.9,"slow, muddy, tepid water. Excellent sucker hatiat",1,30/09/2016,0,0,0,0,"29 LNDC, 12 LNSC, 16 WHSC, 14 TRPR, 1 BUBT"
+WATERTON,18,Crooked,11,284838,5445388,4,5.3,6.9,"slow, muddy, tepid water. Excellent sucker hatiat",2,11/10/2016,0,0,0,0,"13 LNDC, 1 WHSC, 7 TRPR"
+WATERTON,21,Blakiston,11,716887,5445698,3,3.9,7.9,"bedrock, large boulders, nice pools",1,26/09/2016,0,0,10,0,
+WATERTON,21,Blakiston,11,716887,5445698,3,3.9,7.9,"bedrock, large boulders, nice pools",2,27/09/2016,0,0,6,0,
+WATERTON,22,Blakiston,12,281810,5444016,4,18,36,"wide open, riffle, overall poor habitat",1,26/09/2016,0,0,4,0,
+WATERTON,22,Blakiston,12,281810,5444016,4,18,36,"wide open, riffle, overall poor habitat",2,27/09/2016,0,0,1,0,
+WATERTON,24,Blue Grouse,11,709176,5444564,1,1.9,4.4,"nice pools, great habitat",1,28/09/2016,0,0,0,0,
+WATERTON,24,Blue Grouse,11,709176,5444564,1,1.9,4.4,"nice pools, great habitat",2,No Rep,,,,,
+WATERTON,30,Blakiston,11,713164,5444017,3,6.86,7.7,"pleasant habitat, wide, slow, nice pocket water, undercover banks",1,29/09/2016,0,0,0,0,
+WATERTON,30,Blakiston,11,713164,5444017,3,6.86,7.7,"pleasant habitat, wide, slow, nice pocket water, undercover banks",2,No Rep,,,,,
+WATERTON,37,Blakiston,12,287887,5442223,4,10.8,37,"braided, 3 channels",1,26/09/2016,0,31,1,0,
+WATERTON,37,Blakiston,12,287887,5442223,4,10.8,37,"braided, 3 channels",2,27/09/2016,0,71,0,0,
+WATERTON,41,Cameron,12,281788,5439443,3,9,13,"riffle and run mainly, but 1 nice pool and side channel",1,02/10/2016,0,8,0,0,
+WATERTON,41,Cameron,12,281788,5439443,3,9,13,"riffle and run mainly, but 1 nice pool and side channel",2,04/10/2016,0,17,0,0,
+WATERTON,44,Bauerman,11,712525,5448429,3,5.8,5.8,"beautiful pools, mild step pools",1,08/10/2016,0,0,0,0,
+WATERTON,44,Bauerman,11,712525,5448429,3,5.8,5.8,"beautiful pools, mild step pools",2,12/10/2016,0,0,0,0,
+WATERTON,45,Crooked,12,299051,5438158,2,2.6,4.7,"slow, meandering, undeercut banks, BKTR hatitat",1,30/09/2016,0,11,0,0,
+WATERTON,45,Crooked,12,299051,5438158,2,2.6,4.7,"slow, meandering, undeercut banks, BKTR hatitat",2,05/10/2016,0,10,0,0,
+WATERTON,47,Blue Grouse,11,708533,5444796,1,2.5,2.8,"drop pools over bed rock, lots of 1-2 m drops, small water",1,28/09/2016,0,0,0,0,
+WATERTON,47,Blue Grouse,11,708533,5444796,1,2.5,2.8,"drop pools over bed rock, lots of 1-2 m drops, small water",2,No Rep,,,,,
+WATERTON,53,Cameron,11,716533,5435467,2,7.6,21.1,"slow meandering stream, large woody debris, good spawning gravels, braided",1,01/10/2016,0,50,0,11,
+WATERTON,53,Cameron,11,716533,5435467,2,7.6,21.1,"slow meandering stream, large woody debris, good spawning gravels, braided",2,04/10/2016,0,118,0,49,
+WATERTON,57,Rowe,11,716704,5438253,2,3.5,7.6,"willowy, small pools and runs",1,02/10/2016,0,0,0,0,
+WATERTON,57,Rowe,11,716704,5438253,2,3.5,7.6,"willowy, small pools and runs",2,No Rep,,,,,
+WATERTON,58,Crooked,12,296947,5436605,2,2.5,5.8,"great complex habitat, blowdown from burn",1,30/09/2016,0,2,0,0,6 CTTR/RBTR hybrid
+WATERTON,58,Crooked,12,296947,5436605,2,2.5,5.8,"great complex habitat, blowdown from burn",2,05/10/2016,0,4,0,0,7 CTTR/RBTR hybrid
+WATERTON,59,Bauerman,11,715623,5447217,3,10.3,11.9,"nice runs and pools, decent habitat",1,08/10/2016,0,0,5,0,
+WATERTON,59,Bauerman,11,715623,5447217,3,10.3,11.9,"nice runs and pools, decent habitat",2,12/10/2016,0,0,3,0,
+WATERTON,63,Sofa,12,293857,5439394,3,6.8,15,"one large pool, small braid, mostly fast run habitat",1,05/10/2016,4,17,0,0,1 BUBT
+WATERTON,63,Sofa,12,293857,5439394,3,6.8,15,"one large pool, small braid, mostly fast run habitat",2,06/10/2016,5,16,0,0,1 BNTR
+WATERTON,64,Lineham,11,718662,5439046,2,4.5,5.9,"straight run with one small pool, overall poor habitat",1,02/10/2016,0,4,0,1,
+WATERTON,64,Lineham,11,718662,5439046,2,4.5,5.9,"straight run with one small pool, overall poor habitat",2,03/10/2016,0,3,0,1,
+WATERTON,71,Coppermine,12,284051,5443076,2,1.5,4,reach ends at road culvert,1,27/09/2016,0,0,0,0,
+WATERTON,71,Coppermine,12,284051,5443076,2,1.5,4,reach ends at road culvert,2,12/10/2016,0,0,0,0,
+WATERTON,76,Rowe,11,715558,5437933,2,2,3.2,"willowy, large cobble, nice pools, good undercut banks, good habitat",1,02/10/2016,0,0,0,0,
+WATERTON,76,Rowe,11,715558,5437933,2,2,3.2,"willowy, large cobble, nice pools, good undercut banks, good habitat",2,No Rep,,,,,
+WATERTON,82,Hell Roaring,12,290090,5434092,2,6.3,6.6,"excellent habitat, many pools, deep slots, boulder gardens, excellent spawning habitat",1,03/10/2016,0,0,0,0,
+WATERTON,82,Hell Roaring,12,290090,5434092,2,6.3,6.6,"excellent habitat, many pools, deep slots, boulder gardens, excellent spawning habitat",2,No Rep,,,,,
+WATERTON,84,Dungarven,12,285527,5452313,3,3,5.5,"small pools, runs, small undercuts, extremely cold outside",1,07/10/2016,5,18,0,0,
+WATERTON,84,Dungarven,12,285527,5452313,3,3,5.5,"small pools, runs, small undercuts, extremely cold outside",2,13/10/2016,7,12,0,0,1 CTTR/RBTR hybrid
+WATERTON,97,Cottownwood ,12,287715,5451039,2,1,2,"slow, tiny creek, silty",1,07/10/2016,0,0,0,2,28 CTTR/RBTR hybrid
+WATERTON,97,Cottownwood ,12,287715,5451039,2,1,2,"slow, tiny creek, silty",2,13/10/2016,,,,,26 CTTR/RBTR hybrid
+WATERTON,111,Carthew,12,283563,5437148,2,5.5,6,"excellent habitat, many large deep pools, spawning cobbles, great backwater / boulders",1,06/10/2016,0,0,0,0,
+WATERTON,111,Carthew,12,283563,5437148,2,5.5,6,"excellent habitat, many large deep pools, spawning cobbles, great backwater / boulders",2,No Rep,,,,,
+WATERTON,172,Hell Roaring,12,290558,5433978,2,5.7,7.3,excellent habitat,1,03/10/2016,0,0,0,0,
+WATERTON,172,Hell Roaring,12,290558,5433978,2,5.7,7.3,excellent habitat,2,No Rep,,,,,
+WATERTON,244,Lone ,11,710637,5444127,2,2.3,5.1,"excellent habitat, large boulders, pocket water, undercut banks, small pools",1,29/09/2016,0,0,0,0,
+WATERTON,244,Lone ,11,710637,5444127,2,2.3,5.1,"excellent habitat, large boulders, pocket water, undercut banks, small pools",2,No Rep,,,,,
+WATERTON,262,Lone ,11,708844,5443891,1,3,6,"large barrier immediately below and at end of reach, excellent habitat, many nice pools; photo 91 = falls; downstream barriers: 11U 708875/5443970, 11U 709330/5444274",1,29/09/2016,0,0,0,0,
+WATERTON,262,Lone ,11,708844,5443891,1,3,6,"large barrier immediately below and at end of reach, excellent habitat, many nice pools; photo 91 = falls; downstream barriers: 11U 708875/5443970, 11U 709330/5444274",2,No Rep,,,,,
+WATERTON,710,Blakiston,12,284047,5442962,2,12.5,21.8,not sure where this site number came from,1,26/09/2016,0,0,5,0,
+WATERTON,710,Blakiston,12,284047,5442962,2,12.5,21.8,not sure where this site number came from,2,27/09/2016,1,1,6,0,

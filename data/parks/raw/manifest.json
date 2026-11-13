@@ -1,0 +1,66 @@
+{
+ "jasper_fish_inventory": {
+  "id": "27fa5915-2e9a-4942-b986-953119c6fae2",
+  "title": "Aquatic fish inventory - Jasper",
+  "files": [
+   {
+    "file": "jasper_np_freshwater_fish_inventory_1983-2017_data.csv",
+    "name": "Aquatic fish inventory - Jasper",
+    "url": "https://open.canada.ca/data/dataset/27fa5915-2e9a-4942-b986-953119c6fae2/resource/73d78e75-2fb7-42f1-aa5d-01a2b28fb83c/download/jasper_np_freshwater_fish_inventory_1983-2017_data.csv"
+   },
+   {
+    "file": "jasper_np_lake_lentic_freshwater_fish_occurrence_2017_data_dictionary.csv",
+    "name": "Aquatic fish inventory - Jasper - Data Dictionary",
+    "url": "https://open.canada.ca/data/dataset/27fa5915-2e9a-4942-b986-953119c6fae2/resource/03b1702d-909b-47ed-9bad-d7d5a0137770/download/jasper_np_lake_lentic_freshwater_fish_occurrence_2017_data_dictionary.csv"
+   }
+  ]
+ },
+ "banff_stream_fish_occupancy": {
+  "id": "07c1c8d0-ad43-4411-bb79-278f9f50fb96",
+  "title": "Stream Fish Occupancy - Banff",
+  "files": [
+   {
+    "file": "banff_np_freshwater_stream_fish_occupancy_2015-2017_data.csv",
+    "name": "Stream Fish Occupancy - Banff",
+    "url": "https://open.canada.ca/data/dataset/07c1c8d0-ad43-4411-bb79-278f9f50fb96/resource/96860bd7-633b-4e6e-967a-c31341fd1785/download/banff_np_freshwater_stream_fish_occupancy_2015-2017_data.csv"
+   },
+   {
+    "file": "banff_np_freshwater_stream_fish_occupancy_2015-2017_data_dictionary.csv",
+    "name": "Stream Fish Occupancy - Banff - Data Dictionary",
+    "url": "https://open.canada.ca/data/dataset/07c1c8d0-ad43-4411-bb79-278f9f50fb96/resource/32018465-b944-4d5c-9b48-e9345dbbd926/download/banff_np_freshwater_stream_fish_occupancy_2015-2017_data_dictionary.csv"
+   }
+  ]
+ },
+ "waterton_lake_fish_index": {
+  "id": "aea61195-065b-4848-aba3-fab32c33e54c",
+  "title": "Lake Fish Index - Waterton Lakes - Freshwater",
+  "files": [
+   {
+    "file": "waterton_lakes_np_freshwater_lake_fish_index_2016_data.csv",
+    "name": "Lake Fish Index - Waterton Lakes - Score data - 1",
+    "url": "https://open.canada.ca/data/dataset/aea61195-065b-4848-aba3-fab32c33e54c/resource/88ec57f4-fe6b-4567-aa67-87462400a0d2/download/waterton_lakes_np_freshwater_lake_fish_index_2016_data.csv"
+   },
+   {
+    "file": "waterton_lakes_np_freshwater_lake_fish_index_2016_data_dictionary.csv",
+    "name": "Lake Fish Index - Waterton Lakes - Score data dictionary - 2",
+    "url": "https://open.canada.ca/data/dataset/aea61195-065b-4848-aba3-fab32c33e54c/resource/f81a8656-dc64-4c95-931c-ea762544a104/download/waterton_lakes_np_freshwater_lake_fish_index_2016_data_dictionary.csv"
+   }
+  ]
+ },
+ "waterton_stream_fish_occupancy": {
+  "id": "3732ac14-e30c-4128-b8f0-5b9281c6b719",
+  "title": "Stream Fish Occupancy - Waterton Lakes - Freshwater",
+  "files": [
+   {
+    "file": "waterton_lakes_np_freshwater_stream_fish_occupancy_2016_data.csv",
+    "name": "Stream Fish Occupancy - Waterton Lakes - electrofishing data - 1",
+    "url": "https://open.canada.ca/data/dataset/3732ac14-e30c-4128-b8f0-5b9281c6b719/resource/cd7769d5-82c6-46d4-9ed0-d79fe02913b9/download/waterton_lakes_np_freshwater_stream_fish_occupancy_2016_data.csv"
+   },
+   {
+    "file": "waterton_lakes_np_freshwater_stream_fish_occupancy_2016_data_dictionary.csv",
+    "name": "Stream Fish Occupancy - Waterton Lakes - electrofishing data dictionary - 2",
+    "url": "https://open.canada.ca/data/dataset/3732ac14-e30c-4128-b8f0-5b9281c6b719/resource/28491425-405f-4c0f-a55a-ae4e162d24c5/download/waterton_lakes_np_freshwater_stream_fish_occupancy_2016_data_dictionary.csv"
+   }
+  ]
+ }
+}

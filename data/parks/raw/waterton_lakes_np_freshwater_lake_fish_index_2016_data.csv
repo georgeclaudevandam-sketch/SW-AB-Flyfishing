@@ -1,0 +1,112 @@
+Lake ID,Lake Name,Area (ha),Score - Prestocking,Species -Prestocking,Score - Stocking,Species - Stocking,Score - Present (2011),Species - Present (2011),Updated,Present Lake Condition
+Identification du lac,Nom du lac,Superficie (hectares),Cote – pré-empoissonnement,Espèce – pré-empoissonnement,Cote – empoissonnement,Espèce – empoissonnement,Cote – Actuel (2011),Espèces – Actuel (2011),Mise à jour,État actuel du lac
+W1,Lineham North,18.96,1,,-1,CTTR,-2,CTTR ,,R
+W1,Lineham North,18.96,,,-2,RBTR,-2,RBTR,,R
+W2,Lineham South,5.78,1,,-1,CTTR,1,,,G
+W3,Upper Rowe,7.2,1,,-1,CTTR,1,,,G
+W4,Lineham Hourglass,12.64,1,,-1,CTTR,-2,CTTR,,R
+W5,Middle Rowe,2.21,1,,-2,BKTR,1,,,G
+W5,Middle Rowe,2.21,,,-1,CTTR,,,,G
+W6,Lower Rowe,1.97,1,,-2,BKTR,1,,,G
+W6,Lower Rowe,1.97,,,-1,CTTR,,,,G
+W7,Cameron,172.3,1,,-2,BKTR,-2,BKTR,,R
+W7,Cameron,172.3,,,-1,CTTR,-2,RBTR,,R
+W7,Cameron,172.3,,,-2,RBTR,,,,R
+W8,Akamina,4.65,1,,-2,BKTR,-2,BKTR,,R
+W8,Akamina,4.65,,,-2,RBTR,-2,RBTR,,R
+W9 ,Summit,2.03,1,,-1,CTTR,1,,,G
+W11,Upper Carthew,4.35,1,,-2,BKTR,1,,,G
+W11,Upper Carthew,4.35,,,-2,RBTR,,,,G
+W12,Lower Carthiew,7.33,1,,-1,CTTR,-2,CTTR,,R
+W13,Carthiew Pond,0.8,1,,-1,CTTR,-2,CTTR,,R
+W14,Alderson,10.19,1,,-1,CTTR,-2,CTTR,,R
+W15,Crandell,4.53,1,,-2,BKTR,-2,BKTR,,R
+W15,Crandell,4.53,,,-2,RBTR,,,,R
+W16,Bertha,30.2,1,,-1,CTTR,-2,RBTR,,R
+W16,Bertha,30.2,,,-2,RBTR,,,,R
+W17,Upper Waterton,941,2,LKTR,2,LKTR,2,LKTR,"(?FHMN,LNDC)",Y
+W17,Upper Waterton,941,2,BLTR,2,BLTR,2,BLTR,,Y
+W17,Upper Waterton,941,2,CTTR,2,CTTR,-2,CTTR,,Y
+W17,Upper Waterton,941,2,MNWH,2,MNWH,2,MNWH,,Y
+W17,Upper Waterton,941,2,LKWH,2,LKWH,2,LKWH,,Y
+W17,Upper Waterton,941,2,PGWH,2,PGWH,2,PGWH,,Y
+W17,Upper Waterton,941,2,NRPK,2,NRPK,2,NRPK,,Y
+W17,Upper Waterton,941,2,BURB,2,BURB,2,BURB,,Y
+W17,Upper Waterton,941,2,DPSC,2,DPSC,2,DPSC,,Y
+W17,Upper Waterton,941,2,FTMN,2,FTMN,,,LNSC,Y
+W17,Upper Waterton,941,2,LKCH,2,LKCH,2,LKCH,,Y
+W17,Upper Waterton,941,2,LNDC,2,LNDC,,,,Y
+W17,Upper Waterton,941,2,LNSC,2,LNSC,2,LNSC,,Y
+W17,Upper Waterton,941,2,WHSC,2,WHSC,2,WHSC,,Y
+W17,Upper Waterton,941,2,TRPR,2,TRPR,2,TRPR,,Y
+W17,Upper Waterton,941,,,-2,BKTR,-2,BKTR,,Y
+W17,Upper Waterton,941,,,-2,RBTR,-2,RBTR,,Y
+W17,Upper Waterton,941,,,,,-2,BRTR,,Y
+W18,Linnet,3.52,2,FTMN,-1,CTTR,2,LKCH,,G
+W18,Linnet,3.52,2,LKCH,-2,BKTR,2,LNSC,,G
+W18,Linnet,3.52,2,LNSC,-2,RBTR,2,LNSC,,G
+W18,Linnet,3.52,2,LNSC,,,,,,G
+W19,Lower (Middle) Waterton,429,2,BLTR,2,BLTR,2,BLTR,"(?FHMN,LNDC)",Y
+W19,Lower (Middle) Waterton,429,2,CTTR,2,CTTR,-2,CTTR,,Y
+W19,Lower (Middle) Waterton,429,2,LKTR,2,LKTR,2,LKTR,,Y
+W19,Lower (Middle) Waterton,429,2,MNWH,2,MNWH,2,MNWH,,Y
+W19,Lower (Middle) Waterton,429,2,LKWH,2,LKWH,2,LKWH,,Y
+W19,Lower (Middle) Waterton,429,2,NRPK,2,NRPK,2,NRPK,,Y
+W19,Lower (Middle) Waterton,429,2,BURB,2,BURB,2,BURB,,Y
+W19,Lower (Middle) Waterton,429,2,FTMN,2,FTMN,,,,Y
+W19,Lower (Middle) Waterton,429,2,LKCH,2,LKCH,2,LKCH,,Y
+W19,Lower (Middle) Waterton,429,2,LNDC,2,LNDC,,,,Y
+W19,Lower (Middle) Waterton,429,2,LNSC,2,LNSC,2,LNSC,,Y
+W19,Lower (Middle) Waterton,429,2,WSK,2,WSK,2,WSK,,Y
+W19,Lower (Middle) Waterton,429,,,-2,BKTR,-2,BKTR,,Y
+W19,Lower (Middle) Waterton,429,,,-2,RBTR,-2,RBTR,,Y
+W19,Lower (Middle) Waterton,429,,,,,-2,BRTR,,Y
+W20,Loon,0.56,1,,1,,1,,no records of stocking,G
+W22,Knight's/Lower Wtn.,143,2,BLTR,2,BLTR,2,BLTR,no records of stocking,Y
+W22,Knight's/Lower Wtn.,143,2,CTTR,2,CTTR,-2,CTTR,,Y
+W22,Knight's/Lower Wtn.,143,2,LKTR,2,LKTR,2,LKTR,,Y
+W22,Knight's/Lower Wtn.,143,2,MNWH,2,MNWH,2,MNWH,,Y
+W22,Knight's/Lower Wtn.,143,2,NRPK,2,NRPK,2,NRPK,,Y
+W22,Knight's/Lower Wtn.,143,2,BURB,2,BURB,2,BURB,,Y
+W22,Knight's/Lower Wtn.,143,2,LKCH,2,LKCH,2,LKCH,,Y
+W22,Knight's/Lower Wtn.,143,2,LNSC,2,LNSC,2,LNSC,,Y
+W22,Knight's/Lower Wtn.,143,2,WHSC,2,WHSC,2,WHSC,,Y
+W22,Knight's/Lower Wtn.,143,,,,,-2,BRTR,,Y
+W23,Crypt Pond,2.7,1,,1,,1,,no records of stocking,G
+W24,Crypt Lake,13.44,1,,-1,CTTR,-2,CTTR,,R
+W24,Crypt Lake,13.44,,,-2,RBTR,-2,RBTR,,R
+W30,Beaver Pond,n/a,2,CTTR,-2,BKTR,-2,BKTR,,R
+W31,Beaver Pond,2,2,CTTR,-2,BKTR,-2,BKTR,,R
+W31,Beaver Pond,2,,,-2,RBTR,,,,R
+W32,Beaver Pond,n/a,2,CTTR,-2,BKTR,-2,BKTR,,R
+W33,Beaver Pond,5.5,2,CTTR,-2,BKTR,-2,BKTR,,R
+W33,Beaver Pond,5.5,,,-2,RBTR,,,,R
+W39,Giant's Mirror,0.43,1,,-2,BKTR,-2,RBTR,,R
+W39,Giant's Mirror,0.43,,,-2,RBTR,,,,R
+W43,Maskinonge,65,2,BURB,2,BURB,2,BURB,no records of stocking,Y
+W43,Maskinonge,65,2,LKCH,2,LKCH,2,LKCH,,Y
+W43,Maskinonge,65,2,LNSC,2,LNSC,2,LNSC,,Y
+W43,Maskinonge,65,2,WHSC,2,WHSC,2,WHSC,,Y
+W43,Maskinonge,65,2,NRPK,2,NRPK,2,NRPK,,Y
+W43,Maskinonge,65,,,,,-2,BRTR,,Y
+W51,Kesler,7.65,1,,-2,BKTR,1,,"(?LNSK, WTSK)",G
+W51,Kesler,7.65,,,-2,RBTR,,,,G
+W52,Ruby,2.35,1,,-2,RBTR,1,,,G
+W53,Goat,2.35,1,,-1,CTTR,-1,CTTR ,(pure),R
+W53,Goat,2.35,,,-2,RBTR,,,,R
+W54,Lone,2.53,1,,-1,CTTR,-2,CTTR ,,R
+W55,Lost,1.57,1,,-1,CTTR,1,,,G
+W55,Lost,1.57,,,-2,BKTR,,,,G
+W55,Lost,1.57,,,-2,RBTR,,,,G
+W58 ,Lower Twin,2.72,1,,-2,BKTR,-2,BKTR,,R
+W58 ,Lower Twin,2.72,,,-2,RBTR,,,,R
+W59,Upper Twin,6.44,1,,-1,CTTR,-2,CTTR ,,R
+W59,Upper Twin,6.44,,,-2,BKTR,-2,BKTR,,R
+W59,Upper Twin,6.44,,,-2,RBTR,,,,R
+W61,Park Entrance Pond,1,2,NRPK,-1,CTTR,2,NRPK,,R
+W61,Park Entrance Pond,1,,,-2,BKTR,-2,CTTR,,R
+W61,Park Entrance Pond,1,,,-2,RBTR,-2,BKTR,,R
+W61,Park Entrance Pond,1,,,,,-2,RBTR,,R
+W63,Beaver Pond (Hatchery),1,1,,-1,CTTR,-2,CTTR,,R
+W63,Beaver Pond (Hatchery),1,,,-2,BKTR,-2,BKTR,,R
+W63,Beaver Pond (Hatchery),1,,,-2,RBTR,-2,RBTR,,R

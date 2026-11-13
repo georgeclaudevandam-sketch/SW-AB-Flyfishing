@@ -1,0 +1,32 @@
+Data_Field_EN_Champ_de_la_donnee,Data_field_FR_Champ_de_la_donnee,Data_Value_Valeur_de_la_donnee,Value_Description_EN_Description_de_la_valeur,Data_Description_FR_Description_de_la_valeur
+Original species present,Espèces présentes à l’origine,BURB,Burbot,lotte
+Original species present,Espèces présentes à l’origine,BKST,Brook Stickleback,épinoche à cinq épines
+Original species present,Espèces présentes à l’origine,BKTR,Brook Trout,omble de fontaine
+Original species present,Espèces présentes à l’origine,BLTR,Bull trout,omble à tête plat
+Original species present,Espèces présentes à l’origine,CSCO,Cisco,cisco
+Original species present,Espèces présentes à l’origine,CTTR,Cutthroat trout,truite fardée
+Original species present,Espèces présentes à l’origine,LKCH,Lake Chub,mulet de lac
+Original species present,Espèces présentes à l’origine,LKWH,lake whitefish,grand corégone
+Original species present,Espèces présentes à l’origine,LKTR,Lake Trout,truite de lac
+Original species present,Espèces présentes à l’origine,LNDC,Longnose dace,naseux des rapides
+Original species present,Espèces présentes à l’origine,LNSC,Longnose sucker,meunier rouge
+Original species present,Espèces présentes à l’origine,MNWH,Mountain whitefish,ménomini des montagnes
+Original species present,Espèces présentes à l’origine,NRDC,Northern Redbelly dace,ventre rouge du nord
+Original species present,Espèces présentes à l’origine,NRPK,Northern pike,grand brochet 
+Original species present,Espèces présentes à l’origine,PYWH,Pygmy whitefish,corégone pygmée
+Original species present,Espèces présentes à l’origine,RNTR,Rainbow trout,truite arc-en-ciel
+Original species present,Espèces présentes à l’origine,SHSC,Spoonhead sculpin,chabot visqueux
+Original species present,Espèces présentes à l’origine,SPSH,Spottail shiner,queue à tachenoire
+Original species present,Espèces présentes à l’origine,WHSC,White sucker,meunier noir
+Original species present,Espèces présentes à l’origine,YEPR,Yellow perch,perchaude
+Natural condition (original state),Condition naturelle (état d’origine),Native,Native,indigènes
+Natural condition (original state),Condition naturelle (état d’origine),No Fish,No Fish,non indigènes
+Current fish status ,Situation actuelle du poisson ,Native,Native,indigènes
+Current fish status ,Situation actuelle du poisson ,Native and Non Native,Native and Non Native,indigènes et non indigènes
+Current fish status ,Situation actuelle du poisson ,Non Native,Non Native,non indigènes
+Current fish status ,Situation actuelle du poisson ,No Fish,No Fish,Aucun poisson
+Ecoregion,Écorégion,Lower Subalpine,Lower Subalpine,subalpin inférieur
+Ecoregion,Écorégion,Montane,Montane,montagnard
+Type of body of water,Type de plan d’eau,Lake-Intermittent,Lake-Intermittent,lac-intermittent
+Type of body of water,Type de plan d’eau,Lake-Perennial,Lake-Perennial,lac-permanente
+Type of body of water,Type de plan d’eau,Reservoir,Reservoir,réservoir

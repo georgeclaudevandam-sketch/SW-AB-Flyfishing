@@ -1,0 +1,11 @@
+watershed where the survey was conducted,species of fish caught,replicate 1 - proportion of sites occupied (the number of sites occupied by a given species divided by the total number of sites occupied),replicate 2 - proportion of sites occupied (the number of sites occupied by a given species divided by the total number of sites occupied)
+Bassin hydrographique où le relevé a eu lieu ,Espèces de poissons capturées ,"Répétition 1 – Proportion de plans d’eau occupés (nombre de plans d’eau occupés par une espèce donnée, divisé par le nombre total de plans d’eau occupés) ","Répétition 2 – Proportion de plans d’eau occupés (nombre de plans d’eau occupés par une espèce donnée, divisé par le nombre total de plans d’eau occupés)"
+Cascade,CTTR,0.24,0.21
+Cascade,BLTR,0.41,0.46
+Cascade,BKTR,0.15,0.13
+Panther,CTTR,0.00,0.00
+Panther,BLTR,0.51,0.59
+Panther,BKTR,0.18,0.18
+Spray,CTTR,0.02,0.02
+Spray,BLTR,0.30,0.38
+Spray,BKTR,0.77,0.87
