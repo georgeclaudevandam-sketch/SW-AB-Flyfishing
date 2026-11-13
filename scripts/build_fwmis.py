@@ -8,7 +8,11 @@ https://geospatial.alberta.ca/titan/rest/services/biota/fwimt_pub_species_invent
   layer 33  FWMIS Lakes/Ponds/Reservoirs        (SPECIES_PRES)
   layer 34  FWMIS River and Stream              (SPECIES_PRES)
   layer 32  Fish Culture Stocking               (stocking records)
-SPECIES_PRES is the historic list of species sampled anywhere in the waterbody.
+  layer 30  Fish Survey                         (one row per species caught per survey, with location and date)
+
+Streams: species come only from fish survey records located on each stretch (reach)
+of the stream, so a long river does not inherit species caught far away.
+Lakes: species from survey records in the lake plus the lake's SPECIES_PRES list.
 
 Run:  python3 scripts/build_fwmis.py
 """
@@ -102,160 +106,244 @@ def r5(c):
     return [round(c[0], 5), round(c[1], 5)]
 
 
-def main():
-    os.makedirs(OUT, exist_ok=True)
-    wb = {}  # WB_ID -> record
 
-    def rec(wid, kind, a):
-        r = wb.get(wid)
-        if not r:
-            r = wb[wid] = {"id": wid, "kind": kind, "name": title(a.get("OFFICIAL_NM")), "alt": title(a.get("COMMON_NM")),
-                           "species": set(), "order": 0, "huc": a.get("HUC_8"), "geom": []}
-        r["species"].update(codes(a.get("SPECIES_PRES")))
-        if not r["name"]:
-            r["name"] = title(a.get("OFFICIAL_NM"))
-        return r
-
-    # ---- streams: every named stream, plus unnamed ones with fish records
-    sf = ["WB_ID", "OFFICIAL_NM", "COMMON_NM", "SPECIES_PRES", "STR_ORDER", "Feature_Type", "HUC_8"]
-    for f in fetch(34, "OFFICIAL_NM IS NOT NULL OR SPECIES_PRES IS NOT NULL", sf):
-        a = f["attributes"]
-        wid = a.get("WB_ID")
-        if wid is None:
-            continue
-        r = rec(f"s{int(wid)}", "stream", a)
-        try:
-            r["order"] = max(r["order"], int(a.get("STR_ORDER") or 0))
-        except ValueError:
-            pass
-        for p in (f.get("geometry") or {}).get("paths", []):
-            if len(p) > 1:
-                r["geom"].append([r5(c) for c in p])
-
-    # ---- lakes: every named lake, plus unnamed ones with fish records
-    lf = ["WB_ID", "OFFICIAL_NM", "COMMON_NM", "SPECIES_PRES", "Feature_Type", "HUC_8"]
-    for f in fetch(33, "OFFICIAL_NM IS NOT NULL OR SPECIES_PRES IS NOT NULL", lf):
-        a = f["attributes"]
-        wid = a.get("WB_ID")
-        if wid is None:
-            continue
-        r = rec(f"l{int(wid)}", "lake", a)
-        for ring in (f.get("geometry") or {}).get("rings", []):
-            if len(ring) > 3:
-                r["geom"].append([r5(c) for c in ring])
-
-    # ---- stocking records, joined by waterbody id
-    stock = defaultdict(lambda: defaultdict(set))
-    try:
-        sfields = layer_fields(32)
-        print("stocking fields:", sfields, file=sys.stderr)
-        idf = next((x for x in sfields if x.upper() in ("WTB_ID", "WB_ID")), None)
-        spf = next((x for x in sfields if x.upper() == "SPEC_CODE"), None)
-        dtf = next((x for x in sfields if "DATE" in x.upper()), None)
-        if idf and spf:
-            for f in fetch(32, "1=1", [idf, spf] + ([dtf] if dtf else []), geometry=False, batch=500):
-                a = f["attributes"]
-                if a.get(idf) is None or not a.get(spf):
-                    continue
-                yr = None
-                if dtf and isinstance(a.get(dtf), (int, float)):
-                    yr = time.gmtime(a[dtf] / 1000).tm_year
-                stock[int(a[idf])][a[spf].strip().upper()].add(yr)
-    except SystemExit as e:
-        print("stocking skipped:", e, file=sys.stderr)
-
-    write(wb, stock)
+SNAP_KM = 0.5   # a survey site must lie within this distance of a stream reach to count for it
 
 
-def point_dist_km(p, geom):
-    """Shortest distance (km, approximate) from point p to any vertex of geom."""
-    best = 1e9
+def seg_dist_km(p, a, b):
+    """Distance (km) from point p to segment a-b, using a local flat projection."""
     k = math.cos(math.radians(p[1]))
-    for part in geom:
-        for c in part[::2] or part:
-            d = math.hypot((c[0] - p[0]) * 111.32 * k, (c[1] - p[1]) * 110.57)
+    ax, ay = (a[0] - p[0]) * 111.32 * k, (a[1] - p[1]) * 110.57
+    bx, by = (b[0] - p[0]) * 111.32 * k, (b[1] - p[1]) * 110.57
+    dx, dy = bx - ax, by - ay
+    L2 = dx * dx + dy * dy
+    t = 0 if L2 == 0 else max(0, min(1, -(ax * dx + ay * dy) / L2))
+    return math.hypot(ax + t * dx, ay + t * dy)
+
+
+def reach_dist_km(p, parts):
+    best = 1e9
+    for part in parts:
+        for i in range(1, len(part)):
+            d = seg_dist_km(p, part[i - 1], part[i])
             if d < best:
                 best = d
     return best
 
 
-def merge_parks(wb):
-    """Attach Parks Canada species records to FWMIS waterbodies.
-    A record matches only a waterbody with the same name (or the same name plus
-    'Lake'/'Creek'/'River'), inside the park, and - when the record has survey
-    coordinates - within 3 km of a survey site. Anything else is reported as unmatched."""
-    def nm(x):
-        return re.sub(r"[^a-z0-9 ]", "", (x or "").lower()).strip()
+def add_site(r, lon, lat, yr, codeset, src, method=""):
+    """Attach a survey site to waterbody r: to the nearest reach for streams (if within SNAP_KM)."""
+    if r["kind"] == "stream":
+        best, bi = 1e9, None
+        for i, reach in enumerate(r["reaches"]):
+            bb = reach["bb"]
+            if lon < bb[0] - 0.02 or lon > bb[2] + 0.02 or lat < bb[1] - 0.02 or lat > bb[3] + 0.02:
+                continue
+            d = reach_dist_km((lon, lat), reach["g"])
+            if d < best:
+                best, bi = d, i
+        if bi is None or best > SNAP_KM:
+            return False
+        target = r["reaches"][bi]["y"]
+    else:
+        target = r["y"]
+    for c in codeset:
+        target[c] = max(target.get(c, 0), yr or 0)
+        lo, hi = r["yr"].get(c, (9999, 0))
+        r["yr"][c] = (min(lo, yr or 9999), max(hi, yr or 0))
+    key = (round(lon, 4), round(lat, 4), src)
+    site = r["sites"].setdefault(key, {"y": {}, "n": 0, "m": set()})
+    for c in codeset:
+        site["y"][c] = max(site["y"].get(c, 0), yr or 0)
+    site["n"] += 1
+    if method:
+        site["m"].add(method)
+    return True
+
+
+def main():
+    wb = {}
+
+    def rec(wid, kind, a):
+        r = wb.get(wid)
+        if not r:
+            r = wb[wid] = {"id": wid, "kind": kind, "name": title(a.get("OFFICIAL_NM")), "alt": title(a.get("COMMON_NM")),
+                           "pres": set(), "order": 0, "huc": a.get("HUC_8"), "geom": [], "reaches": [],
+                           "y": {}, "yr": {}, "sites": {}}
+        r["pres"].update(codes(a.get("SPECIES_PRES")))
+        return r
+
+    sf = ["WB_ID", "OFFICIAL_NM", "COMMON_NM", "SPECIES_PRES", "STR_ORDER", "HUC_8"]
+    for f in fetch(34, "1=1", sf):
+        a = f["attributes"]
+        if a.get("WB_ID") is None:
+            continue
+        r = rec(f"s{int(a['WB_ID'])}", "stream", a)
+        try:
+            o = int(a.get("STR_ORDER") or 0)
+        except ValueError:
+            o = 0
+        r["order"] = max(r["order"], o)
+        parts = [[r5(c) for c in p] for p in (f.get("geometry") or {}).get("paths", []) if len(p) > 1]
+        if parts:
+            r["reaches"].append({"g": parts, "o": o, "y": {}, "bb": bbox_of([c for p in parts for c in p])})
+
+    lf = ["WB_ID", "OFFICIAL_NM", "COMMON_NM", "SPECIES_PRES", "HUC_8"]
+    for f in fetch(33, "1=1", lf):
+        a = f["attributes"]
+        if a.get("WB_ID") is None:
+            continue
+        r = rec(f"l{int(a['WB_ID'])}", "lake", a)
+        for ring in (f.get("geometry") or {}).get("rings", []):
+            if len(ring) > 3:
+                r["geom"].append([r5(c) for c in ring])
+    # Lakes keep their SPECIES_PRES list (undated) - a lake is one body of water.
+    for r in wb.values():
+        if r["kind"] == "lake":
+            for c in r["pres"]:
+                r["y"].setdefault(c, 0)
+
+    # ---- fish survey records (layer 30): one row per species per survey
+    by_num = {}
+    for r in wb.values():
+        by_num.setdefault(int(r["id"][1:]), []).append(r)
+    stats = defaultdict(int)
+    loose = {}
+    for f in fetch(30, "SPEC_CODE IS NOT NULL", ["WTB_ID", "SPEC_CODE", "LATITUDE", "LONGITUDE", "TERMINATION_DATE", "SURVEY_TYPE"],
+                   geometry=False, batch=1000):
+        a = f["attributes"]
+        code = (a.get("SPEC_CODE") or "").strip().upper()
+        lat, lon = a.get("LATITUDE"), a.get("LONGITUDE")
+        if not CODE_RE.match(code) or lat is None or lon is None:
+            stats["skipped"] += 1
+            continue
+        yr = time.gmtime(a["TERMINATION_DATE"] / 1000).tm_year if isinstance(a.get("TERMINATION_DATE"), (int, float)) else 0
+        method = (a.get("SURVEY_TYPE") or "").strip()
+        ok = False
+        for r in by_num.get(int(a["WTB_ID"]) if a.get("WTB_ID") is not None else -1, []):
+            ok = add_site(r, lon, lat, yr, {code}, "fwmis", method) or ok
+        if ok:
+            stats["snapped"] += 1
+        else:
+            stats["unsnapped"] += 1
+            k = (round(lon, 4), round(lat, 4))
+            s = loose.setdefault(k, {"y": {}, "n": 0, "m": set(), "src": "fwmis"})
+            s["y"][code] = max(s["y"].get(code, 0), yr)
+            s["n"] += 1
+            if method:
+                s["m"].add(method)
+    print("survey records:", dict(stats), file=sys.stderr)
+
+    stock = defaultdict(lambda: defaultdict(set))
+    try:
+        sfields = layer_fields(32)
+        idf = next((x for x in sfields if x.upper() in ("WTB_ID", "WB_ID")), None)
+        spf = next((x for x in sfields if x.upper() == "SPEC_CODE"), None)
+        dtf = next((x for x in sfields if "DATE" in x.upper()), None)
+        if idf and spf:
+            for f in fetch(32, "1=1", [idf, spf] + ([dtf] if dtf else []), geometry=False, batch=1000):
+                a = f["attributes"]
+                if a.get(idf) is None or not a.get(spf):
+                    continue
+                yr = time.gmtime(a[dtf] / 1000).tm_year if dtf and isinstance(a.get(dtf), (int, float)) else None
+                stock[int(a[idf])][a[spf].strip().upper()].add(yr)
+    except SystemExit as e:
+        print("stocking skipped:", e, file=sys.stderr)
+
+    write(wb, stock, loose)
+
+
+def nm(x):
+    return re.sub(r"[^a-z0-9 ]", "", (x or "").lower()).strip()
+
+
+def merge_parks(wb, loose):
+    """Parks Canada records. Sites with coordinates are attached to the reach they lie on,
+    on a same-named waterbody inside the park (within SNAP_KM); otherwise they are kept
+    as stand-alone survey sites. Lake records without coordinates (Waterton lake index)
+    attach to a same-named lake in the park; if none matches they are listed as unmatched."""
     by_name = {}
     for r in wb.values():
         for n in {nm(r["name"]), nm(r["alt"])}:
             if n:
                 by_name.setdefault(n, []).append(r)
-    matched, unmatched = 0, []
+    unmatched, matched = [], 0
     for p in parks.records():
         base = nm(re.sub(r"\(.*?\)|\baka\b|#\d+", "", p["name"]))
         names = [base] if base.endswith((" lake", " creek", " river", " lakes", " pond")) else \
             [base, base + " lake", base + " creek", base + " river", "lake " + base]
-        if p.get("kind") == "lake":
-            names = [n for n in names if not n.endswith((" creek", " river"))]
-        if p.get("kind") == "stream":
-            names = [n for n in names if not n.endswith((" lake", " lakes", " pond")) and not n.startswith("lake ")]
         cands = []
         for n in names:
             for r in by_name.get(n, []):
-                if not r["geom"]:
-                    continue
-                if not any(parks.in_park(p["park"], c[0], c[1]) for part in r["geom"] for c in part[::3] or part):
-                    continue
                 if p.get("kind") and r["kind"] != p["kind"]:
                     continue
-                cands.append(r)
+                pts = [c for g in (r["geom"] or [x for rc in r["reaches"] for x in rc["g"]]) for c in g[::3]]
+                if any(parks.in_park(p["park"], c[0], c[1]) for c in pts):
+                    cands.append(r)
         cands = list({id(r): r for r in cands}.values())
-        if p["points"] and cands:
-            # Survey coordinates decide: the nearest same-named waterbody, if within 3 km.
-            dist = [(min(point_dist_km(pt, r["geom"]) for pt in p["points"]), r) for r in cands]
-            dist = [d for d in dist if d[0] <= 3.0]
-            cands = [min(dist, key=lambda d: d[0])[1]] if dist else []
-        if len(cands) != 1:
-            unmatched.append({"park": p["park"], "name": p["name"], "species": sorted(p["species"]),
-                              "points": p["points"][:5], "reason": "no match" if not cands else "ambiguous", "src": p["src"]})
-            continue
-        r = cands[0]
-        r.setdefault("parks", []).append({"park": p["park"], "species": sorted(p["species"]),
-                                          "years": sorted(p["years"]), "src": p["src"]})
-        r["species"].update(p["species"])
-        matched += 1
+        src = "pc:" + p["park"]
+        if p["sites"]:
+            for s in p["sites"]:
+                ok = any(add_site(r, s["lon"], s["lat"], s["yr"], s["codes"], src, s.get("method", "")) for r in cands)
+                if ok:
+                    matched += 1
+                    for r in cands:
+                        r.setdefault("parks", {})[p["park"]] = p["src"]
+                else:
+                    k = (round(s["lon"], 4), round(s["lat"], 4))
+                    st = loose.setdefault(k, {"y": {}, "n": 0, "m": set(), "src": src, "name": p["name"]})
+                    for c in s["codes"]:
+                        st["y"][c] = max(st["y"].get(c, 0), s["yr"])
+                    st["n"] += 1
+        elif p.get("kind") == "lake" and len(cands) == 1:
+            r = cands[0]
+            yr = max(p["years"]) if p["years"] else 0
+            for c in p["species"]:
+                r["y"][c] = max(r["y"].get(c, 0), yr)
+                lo, hi = r["yr"].get(c, (9999, 0))
+                r["yr"][c] = (min(lo, yr), max(hi, yr))
+            r.setdefault("parks", {})[p["park"]] = p["src"]
+            matched += 1
+        else:
+            unmatched.append({"park": p["park"], "name": p["name"], "species": sorted(p["species"]), "src": p["src"]})
     print(f"parks: matched {matched}, unmatched {len(unmatched)}", file=sys.stderr)
     return unmatched
 
 
-def write(wb, stock):
-    unmatched = merge_parks(wb)
-    index, chunks, all_codes = [], defaultdict(list), defaultdict(int)
+def write(wb, stock, loose):
+    unmatched = merge_parks(wb, loose)
+    index, chunks = [], defaultdict(list)
+    all_codes = defaultdict(int)
     for r in wb.values():
-        if not r["geom"]:
+        geoms = r["geom"] or [p for rc in r["reaches"] for p in rc["g"]]
+        if not geoms:
             continue
-        pts = [c for part in r["geom"] for c in part]
-        bb = bbox_of(pts)
+        bb = bbox_of([c for part in geoms for c in part])
         if r["kind"] == "lake":
             ring = max(r["geom"], key=len)
             cx = sum(c[0] for c in ring) / len(ring); cy = sum(c[1] for c in ring) / len(ring)
         else:
-            longest = max(r["geom"], key=len)
+            longest = max(geoms, key=len)
             cx, cy = longest[len(longest) // 2]
-        num = int(r["id"][1:])
-        st = {}
-        if r["kind"] == "lake" and num in stock:
-            st = {k: sorted(y for y in v if y) for k, v in stock[num].items()}
-        sp = sorted(r["species"])
-        for c in sp:
-            all_codes[c] += 1
         key = f"{math.floor(cx / CHUNK_DEG)}_{math.floor(cy / CHUNK_DEG)}"
-        feat = {"id": r["id"], "g": r["geom"]}
-        # Waters with fish records (and every named lake) go in the searchable index;
-        # streams with no records live only in their geometry chunk.
-        if sp or st or (r["kind"] == "lake" and r["name"]):
-            item = {"id": r["id"], "k": r["kind"][0], "n": r["name"], "sp": sp, "c": [round(cx, 4), round(cy, 4)],
+        num = int(r["id"][1:])
+        st = {k: sorted(y for y in v if y) for k, v in stock.get(num, {}).items()} if r["kind"] == "lake" else {}
+        y = dict(r["y"])
+        for rc in r["reaches"]:
+            for c, yr in rc["y"].items():
+                y[c] = max(y.get(c, 0), yr)
+        for c in y:
+            all_codes[c] += 1
+        sites = [[k[0], k[1], v["y"], v["n"], k[2], sorted(v["m"])] for k, v in r["sites"].items()]
+        feat = {"id": r["id"]}
+        if r["kind"] == "lake":
+            feat["g"] = r["geom"]
+        else:
+            feat["r"] = [{"g": rc["g"], "o": rc["o"], **({"y": rc["y"]} if rc["y"] else {})} for rc in r["reaches"]]
+        if sites:
+            feat["s"] = sites
+        if y or st or (r["kind"] == "lake" and (r["name"] or r["alt"])):
+            item = {"id": r["id"], "k": r["kind"][0], "n": r["name"], "y": y, "c": [round(cx, 4), round(cy, 4)],
                     "b": [round(v, 4) for v in bb], "ch": key}
             if r["alt"] and r["alt"] != r["name"]:
                 item["a"] = r["alt"]
@@ -265,12 +353,24 @@ def write(wb, stock):
                 item["h"] = r["huc"]
             if st:
                 item["st"] = st
+            if r["yr"]:
+                item["yr"] = {c: [lo if lo != 9999 else 0, hi] for c, (lo, hi) in r["yr"].items()}
+            if r["kind"] == "stream" and r["pres"]:
+                item["pres"] = sorted(r["pres"])
             if r.get("parks"):
                 item["pk"] = r["parks"]
             index.append(item)
         else:
-            feat.update({"k": r["kind"][0], "n": r["name"], "o": r["order"] or None})
+            feat.update({"k": r["kind"][0], "n": r["name"] or r["alt"], "o": r["order"] or None})
         chunks[key].append(feat)
+
+    # Survey sites not on any mapped water, kept as points.
+    loose_out = defaultdict(list)
+    for (lon, lat), v in loose.items():
+        loose_out[f"{math.floor(lon / CHUNK_DEG)}_{math.floor(lat / CHUNK_DEG)}"].append(
+            [lon, lat, v["y"], v["n"], v["src"], sorted(v["m"]), v.get("name")])
+    for k, pts in loose_out.items():
+        chunks[k].append({"id": "pts_" + k, "pts": pts})
 
     os.makedirs(OUT, exist_ok=True)
     for f in os.listdir(OUT):
@@ -279,16 +379,15 @@ def write(wb, stock):
     for key, feats in chunks.items():
         with open(os.path.join(OUT, f"c_{key}.json"), "w") as fh:
             json.dump(feats, fh, separators=(",", ":"))
-    index.sort(key=lambda x: (x["n"] or "~", x["id"]))
-    meta = {"source": BASE, "layers": {"lakes": 33, "streams": 34, "stocking": 32},
-            "built": time.strftime("%Y-%m-%d", time.gmtime()), "chunkDeg": CHUNK_DEG,
+    index.sort(key=lambda x: (x["n"] or x.get("a") or "~", x["id"]))
+    meta = {"source": BASE, "layers": {"lakes": 33, "streams": 34, "stocking": 32, "surveys": 30},
+            "built": time.strftime("%Y-%m-%d", time.gmtime()), "chunkDeg": CHUNK_DEG, "snapKm": SNAP_KM,
             "chunks": sorted(chunks), "codes": dict(sorted(all_codes.items(), key=lambda kv: -kv[1])),
-            "count": len(index), "total": sum(len(v) for v in chunks.values()),
+            "count": len(index), "total": sum(1 for v in chunks.values() for f in v if not f["id"].startswith("pts_")),
             "parks": {"datasets": parks.DS, "unmatched": unmatched, "banffWatersheds": parks.banff_watersheds()}}
     with open(os.path.join(OUT, "index.json"), "w") as fh:
         json.dump({"meta": meta, "items": index}, fh, separators=(",", ":"))
-    print(json.dumps({k: meta[k] for k in ("built", "count", "total")}, indent=1))
-    print("codes:", meta["codes"])
+    print(json.dumps({k: meta[k] for k in ("built", "count", "total")}))
 
 
 if __name__ == "__main__":

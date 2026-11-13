@@ -46,14 +46,19 @@
       <label class="range">Smallest stream size shown: <b id="ordOut">all</b>
         <input type="range" id="minOrder" min="1" max="6" step="1" value="1"></label>
       <p class="hint">Stream size is Strahler order: 1 is a tiny headwater trickle, 5+ is a main river.</p>
+      <label class="sel">Records from
+        <select id="since">
+          <option value="0">All years</option><option value="1990">1990 on</option><option value="2000">2000 on</option>
+          <option value="2010">2010 on</option><option value="2015">2015 on</option><option value="2020">2020 on</option>
+        </select></label>
+      <label class="chk"><input type="checkbox" id="showSites" checked> Show survey sites (zoomed in)</label>
       <label class="chk"><input type="checkbox" id="showNoRecord"> Also show waters with no fish records</label>
       <label class="chk"><input type="checkbox" id="onlyStocked"> Only lakes with stocking records</label>
     </section>
 
     <section>
       <h2>National parks</h2>
-      <p class="hint">Banff, Jasper and Waterton records from Parks Canada open data are merged into the matching lake or stream. Survey sites that don't match a mapped water are shown as dots.</p>
-      <label class="chk"><input type="checkbox" id="parkSites" checked> Show Parks Canada survey sites</label>
+      <p class="hint">Banff, Jasper and Waterton survey records from Parks Canada open data are placed on the stretch of stream (or the lake) where they were taken.</p>
       <div id="parksInfo"></div>
     </section>
 
@@ -66,11 +71,11 @@
     <section>
       <h2>Legend</h2>
       <div id="legend"></div>
-      <p class="hint">Each water is coloured by the rarest species recorded in it. Grey = no fish records.</p>
+      <p class="hint">Streams: each stretch is coloured by the rarest species caught on that stretch at FWMIS or Parks Canada survey sites; dashed = no record of the selected species there. Lakes: coloured by the rarest species recorded in the lake. Dots = survey sites.</p>
     </section>
 
     <section class="disclaimer">
-      Waters and species come from the Government of Alberta <a href="https://www.alberta.ca/fisheries-and-wildlife-management-information-system-overview" target="_blank" rel="noopener">FWMIS</a> database: a species is listed if it has ever been recorded anywhere in that waterbody. National park records also come from <a href="https://open.canada.ca/data/en/organization/pc" target="_blank" rel="noopener">Parks Canada open data</a>. <span id="dataInfo"></span><br><br>Seasons, limits and closures: always check the current
+      Waters and species come from the Government of Alberta <a href="https://www.alberta.ca/fisheries-and-wildlife-management-information-system-overview" target="_blank" rel="noopener">FWMIS</a> database. Stream species come from fish survey records (electrofishing, netting, angling and redd counts) at the site where each fish was caught. National park records also come from <a href="https://open.canada.ca/data/en/organization/pc" target="_blank" rel="noopener">Parks Canada open data</a>. <span id="dataInfo"></span><br><br>Seasons, limits and closures: always check the current
       <a href="https://albertaregulations.ca/fishingregs/" target="_blank" rel="noopener">Alberta Guide to Sportfishing Regulations</a>,
       <a href="https://mywildalberta.ca/fishing/" target="_blank" rel="noopener">My Wild Alberta</a> and, in national parks,
       <a href="https://parks.canada.ca/voyage-travel/experience/peche-fishing" target="_blank" rel="noopener">Parks Canada fishing rules</a>.

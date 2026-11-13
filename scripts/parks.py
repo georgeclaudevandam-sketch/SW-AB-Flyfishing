@@ -79,12 +79,14 @@ def records():
                 lon, lat = utm_to_lonlat(11, float(r[7]), float(r[8]))
             except ValueError:
                 lon = lat = None
-            rec = by.setdefault(name, {"park": "Jasper", "name": name, "species": set(), "points": [], "years": set(), "src": DS["jasper"]})
+            rec = by.setdefault(name, {"park": "Jasper", "name": name, "species": set(), "points": [], "years": set(), "sites": [], "src": DS["jasper"]})
             rec["species"].add(code)
+            yr = int(r[1][:4]) if r[1][:4].isdigit() else 0
+            if yr:
+                rec["years"].add(yr)
             if lon is not None and in_park("Jasper", lon, lat):
                 rec["points"].append((round(lon, 5), round(lat, 5)))
-            if r[1][:4].isdigit():
-                rec["years"].add(int(r[1][:4]))
+                rec["sites"].append({"lon": round(lon, 5), "lat": round(lat, 5), "yr": yr, "codes": {code}, "method": r[3].strip()})
         out += by.values()
 
     # Waterton lakes: current (2011) species per lake, no coordinates.
@@ -97,7 +99,7 @@ def records():
             name, code = r[1].strip(), norm_code(r[8])
             if not name:
                 continue
-            rec = by.setdefault(name, {"park": "Waterton", "name": name, "kind": "lake", "species": set(), "points": [], "years": {2011}, "src": DS["waterton_lakes"]})
+            rec = by.setdefault(name, {"park": "Waterton", "name": name, "kind": "lake", "species": set(), "points": [], "years": {2011}, "sites": [], "src": DS["waterton_lakes"]})
             if code:
                 rec["species"].add(code)
         out += [r for r in by.values() if r["species"]]
@@ -111,21 +113,25 @@ def records():
             if len(r) < 17 or not r[2].strip():
                 continue
             name = r[2].strip()
-            rec = by.setdefault(name, {"park": "Waterton", "name": name, "kind": "stream", "species": set(), "points": [], "years": {2016}, "src": DS["waterton_streams"]})
+            rec = by.setdefault(name, {"park": "Waterton", "name": name, "kind": "stream", "species": set(), "points": [], "years": {2016}, "sites": [], "src": DS["waterton_streams"]})
+            found = set()
             for i, code in cols.items():
                 try:
                     if float(r[i] or 0) > 0:
-                        rec["species"].add(code)
+                        found.add(code)
                 except ValueError:
                     pass
             for part in r[16].split(","):
                 m = re.match(r"\s*\d+\s+(.+?)\s*$", part)
                 if m and norm_code(m.group(1)):
-                    rec["species"].add(norm_code(m.group(1)))
+                    found.add(norm_code(m.group(1)))
+            rec["species"] |= found
             try:
                 lon, lat = utm_to_lonlat(int(r[3]), float(r[4]), float(r[5]))
                 if in_park("Waterton", lon, lat):
                     rec["points"].append((round(lon, 5), round(lat, 5)))
+                    if found:
+                        rec["sites"].append({"lon": round(lon, 5), "lat": round(lat, 5), "yr": 2016, "codes": found, "method": "Electrofishing"})
             except ValueError:
                 pass
         out += [r for r in by.values() if r["species"]]

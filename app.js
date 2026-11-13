@@ -18,9 +18,10 @@
   let passing = new Set(), selectedId = null;
   const chunkData = {};      // chunk key -> {id: geometry}
   const chunkExtra = {};     // chunk key -> waters with no fish records (geometry + name only)
+  const chunkPts = {};       // chunk key -> survey sites not on a mapped water
   const chunkLoading = {};
   const sort = store.get('sort2', { key: 'name', desc: false });
-  const dispName = it => it.n || it.a || 'Unnamed ' + (it.k === 'l' ? 'lake' : it.k === 'p' ? 'site' : 'stream');
+  const dispName = it => it.n || it.a || 'Unnamed ' + (it.k === 'l' ? 'lake' : 'stream');
   const spName = c => (SP[c] ? SP[c].name : c);
   const spColor = c => (SP[c] ? SP[c].color : '#666');
 
@@ -54,50 +55,50 @@
   let hiLayer = null;
 
   /* ---------------- Filters ---------------- */
-  const F = Object.assign({ species: null, match: 'any', lakes: true, streams: true, minOrder: 1, noRecord: false, onlyStocked: false, labels: true }, store.get('filters2', {}));
+  const F = Object.assign({ species: null, match: 'any', lakes: true, streams: true, minOrder: 1, noRecord: false, onlyStocked: false, labels: true, since: 0, sites: true }, store.get('filters3', {}));
   function readFilters() {
     F.species = $$('#speciesList input:checked').map(i => i.value);
     F.match = $('input[name=match]:checked').value;
     F.lakes = $('#showLakes').checked; F.streams = $('#showStreams').checked;
     F.minOrder = +$('#minOrder').value;
-    F.noRecord = $('#showNoRecord').checked; F.onlyStocked = $('#onlyStocked').checked; F.parkSites = $('#parkSites').checked;
-    F.labels = $('#labels').checked;
-    store.set('filters2', F);
+    F.noRecord = $('#showNoRecord').checked; F.onlyStocked = $('#onlyStocked').checked;
+    F.labels = $('#labels').checked; F.since = +$('#since').value; F.sites = $('#showSites').checked;
+    store.set('filters3', F);
   }
   function writeFilters() {
     $$('#speciesList input').forEach(i => { i.checked = !F.species || F.species.includes(i.value); });
     $$('input[name=match]').forEach(i => { i.checked = i.value === F.match; });
     $('#showLakes').checked = F.lakes; $('#showStreams').checked = F.streams;
-    $('#minOrder').value = F.minOrder; $('#showNoRecord').checked = F.noRecord; $('#onlyStocked').checked = F.onlyStocked; $('#parkSites').checked = F.parkSites !== false;
-    $('#labels').checked = F.labels;
+    $('#minOrder').value = F.minOrder; $('#showNoRecord').checked = F.noRecord; $('#onlyStocked').checked = F.onlyStocked;
+    $('#labels').checked = F.labels; $('#since').value = F.since; $('#showSites').checked = F.sites;
   }
-  const allSp = it => it.st ? [...new Set(it.sp.concat(Object.keys(it.st)))] : it.sp;
+  // Species in a {code: lastYear} map that pass the "records since" filter (year 0 = undated list).
+  const spIn = y => Object.keys(y || {}).filter(c => !F.since || y[c] === 0 || y[c] >= F.since).sort();
+  function allSp(it) {
+    const sp = new Set(spIn(it.y));
+    if (it.st) Object.entries(it.st).forEach(([c, yrs]) => { if (!F.since || !yrs.length || yrs[yrs.length - 1] >= F.since) sp.add(c); });
+    return [...sp].sort();
+  }
+  const selMatch = sp => { const sel = F.species || []; if (!sel.length || !sp.length) return false; return F.match === 'all' ? sel.every(c => sp.includes(c)) : sp.some(c => sel.includes(c)); };
   function passes(it) {
-    if (it.k === 'p') { if (!F.parkSites) return false; }
-    else if (it.k === 'l' ? !F.lakes : !F.streams) return false;
+    if (it.k === 'l' ? !F.lakes : !F.streams) return false;
     if (it.k === 's' && (it.o || 1) < F.minOrder) return false;
     if (F.onlyStocked && !it.st) return false;
-    const sp = allSp(it);
-    if (!sp.length) return F.noRecord;
-    const sel = F.species || [];
-    if (!sel.length) return false;
-    return F.match === 'all' ? sel.every(c => sp.includes(c)) : sp.some(c => sel.includes(c));
+    return selMatch(allSp(it));
   }
-  const topSpecies = it => { const sp = allSp(it); return RARITY.find(c => sp.includes(c)) || sp[0]; };
-  const colorOf = it => { const t = topSpecies(it); return t ? spColor(t) : NO_REC; };
+  const rarest = sp => RARITY.find(c => sp.includes(c)) || sp[0];
+  const colorOfSp = sp => { const t = rarest(sp); return t ? spColor(t) : NO_REC; };
+  const topSpecies = it => rarest(allSp(it));
+  const colorOf = it => colorOfSp(allSp(it));
+  const yrs = (it, c) => { const r = (it.yr || {})[c]; return r && r[1] ? (r[0] && r[0] !== r[1] ? `${r[0]}–${r[1]}` : `${r[1]}`) : ''; };
 
   /* ---------------- Chunk loading ---------------- */
+  const inBox = (bb, b) => !(bb[2] < b.getWest() || bb[0] > b.getEast() || bb[3] < b.getSouth() || bb[1] > b.getNorth());
   function chunksInView() {
     const b = map.getBounds().pad(0.1), d = META.chunkDeg;
     const keys = new Set();
-    // Any item whose bbox intersects the view pulls in its chunk (rivers can be long).
-    for (const it of ITEMS) {
-      if (!passing.has(it.id)) continue;
-      const bb = it.b;
-      if (bb[2] < b.getWest() || bb[0] > b.getEast() || bb[3] < b.getSouth() || bb[1] > b.getNorth()) continue;
-      keys.add(it.ch);
-    }
-    if (F.noRecord && map.getZoom() >= 10) {
+    for (const it of ITEMS) if (passing.has(it.id) && inBox(it.b, b)) keys.add(it.ch);
+    if ((F.noRecord || F.sites) && map.getZoom() >= 10) {
       for (let x = Math.floor(b.getWest() / d); x <= Math.floor(b.getEast() / d); x++)
         for (let y = Math.floor(b.getSouth() / d); y <= Math.floor(b.getNorth() / d); y++) keys.add(`${x}_${y}`);
     }
@@ -107,19 +108,22 @@
     if (chunkData[k]) return Promise.resolve();
     if (chunkLoading[k]) return chunkLoading[k];
     return (chunkLoading[k] = fetch(`data/water/c_${k}.json`).then(r => r.json()).then(arr => {
-      const m = {}, extra = []; arr.forEach(f => { m[f.id] = f.g; if (f.k) extra.push(f); }); chunkData[k] = m; chunkExtra[k] = extra;
+      const m = {}, extra = [], pts = [];
+      arr.forEach(f => { if (f.pts) pts.push(...f.pts); else { m[f.id] = f; if (f.k) extra.push(f); } });
+      chunkData[k] = m; chunkExtra[k] = extra; chunkPts[k] = pts;
     }).catch(() => { delete chunkLoading[k]; }));
   }
 
   /* ---------------- Drawing ---------------- */
   let drawToken = 0;
+  const swap = g => g.map(part => part.map(c => [c[1], c[0]]));
+  const mid = g => { const p = g.reduce((a, b) => (b.length > a.length ? b : a)); return p[Math.floor(p.length / 2)]; };
   async function draw() {
     if (!META) return;
     const token = ++drawToken;
-    const keys = chunksInView();
     const z = map.getZoom();
+    const keys = chunksInView();
     if (keys.length > 40 && z < 9) {
-      // Too far out to draw full geometry: show centroids instead.
       waterLayer.clearLayers(); labelLayer.clearLayers();
       const b = map.getBounds();
       ITEMS.forEach(it => {
@@ -128,62 +132,67 @@
         L.circleMarker([it.c[1], it.c[0]], { renderer: canvas, radius: it.k === 'l' ? 4 : 3, weight: 1, color: '#fff', fillColor: colorOf(it), fillOpacity: 1 })
           .on('click', () => select(it.id, false)).addTo(waterLayer);
       });
-      $('#listInfo').textContent = 'Zoom in to see full lake and stream outlines.';
+      $('#listInfo').textContent = 'Zoom in to see lake outlines and each stretch of stream.';
       return renderList();
     }
     await Promise.all(keys.map(loadChunk));
     if (token !== drawToken) return;
-    waterLayer.clearLayers();
+    waterLayer.clearLayers(); labelLayer.clearLayers();
     const b = map.getBounds().pad(0.1);
-    const lakes = [], streams = [];
-    const parkPts = [];
-    for (const it of ITEMS) {
-      if (!passing.has(it.id)) continue;
-      const bb = it.b;
-      if (bb[2] < b.getWest() || bb[0] > b.getEast() || bb[3] < b.getSouth() || bb[1] > b.getNorth()) continue;
-      if (it.k === 'p') { parkPts.push(it); continue; }
-      const g = (chunkData[it.ch] || {})[it.id];
-      if (!g) continue;
-      (it.k === 'l' ? lakes : streams).push([it, g]);
-    }
-    const swap = g => g.map(part => part.map(c => [c[1], c[0]]));
+    const labels = [];
     if (F.noRecord && z >= 10) {
       for (const k of keys) for (const f of (chunkExtra[k] || [])) {
         if (f.k === 'l' ? !F.lakes : (!F.streams || (f.o || 1) < F.minOrder)) continue;
-        const g = swap(f.g);
-        const lyr = f.k === 'l' ? L.polygon(g, { renderer: canvas, color: NO_REC, weight: 1, fillColor: NO_REC, fillOpacity: 0.2 }) : L.polyline(g, { renderer: canvas, color: NO_REC, weight: Math.min(1 + (f.o || 1) * 0.6, 4), opacity: 0.6 });
+        const g = f.g || (f.r || []).flatMap(r => r.g);
+        const lyr = f.k === 'l' ? L.polygon(swap(g), { renderer: canvas, color: NO_REC, weight: 1, fillColor: NO_REC, fillOpacity: 0.2 }) : L.polyline(swap(g), { renderer: canvas, color: NO_REC, weight: Math.min(1 + (f.o || 1) * 0.5, 3), opacity: 0.5 });
         lyr.bindTooltip((f.n || 'Unnamed') + ' · no fish records', { sticky: true }).addTo(waterLayer);
       }
     }
-    streams.sort((a, b2) => (a[0].o || 1) - (b2[0].o || 1));
-    for (const [it, g] of lakes) {
-      const col = colorOf(it);
-      L.polygon(swap(g), { renderer: canvas, color: col, weight: 2, fillColor: col, fillOpacity: 0.35 }).on('click', () => select(it.id, false)).addTo(waterLayer);
+    const items = ITEMS.filter(it => passing.has(it.id) && inBox(it.b, b));
+    items.sort((a, c) => (a.k === 'l') - (c.k === 'l') || (a.o || 1) - (c.o || 1));
+    for (const it of items) {
+      const f = (chunkData[it.ch] || {})[it.id];
+      if (!f) continue;
+      if (it.k === 'l') {
+        const col = colorOf(it);
+        L.polygon(swap(f.g), { renderer: canvas, color: col, weight: 2, fillColor: col, fillOpacity: 0.35 }).on('click', () => select(it.id, false)).addTo(waterLayer);
+        labels.push([it.c[1], it.c[0], allSp(it), 1000]);
+        continue;
+      }
+      // Streams: each stretch (reach) shows only the species caught on that stretch.
+      for (const r of f.r || []) {
+        const sp = spIn(r.y);
+        const w = Math.min(1 + (r.o || it.o || 1) * 0.7, 6);
+        const lyr = selMatch(sp)
+          ? L.polyline(swap(r.g), { renderer: canvas, color: colorOfSp(sp), weight: w, opacity: 0.95 })
+          : L.polyline(swap(r.g), { renderer: canvas, color: '#6f8f9a', weight: Math.max(1, w - 2), opacity: 0.55, dashArray: '4 5' });
+        lyr.on('click', () => select(it.id, false)).addTo(waterLayer);
+        if (sp.length) { const m = mid(r.g); labels.push([m[1], m[0], sp, r.o || 1]); }
+      }
     }
-    for (const [it, g] of streams) {
-      const o = it.o || 1;
-      L.polyline(swap(g), { renderer: canvas, color: colorOf(it), weight: Math.min(1 + o * 0.8, 6), opacity: it.sp.length ? 0.95 : 0.6 }).on('click', () => select(it.id, false)).addTo(waterLayer);
-    }
-    for (const it of parkPts) {
-      it.pts.forEach(pt => L.circleMarker([pt[1], pt[0]], { renderer: canvas, radius: 6, weight: 2, color: '#0e2a44', fillColor: colorOf(it), fillOpacity: 1 })
-        .on('click', () => select(it.id, false)).addTo(waterLayer));
-    }
-    drawLabels();
+    if (F.sites && z >= 11) drawSites(keys, items);
+    drawLabels(labels);
     renderList();
   }
-  function drawLabels() {
-    labelLayer.clearLayers();
+  function siteLayer(s, name) {
+    const sp = spIn(s[2]);
+    if (!sp.length) return;
+    const src = s[4] && s[4].startsWith('pc:') ? `Parks Canada (${s[4].slice(3)})` : 'FWMIS survey';
+    const tip = `<b>${esc(name || 'Survey site')}</b><br>${sp.map(c => `<span class="code">${c}</span> ${esc(spName(c))}${s[2][c] ? ' (' + s[2][c] + ')' : ''}`).join('<br>')}<br><span class="hint">${src}${s[5] && s[5].length ? ' · ' + esc(s[5].join(', ')) : ''} · ${s[3]} record${s[3] > 1 ? 's' : ''}</span>`;
+    L.circleMarker([s[1], s[0]], { renderer: canvas, radius: 4, weight: 1.5, color: '#fff', fillColor: selMatch(sp) ? colorOfSp(sp) : '#777', fillOpacity: 1 })
+      .bindTooltip(tip, { direction: 'top' }).addTo(waterLayer);
+  }
+  function drawSites(keys, items) {
+    const b = map.getBounds();
+    for (const it of items) { const f = (chunkData[it.ch] || {})[it.id]; (f && f.s || []).forEach(s => { if (b.contains([s[1], s[0]])) siteLayer(s, dispName(it)); }); }
+    for (const k of keys) (chunkPts[k] || []).forEach(s => { if (b.contains([s[1], s[0]])) siteLayer(s, s[6] ? s[6] + ' (not on a mapped water)' : 'Survey site not on a mapped water'); });
+  }
+  function drawLabels(labels) {
     if (!F.labels || map.getZoom() < LABEL_ZOOM) return;
     const b = map.getBounds();
-    let n = 0;
-    const cand = ITEMS.filter(it => passing.has(it.id) && allSp(it).length && b.contains([it.c[1], it.c[0]]))
-      .sort((a, c) => (c.k === 'l') - (a.k === 'l') || (c.o || 0) - (a.o || 0));
-    for (const it of cand) {
-      if (n++ >= MAX_LABELS) break;
-      const sp = allSp(it);
+    labels.filter(l => l[2].length && b.contains([l[0], l[1]])).sort((a, c) => c[3] - a[3]).slice(0, MAX_LABELS).forEach(l =>
       L.tooltip({ permanent: true, direction: 'right', className: 'codes-lbl', offset: [4, 0], interactive: false })
-        .setLatLng([it.c[1], it.c[0]]).setContent(sp.join(' ')).addTo(labelLayer);
-    }
+        .setLatLng([l[0], l[1]]).setContent(l[2].join(' ')).addTo(labelLayer));
   }
   map.on('moveend', () => { draw(); });
 
@@ -200,7 +209,7 @@
     const q = $('#q').value.trim().toLowerCase();
     const inView = $('#inView').checked, b = map.getBounds();
     let rows = ITEMS.filter(it => passing.has(it.id) &&
-      (!inView || b.contains([it.c[1], it.c[0]])) &&
+      (!inView || inBox(it.b, b)) &&
       (!q || ((it.n || '') + ' ' + (it.a || '') + ' ' + allSp(it).join(' ')).toLowerCase().includes(q)));
     const total = rows.length;
     if (sort.key === 'codes') rows.sort((a, c) => (RARITY.indexOf(topSpecies(a)) + 1 || 99) - (RARITY.indexOf(topSpecies(c)) + 1 || 99));
@@ -212,8 +221,8 @@
     $('#siteRows').innerHTML = rows.map(it => `
       <tr data-id="${it.id}" class="${it.id === selectedId ? 'sel' : ''}">
         <td>${esc(dispName(it))}${it.st ? '<span class="badge pc">stocked</span>' : ''}
-          <div class="sub">${it.k === 'p' ? esc(it.park) + ' NP survey site' : it.k === 'l' ? 'Lake' : 'Stream' + (it.o ? ', order ' + it.o : '')}${it.pk ? ' · ' + esc(it.pk[0].park) + ' NP' : ''}${it.a && it.n ? ' · ' + esc(it.a) : ''}</div></td>
-        <td class="codes">${allSp(it).map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ') || '<span class="hint">no records</span>'}</td>
+          <div class="sub">${it.k === 'l' ? 'Lake' : 'Stream' + (it.o ? ', order ' + it.o : '')}${it.pk ? ' · ' + esc(Object.keys(it.pk).join(', ')) + ' NP' : ''}${it.a && it.n ? ' · ' + esc(it.a) : ''}</div></td>
+        <td class="codes">${allSp(it).map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ')}</td>
       </tr>`).join('') || '<tr><td colspan="2" class="hint">Nothing matches. Select more species, widen the filters or pan the map.</td></tr>';
   }
 
@@ -221,29 +230,29 @@
   async function select(id, pan = true) {
     selectedId = id;
     const it = BYID[id];
-    if (it.ch) await loadChunk(it.ch);
+    await loadChunk(it.ch);
     if (hiLayer) map.removeLayer(hiLayer);
-    const g = it.k === 'p' ? null : (chunkData[it.ch] || {})[id];
+    const f = (chunkData[it.ch] || {})[id];
+    const g = f ? (f.g || (f.r || []).flatMap(r => r.g)) : null;
     if (g) {
-      const ll = g.map(p => p.map(c => [c[1], c[0]]));
-      hiLayer = (it.k === 'l' ? L.polygon(ll, { color: '#ffeb3b', weight: 5, fill: false }) : L.polyline(ll, { color: '#ffeb3b', weight: 8, opacity: 0.7 })).addTo(map);
-      hiLayer.bringToBack && hiLayer.bringToBack();
+      hiLayer = (it.k === 'l' ? L.polygon(swap(g), { color: '#ffeb3b', weight: 5, fill: false }) : L.polyline(swap(g), { color: '#ffeb3b', weight: 9, opacity: 0.6 })).addTo(map);
+      hiLayer.bringToBack();
       if (pan) map.fitBounds(hiLayer.getBounds(), { maxZoom: 13, padding: [30, 30] });
     } else if (pan) map.setView([it.c[1], it.c[0]], 12);
-    const name = dispName(it);
-    const pk = (it.pk || []).map(r => `<li>${esc(r.park)} National Park${r.years && r.years.length ? ` (${r.years[0]}${r.years.length > 1 ? '–' + r.years[r.years.length - 1] : ''})` : ''}: <span class="code">${r.species.join(' ')}</span> · <a href="${r.src}" target="_blank" rel="noopener">dataset</a></li>`).join('');
-    const stocked = it.st ? Object.entries(it.st).map(([c, yrs]) => `<li><b class="code">${c}</b> ${esc(spName(c))}${yrs.length ? `: ${yrs.length > 6 ? yrs[0] + '–' + yrs[yrs.length - 1] + ` (${yrs.length} years)` : yrs.join(', ')}` : ''}</li>`).join('') : '';
-    const other = it.sp.filter(c => !SP[c]);
+    const sp = allSp(it);
+    const sites = (f && f.s || []).slice().sort((a, c) => Math.max(0, ...Object.values(c[2])) - Math.max(0, ...Object.values(a[2])));
+    const stocked = it.st ? Object.entries(it.st).map(([c, ys]) => `<li><b class="code">${c}</b> ${esc(spName(c))}${ys.length ? `: ${ys.length > 6 ? ys[0] + '–' + ys[ys.length - 1] + ` (${ys.length} years)` : ys.join(', ')}` : ''}</li>`).join('') : '';
     $('#tab-detail').innerHTML = `<div class="detail">
-      <h2>${esc(name)}</h2>
-      <div class="sub hint">${it.k === 'p' ? `${esc(it.park)} National Park survey site (not matched to a mapped waterbody)` : it.k === 'l' ? 'Lake / pond / reservoir' : 'River / stream' + (it.o ? `, Strahler order ${it.o}` : '')}${it.a ? ' · also called ' + esc(it.a) : ''}</div>
-      <h3 class="dh">Species recorded${it.k === 'p' ? ' (Parks Canada)' : it.pk ? ' (FWMIS + Parks Canada)' : ' (FWMIS)'}</h3>
-      <div>${it.sp.length ? it.sp.filter(c => SP[c]).map(c => `<span class="chip"><span class="dot" style="background:${spColor(c)}"></span><b class="code">${c}</b> ${esc(spName(c))}</span>`).join('') : '<span class="hint">No fish records in FWMIS.</span>'}</div>
-      ${other.length ? `<p class="hint">Other species codes: <span class="code">${other.join(' ')}</span></p>` : ''}
-      ${pk ? `<h3 class="dh">Parks Canada surveys</h3><ul class="stock">${pk}</ul>` : ''}
+      <h2>${esc(dispName(it))}</h2>
+      <div class="sub hint">${it.k === 'l' ? 'Lake / pond / reservoir' : 'River / stream' + (it.o ? `, Strahler order ${it.o}` : '')}${it.a && it.n ? ' · also called ' + esc(it.a) : ''}${it.pk ? ' · ' + esc(Object.keys(it.pk).join(', ')) + ' National Park' : ''}</div>
+      <h3 class="dh">${it.k === 's' ? 'Species caught at survey sites on this stream' : 'Species recorded in this lake'}${F.since ? ` (since ${F.since})` : ''}</h3>
+      <div>${sp.length ? sp.map(c => `<span class="chip"><span class="dot" style="background:${spColor(c)}"></span><b class="code">${c}</b> ${esc(spName(c))}${yrs(it, c) ? ` <span class="hint">${yrs(it, c)}</span>` : ''}</span>`).join('') : '<span class="hint">No records.</span>'}</div>
+      ${it.k === 's' ? '<p class="hint">On the map each stretch is coloured only by what was caught on that stretch. Dashed stretches have no survey record of the selected species.</p>' : ''}
       ${stocked ? `<h3 class="dh">Stocking records</h3><ul class="stock">${stocked}</ul>` : ''}
+      ${sites.length ? `<h3 class="dh">Survey sites (${sites.length})</h3><ul class="stock">${sites.slice(0, 40).map(s => `<li><span class="code">${Object.keys(s[2]).sort().join(' ')}</span> · ${Math.max(0, ...Object.values(s[2])) || 'undated'}${s[4].startsWith('pc:') ? ' · Parks Canada' : ''}${s[5] && s[5].length ? ' · ' + esc(s[5].join(', ')) : ''}</li>`).join('')}${sites.length > 40 ? '<li class="hint">…</li>' : ''}</ul>` : ''}
+      ${it.pres && it.pres.length ? `<details><summary class="hint">FWMIS list for the whole river system, not location-specific (${it.pres.length})</summary><p class="code">${it.pres.join(' ')}</p></details>` : ''}
       <dl>
-        ${it.k === 'p' ? '' : `<dt>FWMIS ID</dt><dd class="code">${id.slice(1)}</dd>`}
+        <dt>FWMIS ID</dt><dd class="code">${id.slice(1)}</dd>
         ${it.h ? `<dt>Watershed</dt><dd class="code">HUC ${esc(it.h)}</dd>` : ''}
         <dt>Location</dt><dd class="code">${it.c[1].toFixed(4)}, ${it.c[0].toFixed(4)}</dd>
       </dl>
@@ -252,8 +261,8 @@
         <a href="https://www.google.com/maps/dir/?api=1&destination=${it.c[1]},${it.c[0]}" target="_blank" rel="noopener"><button>Directions</button></a>
         <button id="dCopy">Copy coordinates</button>
       </div>
-      <p class="hint">A species is listed if it has ever been recorded in this waterbody, not necessarily at this spot or today.${it.k === 'p' || it.pk ? ' National parks need a Parks Canada fishing permit and have their own rules.' : ''}
-      Check seasons, limits and closures in the <a href="https://albertaregulations.ca/fishingregs/" target="_blank" rel="noopener">Alberta sportfishing regulations</a>.</p>
+      <p class="hint">Sources: Alberta FWMIS fish survey records${it.pk ? ' and Parks Canada open data (' + Object.entries(it.pk).map(([p, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(p)}</a>`).join(', ') + ')' : ''}. A record means the species was caught there in that year, not that it is there today.
+      ${it.pk ? 'National parks need a Parks Canada fishing permit. ' : ''}Check seasons, limits and closures in the <a href="https://albertaregulations.ca/fishingregs/" target="_blank" rel="noopener">Alberta sportfishing regulations</a>.</p>
     </div>`;
     $('#dRoute').onclick = () => { route.add(L.latLng(it.c[1], it.c[0])); showTab('route'); toast('Added to route'); };
     $('#dCopy').onclick = () => { navigator.clipboard && navigator.clipboard.writeText(`${it.c[1]}, ${it.c[0]}`).then(() => toast('Copied')); };
@@ -368,7 +377,7 @@
   $('#xKml').onclick = () => download('eastern-slopes-waters.kml', `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Eastern Slopes waters</name>\n` +
     exportRows().map(it => `<Placemark><name>${esc(label(it))}</name><description>FWMIS waterbody ${it.id.slice(1)}</description><Point><coordinates>${it.c[0]},${it.c[1]},0</coordinates></Point></Placemark>`).join('\n') +
     '\n</Document></kml>', 'application/vnd.google-earth.kml+xml');
-  $('#xJson').onclick = () => download('eastern-slopes-waters.geojson', JSON.stringify({ type: 'FeatureCollection', features: exportRows().map(it => ({ type: 'Feature', geometry: { type: 'Point', coordinates: it.c }, properties: { name: it.n, kind: it.k === 'l' ? 'lake' : 'stream', species: allSp(it), fwmis_id: it.id.slice(1) } })) }), 'application/geo+json');
+  $('#xJson').onclick = () => download('eastern-slopes-waters.geojson', JSON.stringify({ type: 'FeatureCollection', features: exportRows().map(it => ({ type: 'Feature', geometry: { type: 'Point', coordinates: it.c }, properties: { name: dispName(it), kind: it.k === 'l' ? 'lake' : 'stream', species: allSp(it), fwmis_id: it.id.slice(1) } })) }), 'application/geo+json');
   $('#btnTools').onclick = () => $('#tools').showModal();
 
   /* ---------------- Offline ---------------- */
@@ -418,21 +427,15 @@
       SPECIES = sp; SPECIES.forEach(s => SP[s.code] = s); RARITY = SPECIES.map(s => s.code);
       META = idx.meta; ITEMS = idx.items;
       const pk = (META.parks || {});
-      (pk.unmatched || []).forEach((u, i) => {
-        if (!u.points || !u.points.length) return;
-        const xs = u.points.map(p => p[0]), ys = u.points.map(p => p[1]);
-        ITEMS.push({ id: 'p' + i, k: 'p', n: u.name, park: u.park, sp: u.species, pts: u.points, c: u.points[0],
-          b: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], pk: [{ park: u.park, species: u.species, years: [], src: u.src }] });
-      });
       ITEMS.forEach(it => BYID[it.id] = it);
-      const noLoc = (pk.unmatched || []).filter(u => !u.points || !u.points.length);
+      const noLoc = pk.unmatched || [];
       const bw = pk.banffWatersheds || {};
-      $('#parksInfo').innerHTML = (Object.keys(bw).length ? `<p class="hint"><b>Banff stream survey (2015–17)</b>, by watershed only: ` +
+      $('#parksInfo').innerHTML = (Object.keys(bw).length ? `<p class="hint"><b>Banff stream survey (2015–17)</b>, reported by watershed only: ` +
         Object.entries(bw).map(([w, spp]) => `${esc(w)}: ` + Object.entries(spp).filter(([, v]) => parseFloat(v[0]) > 0 || parseFloat(v[1]) > 0).map(([c]) => `<span class="code">${esc(c)}</span>`).join(' ')).join('; ') +
         ` · <a href="${(pk.datasets || {}).banff_streams}" target="_blank" rel="noopener">dataset</a></p>` : '') +
         (noLoc.length ? `<details><summary class="hint">Park records with no map location (${noLoc.length})</summary><ul class="stock">` +
         noLoc.map(u => `<li>${esc(u.park)}: ${esc(u.name)} <span class="code">${u.species.join(' ')}</span></li>`).join('') + '</ul></details>' : '');
-      const counts = {}; ITEMS.forEach(it => allSp(it).forEach(c => counts[c] = (counts[c] || 0) + 1));
+      const counts = {}; ITEMS.forEach(it => Object.keys(it.y || {}).concat(Object.keys(it.st || {})).forEach(c => counts[c] = (counts[c] || 0) + 1));
       // Known species first (in our order), then any other code present in the data.
       const extra = Object.keys(counts).filter(c => !SP[c]).sort();
       const groups = [...new Set(SPECIES.map(s => s.group))];
