@@ -189,7 +189,7 @@
 
   function applyFilters() {
     passing = new Set(ITEMS.filter(passes).map(it => it.id));
-    $('#count').textContent = `${passing.size.toLocaleString()} of ${ITEMS.length.toLocaleString()} waters`;
+    $('#count').textContent = `${passing.size.toLocaleString()} waters with selected fish · ${(META.total || ITEMS.length).toLocaleString()} lakes & streams mapped`;
     $('#ordOut').textContent = F.minOrder <= 1 ? 'all' : `order ${F.minOrder}+`;
     draw();
   }
