@@ -51,6 +51,13 @@
     </section>
 
     <section>
+      <h2>National parks</h2>
+      <p class="hint">Banff, Jasper and Waterton records from Parks Canada open data are merged into the matching lake or stream. Survey sites that don't match a mapped water are shown as dots.</p>
+      <label class="chk"><input type="checkbox" id="parkSites" checked> Show Parks Canada survey sites</label>
+      <div id="parksInfo"></div>
+    </section>
+
+    <section>
       <h2>Map</h2>
       <label class="chk"><input type="checkbox" id="labels" checked> Species code labels</label>
       <p class="hint">Change the basemap or add trails with the layer button on the map.</p>
@@ -63,7 +70,7 @@
     </section>
 
     <section class="disclaimer">
-      Waters and species come from the Government of Alberta <a href="https://www.alberta.ca/fisheries-and-wildlife-management-information-system-overview" target="_blank" rel="noopener">FWMIS</a> database: a species is listed if it has ever been recorded anywhere in that waterbody. National parks are not covered by FWMIS. <span id="dataInfo"></span><br><br>Seasons, limits and closures: always check the current
+      Waters and species come from the Government of Alberta <a href="https://www.alberta.ca/fisheries-and-wildlife-management-information-system-overview" target="_blank" rel="noopener">FWMIS</a> database: a species is listed if it has ever been recorded anywhere in that waterbody. National park records also come from <a href="https://open.canada.ca/data/en/organization/pc" target="_blank" rel="noopener">Parks Canada open data</a>. <span id="dataInfo"></span><br><br>Seasons, limits and closures: always check the current
       <a href="https://albertaregulations.ca/fishingregs/" target="_blank" rel="noopener">Alberta Guide to Sportfishing Regulations</a>,
       <a href="https://mywildalberta.ca/fishing/" target="_blank" rel="noopener">My Wild Alberta</a> and, in national parks,
       <a href="https://parks.canada.ca/voyage-travel/experience/peche-fishing" target="_blank" rel="noopener">Parks Canada fishing rules</a>.

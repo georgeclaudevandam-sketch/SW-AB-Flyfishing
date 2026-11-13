@@ -17,8 +17,10 @@
   let SPECIES = [], SP = {}, META = null, ITEMS = [], BYID = {}, RARITY = [];
   let passing = new Set(), selectedId = null;
   const chunkData = {};      // chunk key -> {id: geometry}
+  const chunkExtra = {};     // chunk key -> waters with no fish records (geometry + name only)
   const chunkLoading = {};
   const sort = store.get('sort2', { key: 'name', desc: false });
+  const dispName = it => it.n || it.a || 'Unnamed ' + (it.k === 'l' ? 'lake' : it.k === 'p' ? 'site' : 'stream');
   const spName = c => (SP[c] ? SP[c].name : c);
   const spColor = c => (SP[c] ? SP[c].color : '#666');
 
@@ -58,7 +60,7 @@
     F.match = $('input[name=match]:checked').value;
     F.lakes = $('#showLakes').checked; F.streams = $('#showStreams').checked;
     F.minOrder = +$('#minOrder').value;
-    F.noRecord = $('#showNoRecord').checked; F.onlyStocked = $('#onlyStocked').checked;
+    F.noRecord = $('#showNoRecord').checked; F.onlyStocked = $('#onlyStocked').checked; F.parkSites = $('#parkSites').checked;
     F.labels = $('#labels').checked;
     store.set('filters2', F);
   }
@@ -66,12 +68,13 @@
     $$('#speciesList input').forEach(i => { i.checked = !F.species || F.species.includes(i.value); });
     $$('input[name=match]').forEach(i => { i.checked = i.value === F.match; });
     $('#showLakes').checked = F.lakes; $('#showStreams').checked = F.streams;
-    $('#minOrder').value = F.minOrder; $('#showNoRecord').checked = F.noRecord; $('#onlyStocked').checked = F.onlyStocked;
+    $('#minOrder').value = F.minOrder; $('#showNoRecord').checked = F.noRecord; $('#onlyStocked').checked = F.onlyStocked; $('#parkSites').checked = F.parkSites !== false;
     $('#labels').checked = F.labels;
   }
   const allSp = it => it.st ? [...new Set(it.sp.concat(Object.keys(it.st)))] : it.sp;
   function passes(it) {
-    if (it.k === 'l' ? !F.lakes : !F.streams) return false;
+    if (it.k === 'p') { if (!F.parkSites) return false; }
+    else if (it.k === 'l' ? !F.lakes : !F.streams) return false;
     if (it.k === 's' && (it.o || 1) < F.minOrder) return false;
     if (F.onlyStocked && !it.st) return false;
     const sp = allSp(it);
@@ -94,13 +97,17 @@
       if (bb[2] < b.getWest() || bb[0] > b.getEast() || bb[3] < b.getSouth() || bb[1] > b.getNorth()) continue;
       keys.add(it.ch);
     }
+    if (F.noRecord && map.getZoom() >= 10) {
+      for (let x = Math.floor(b.getWest() / d); x <= Math.floor(b.getEast() / d); x++)
+        for (let y = Math.floor(b.getSouth() / d); y <= Math.floor(b.getNorth() / d); y++) keys.add(`${x}_${y}`);
+    }
     return [...keys].filter(k => META.chunks.includes(k));
   }
   function loadChunk(k) {
     if (chunkData[k]) return Promise.resolve();
     if (chunkLoading[k]) return chunkLoading[k];
     return (chunkLoading[k] = fetch(`data/water/c_${k}.json`).then(r => r.json()).then(arr => {
-      const m = {}; arr.forEach(f => m[f.id] = f.g); chunkData[k] = m;
+      const m = {}, extra = []; arr.forEach(f => { m[f.id] = f.g; if (f.k) extra.push(f); }); chunkData[k] = m; chunkExtra[k] = extra;
     }).catch(() => { delete chunkLoading[k]; }));
   }
 
@@ -129,15 +136,25 @@
     waterLayer.clearLayers();
     const b = map.getBounds().pad(0.1);
     const lakes = [], streams = [];
+    const parkPts = [];
     for (const it of ITEMS) {
       if (!passing.has(it.id)) continue;
       const bb = it.b;
       if (bb[2] < b.getWest() || bb[0] > b.getEast() || bb[3] < b.getSouth() || bb[1] > b.getNorth()) continue;
+      if (it.k === 'p') { parkPts.push(it); continue; }
       const g = (chunkData[it.ch] || {})[it.id];
       if (!g) continue;
       (it.k === 'l' ? lakes : streams).push([it, g]);
     }
     const swap = g => g.map(part => part.map(c => [c[1], c[0]]));
+    if (F.noRecord && z >= 10) {
+      for (const k of keys) for (const f of (chunkExtra[k] || [])) {
+        if (f.k === 'l' ? !F.lakes : (!F.streams || (f.o || 1) < F.minOrder)) continue;
+        const g = swap(f.g);
+        const lyr = f.k === 'l' ? L.polygon(g, { renderer: canvas, color: NO_REC, weight: 1, fillColor: NO_REC, fillOpacity: 0.2 }) : L.polyline(g, { renderer: canvas, color: NO_REC, weight: Math.min(1 + (f.o || 1) * 0.6, 4), opacity: 0.6 });
+        lyr.bindTooltip((f.n || 'Unnamed') + ' · no fish records', { sticky: true }).addTo(waterLayer);
+      }
+    }
     streams.sort((a, b2) => (a[0].o || 1) - (b2[0].o || 1));
     for (const [it, g] of lakes) {
       const col = colorOf(it);
@@ -146,6 +163,10 @@
     for (const [it, g] of streams) {
       const o = it.o || 1;
       L.polyline(swap(g), { renderer: canvas, color: colorOf(it), weight: Math.min(1 + o * 0.8, 6), opacity: it.sp.length ? 0.95 : 0.6 }).on('click', () => select(it.id, false)).addTo(waterLayer);
+    }
+    for (const it of parkPts) {
+      it.pts.forEach(pt => L.circleMarker([pt[1], pt[0]], { renderer: canvas, radius: 6, weight: 2, color: '#0e2a44', fillColor: colorOf(it), fillOpacity: 1 })
+        .on('click', () => select(it.id, false)).addTo(waterLayer));
     }
     drawLabels();
     renderList();
@@ -183,15 +204,15 @@
       (!q || ((it.n || '') + ' ' + (it.a || '') + ' ' + allSp(it).join(' ')).toLowerCase().includes(q)));
     const total = rows.length;
     if (sort.key === 'codes') rows.sort((a, c) => (RARITY.indexOf(topSpecies(a)) + 1 || 99) - (RARITY.indexOf(topSpecies(c)) + 1 || 99));
-    else rows.sort((a, c) => (a.n || '~').localeCompare(c.n || '~'));
+    else rows.sort((a, c) => dispName(a).localeCompare(dispName(c)));
     if (sort.desc) rows.reverse();
     rows = rows.slice(0, 300);
     $$('.sites th').forEach(th => { th.classList.toggle('sorted', th.dataset.sort === sort.key); th.classList.toggle('desc', th.dataset.sort === sort.key && sort.desc); });
     if (map.getZoom() >= 9 || !inView) $('#listInfo').textContent = `${total.toLocaleString()} waters${total > 300 ? ' (showing first 300)' : ''}`;
     $('#siteRows').innerHTML = rows.map(it => `
       <tr data-id="${it.id}" class="${it.id === selectedId ? 'sel' : ''}">
-        <td>${esc(it.n || 'Unnamed ' + (it.k === 'l' ? 'lake' : 'stream'))}${it.st ? '<span class="badge pc">stocked</span>' : ''}
-          <div class="sub">${it.k === 'l' ? 'Lake' : 'Stream' + (it.o ? ', order ' + it.o : '')}${it.a ? ' · ' + esc(it.a) : ''}</div></td>
+        <td>${esc(dispName(it))}${it.st ? '<span class="badge pc">stocked</span>' : ''}
+          <div class="sub">${it.k === 'p' ? esc(it.park) + ' NP survey site' : it.k === 'l' ? 'Lake' : 'Stream' + (it.o ? ', order ' + it.o : '')}${it.pk ? ' · ' + esc(it.pk[0].park) + ' NP' : ''}${it.a && it.n ? ' · ' + esc(it.a) : ''}</div></td>
         <td class="codes">${allSp(it).map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ') || '<span class="hint">no records</span>'}</td>
       </tr>`).join('') || '<tr><td colspan="2" class="hint">Nothing matches. Select more species, widen the filters or pan the map.</td></tr>';
   }
@@ -200,27 +221,29 @@
   async function select(id, pan = true) {
     selectedId = id;
     const it = BYID[id];
-    await loadChunk(it.ch);
+    if (it.ch) await loadChunk(it.ch);
     if (hiLayer) map.removeLayer(hiLayer);
-    const g = (chunkData[it.ch] || {})[id];
+    const g = it.k === 'p' ? null : (chunkData[it.ch] || {})[id];
     if (g) {
       const ll = g.map(p => p.map(c => [c[1], c[0]]));
       hiLayer = (it.k === 'l' ? L.polygon(ll, { color: '#ffeb3b', weight: 5, fill: false }) : L.polyline(ll, { color: '#ffeb3b', weight: 8, opacity: 0.7 })).addTo(map);
       hiLayer.bringToBack && hiLayer.bringToBack();
       if (pan) map.fitBounds(hiLayer.getBounds(), { maxZoom: 13, padding: [30, 30] });
     } else if (pan) map.setView([it.c[1], it.c[0]], 12);
-    const name = it.n || 'Unnamed ' + (it.k === 'l' ? 'lake' : 'stream');
+    const name = dispName(it);
+    const pk = (it.pk || []).map(r => `<li>${esc(r.park)} National Park${r.years && r.years.length ? ` (${r.years[0]}${r.years.length > 1 ? '–' + r.years[r.years.length - 1] : ''})` : ''}: <span class="code">${r.species.join(' ')}</span> · <a href="${r.src}" target="_blank" rel="noopener">dataset</a></li>`).join('');
     const stocked = it.st ? Object.entries(it.st).map(([c, yrs]) => `<li><b class="code">${c}</b> ${esc(spName(c))}${yrs.length ? `: ${yrs.length > 6 ? yrs[0] + '–' + yrs[yrs.length - 1] + ` (${yrs.length} years)` : yrs.join(', ')}` : ''}</li>`).join('') : '';
     const other = it.sp.filter(c => !SP[c]);
     $('#tab-detail').innerHTML = `<div class="detail">
       <h2>${esc(name)}</h2>
-      <div class="sub hint">${it.k === 'l' ? 'Lake / pond / reservoir' : 'River / stream' + (it.o ? `, Strahler order ${it.o}` : '')}${it.a ? ' · also called ' + esc(it.a) : ''}</div>
-      <h3 class="dh">Species recorded (FWMIS)</h3>
+      <div class="sub hint">${it.k === 'p' ? `${esc(it.park)} National Park survey site (not matched to a mapped waterbody)` : it.k === 'l' ? 'Lake / pond / reservoir' : 'River / stream' + (it.o ? `, Strahler order ${it.o}` : '')}${it.a ? ' · also called ' + esc(it.a) : ''}</div>
+      <h3 class="dh">Species recorded${it.k === 'p' ? ' (Parks Canada)' : it.pk ? ' (FWMIS + Parks Canada)' : ' (FWMIS)'}</h3>
       <div>${it.sp.length ? it.sp.filter(c => SP[c]).map(c => `<span class="chip"><span class="dot" style="background:${spColor(c)}"></span><b class="code">${c}</b> ${esc(spName(c))}</span>`).join('') : '<span class="hint">No fish records in FWMIS.</span>'}</div>
       ${other.length ? `<p class="hint">Other species codes: <span class="code">${other.join(' ')}</span></p>` : ''}
+      ${pk ? `<h3 class="dh">Parks Canada surveys</h3><ul class="stock">${pk}</ul>` : ''}
       ${stocked ? `<h3 class="dh">Stocking records</h3><ul class="stock">${stocked}</ul>` : ''}
       <dl>
-        <dt>Waterbody ID</dt><dd class="code">${id.slice(1)}</dd>
+        ${it.k === 'p' ? '' : `<dt>FWMIS ID</dt><dd class="code">${id.slice(1)}</dd>`}
         ${it.h ? `<dt>Watershed</dt><dd class="code">HUC ${esc(it.h)}</dd>` : ''}
         <dt>Location</dt><dd class="code">${it.c[1].toFixed(4)}, ${it.c[0].toFixed(4)}</dd>
       </dl>
@@ -229,7 +252,7 @@
         <a href="https://www.google.com/maps/dir/?api=1&destination=${it.c[1]},${it.c[0]}" target="_blank" rel="noopener"><button>Directions</button></a>
         <button id="dCopy">Copy coordinates</button>
       </div>
-      <p class="hint">A species is listed if FWMIS has ever recorded it anywhere in this waterbody, not necessarily at this spot or today.
+      <p class="hint">A species is listed if it has ever been recorded in this waterbody, not necessarily at this spot or today.${it.k === 'p' || it.pk ? ' National parks need a Parks Canada fishing permit and have their own rules.' : ''}
       Check seasons, limits and closures in the <a href="https://albertaregulations.ca/fishingregs/" target="_blank" rel="noopener">Alberta sportfishing regulations</a>.</p>
     </div>`;
     $('#dRoute').onclick = () => { route.add(L.latLng(it.c[1], it.c[0])); showTab('route'); toast('Added to route'); };
@@ -339,7 +362,7 @@
   }
   const gpxWrap = body => `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Eastern Slopes Trout Map" xmlns="http://www.topografix.com/GPX/1/1">\n${body}\n</gpx>`;
   const exportRows = () => { const b = map.getBounds(); return ITEMS.filter(it => passing.has(it.id) && b.contains([it.c[1], it.c[0]])); };
-  const label = it => `${it.n || 'Unnamed ' + (it.k === 'l' ? 'lake' : 'stream')} [${allSp(it).join(' ')}]`;
+  const label = it => `${dispName(it)} [${allSp(it).join(' ')}]`;
   $('#xGpx').onclick = () => download('eastern-slopes-waters.gpx', gpxWrap(exportRows().map(it =>
     `<wpt lat="${it.c[1]}" lon="${it.c[0]}"><name>${esc(label(it))}</name><desc>FWMIS waterbody ${it.id.slice(1)}</desc><sym>Fishing Area</sym></wpt>`).join('\n')), 'application/gpx+xml');
   $('#xKml').onclick = () => download('eastern-slopes-waters.kml', `<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Eastern Slopes waters</name>\n` +
@@ -393,7 +416,22 @@
   Promise.all([fetch('data/species.json').then(r => r.json()), fetch('data/water/index.json').then(r => { if (!r.ok) throw new Error('nodata'); return r.json(); })])
     .then(([sp, idx]) => {
       SPECIES = sp; SPECIES.forEach(s => SP[s.code] = s); RARITY = SPECIES.map(s => s.code);
-      META = idx.meta; ITEMS = idx.items; ITEMS.forEach(it => BYID[it.id] = it);
+      META = idx.meta; ITEMS = idx.items;
+      const pk = (META.parks || {});
+      (pk.unmatched || []).forEach((u, i) => {
+        if (!u.points || !u.points.length) return;
+        const xs = u.points.map(p => p[0]), ys = u.points.map(p => p[1]);
+        ITEMS.push({ id: 'p' + i, k: 'p', n: u.name, park: u.park, sp: u.species, pts: u.points, c: u.points[0],
+          b: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], pk: [{ park: u.park, species: u.species, years: [], src: u.src }] });
+      });
+      ITEMS.forEach(it => BYID[it.id] = it);
+      const noLoc = (pk.unmatched || []).filter(u => !u.points || !u.points.length);
+      const bw = pk.banffWatersheds || {};
+      $('#parksInfo').innerHTML = (Object.keys(bw).length ? `<p class="hint"><b>Banff stream survey (2015–17)</b>, by watershed only: ` +
+        Object.entries(bw).map(([w, spp]) => `${esc(w)}: ` + Object.entries(spp).filter(([, v]) => parseFloat(v[0]) > 0 || parseFloat(v[1]) > 0).map(([c]) => `<span class="code">${esc(c)}</span>`).join(' ')).join('; ') +
+        ` · <a href="${(pk.datasets || {}).banff_streams}" target="_blank" rel="noopener">dataset</a></p>` : '') +
+        (noLoc.length ? `<details><summary class="hint">Park records with no map location (${noLoc.length})</summary><ul class="stock">` +
+        noLoc.map(u => `<li>${esc(u.park)}: ${esc(u.name)} <span class="code">${u.species.join(' ')}</span></li>`).join('') + '</ul></details>' : '');
       const counts = {}; ITEMS.forEach(it => allSp(it).forEach(c => counts[c] = (counts[c] || 0) + 1));
       // Known species first (in our order), then any other code present in the data.
       const extra = Object.keys(counts).filter(c => !SP[c]).sort();
@@ -404,8 +442,8 @@
           `<label class="sp"><input type="checkbox" value="${c}"><span class="dot" style="background:#666"></span><span class="code">${c}</span><span class="n"><span class="c">${counts[c]}</span></span></label>`).join('') + '</details>' : '');
       $('#legend').innerHTML = SPECIES.filter(s => counts[s.code]).map(s => `<div class="row"><span class="dot" style="background:${s.color}"></span><span class="code">${s.code}</span> ${esc(s.name)}</div>`).join('') +
         `<div class="row"><span class="dot" style="background:${NO_REC}"></span> No fish records</div>`;
-      $('#dataInfo').textContent = `Data downloaded ${META.built}.`;
-      if (F.species === null) F.species = SPECIES.filter(s => s.group.startsWith('Trout')).map(s => s.code).concat(['MNWH']);
+      $('#dataInfo').textContent = `Data downloaded ${META.built}: ${(META.total || ITEMS.length).toLocaleString()} waters.`;
+      if (F.species === null || !F.species.some(c => counts[c])) F.species = SPECIES.filter(s => s.group.startsWith('Trout')).map(s => s.code).concat(['MNWH']);
       writeFilters(); readFilters();
       $('#filters').addEventListener('change', () => { readFilters(); applyFilters(); });
       $('#minOrder').addEventListener('input', () => { readFilters(); applyFilters(); });
