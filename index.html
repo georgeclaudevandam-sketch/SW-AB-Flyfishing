@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eastern Slopes Trout Map</title>
+<meta name="description" content="Fly-fishing sites on Alberta's Eastern Slopes, Grande Cache to the US border, filtered by trout species, trip type, distance and month.">
+<meta name="theme-color" content="#1d3b2a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="tb-btn only-mobile" id="btnFilters" aria-label="Filters">☰ Filters</button>
+  <h1>Eastern Slopes Trout Map</h1>
+  <span class="count" id="count"></span>
+  <div class="tb-actions">
+    <button class="tb-btn" id="btnRoute" title="Plan a route">⟿ Route</button>
+    <button class="tb-btn" id="btnLocate" title="Show my location">◎ Me</button>
+    <button class="tb-btn" id="btnTools" title="Export and offline tools">⇩ Tools</button>
+    <button class="tb-btn only-mobile" id="btnList" aria-label="Site list">≡ List</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="panel" id="filters" aria-label="Filters">
+    <div class="panel-head only-mobile"><b>Filters</b><button class="x" data-close="filters">✕</button></div>
+
+    <section>
+      <div class="sec-head"><h2>Species</h2>
+        <span><button class="link" id="spAll">All</button> · <button class="link" id="spNone">None</button></span></div>
+      <div class="seg" role="radiogroup" aria-label="Species match">
+        <label><input type="radio" name="match" value="any" checked> Any selected</label>
+        <label><input type="radio" name="match" value="all"> All selected</label>
+      </div>
+      <div id="speciesList"></div>
+    </section>
+
+    <section>
+      <h2>Trip type</h2>
+      <label class="chk"><input type="checkbox" name="access" value="roadside" checked> Roadside / walk-in</label>
+      <label class="chk"><input type="checkbox" name="access" value="day" checked> Day hike</label>
+      <label class="chk"><input type="checkbox" name="access" value="multiday" checked> Multi-day / remote</label>
+      <label class="range">Max round trip: <b id="kmOut">Any</b>
+        <input type="range" id="km" min="0" max="80" step="5" value="80"></label>
+    </section>
+
+    <section>
+      <h2>When</h2>
+      <label class="sel">Month
+        <select id="month">
+          <option value="0">Any month</option>
+          <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+          <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+          <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+          <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+        </select></label>
+      <button class="link" id="thisMonth">Use this month</button>
+      <p class="hint">Hides waters that are normally closed or frozen that month (approximate).</p>
+    </section>
+
+    <section>
+      <h2>Area &amp; permits</h2>
+      <label class="sel">Drainage
+        <select id="region"><option value="">All drainages</option></select></label>
+      <label class="chk"><input type="checkbox" id="permAB" checked> Alberta licence waters</label>
+      <label class="chk"><input type="checkbox" id="permPC" checked> National parks (Parks Canada permit)</label>
+      <label class="chk"><input type="checkbox" id="onlyConfirmed"> Hide sites marked "verify"</label>
+    </section>
+
+    <section>
+      <h2>Map</h2>
+      <label class="chk"><input type="checkbox" id="labels" checked> Species code labels</label>
+      <p class="hint">Change the basemap or add trails with the layer button on the map.</p>
+    </section>
+
+    <section>
+      <h2>Legend</h2>
+      <div id="legend"></div>
+      <p class="hint"><span class="ring sample"></span> Marker colour = rarest species at the site. Dashed ring = needs verifying. Square = national park.</p>
+    </section>
+
+    <section class="disclaimer">
+      Locations, seasons and species are <b>approximate</b> and for planning only. Always check the current
+      <a href="https://albertaregulations.ca/fishingregs/" target="_blank" rel="noopener">Alberta Guide to Sportfishing Regulations</a>,
+      <a href="https://mywildalberta.ca/fishing/" target="_blank" rel="noopener">My Wild Alberta</a> and, in national parks,
+      <a href="https://parks.canada.ca/voyage-travel/experience/peche-fishing" target="_blank" rel="noopener">Parks Canada fishing rules</a>.
+    </section>
+  </aside>
+
+  <main id="map" aria-label="Map"></main>
+
+  <aside class="panel right" id="side" aria-label="Sites and details">
+    <div class="panel-head only-mobile"><b id="sideTitle">Sites</b><button class="x" data-close="side">✕</button></div>
+    <nav class="tabs">
+      <button data-tab="list" class="on">Sites</button>
+      <button data-tab="detail">Details</button>
+      <button data-tab="route">Route</button>
+    </nav>
+    <div class="tab" id="tab-list">
+      <input type="search" id="q" placeholder="Search sites…" aria-label="Search sites">
+      <table class="sites">
+        <thead><tr>
+          <th data-sort="name">Site</th><th data-sort="codes">Species</th><th data-sort="rtKm">km</th>
+        </tr></thead>
+        <tbody id="siteRows"></tbody>
+      </table>
+    </div>
+    <div class="tab" id="tab-detail" hidden><p class="hint">Tap a site on the map or in the list.</p></div>
+    <div class="tab" id="tab-route" hidden>
+      <p class="hint" id="routeHint">Turn on drawing, then tap the map to add points. Drag points to adjust; tap a point to remove it.</p>
+      <div class="route-btns">
+        <button id="rDraw" class="primary">Start drawing</button>
+        <button id="rUndo">Undo</button>
+        <button id="rClear">Clear</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="rSnap"> Snap to trails and roads (needs internet)</label>
+      <label class="chk"><input type="checkbox" id="rReturn" checked> Count return trip (out and back)</label>
+      <div class="route-stats" id="rStats">No route yet.</div>
+      <label class="sel">Route name <input id="rName" value="My route"></label>
+      <div class="route-btns">
+        <button id="rGpx">Export GPX</button>
+        <button id="rSave">Save on this device</button>
+      </div>
+      <div id="rSaved"></div>
+    </div>
+  </aside>
+</div>
+
+<dialog id="tools">
+  <form method="dialog">
+    <h2>Tools</h2>
+    <h3>Export sites (current filter)</h3>
+    <p class="hint">Load into Gaia GPS, onX, CalTopo or Avenza for full offline topo.</p>
+    <div class="route-btns">
+      <button type="button" id="xGpx">GPX</button>
+      <button type="button" id="xKml">KML</button>
+      <button type="button" id="xJson">GeoJSON</button>
+    </div>
+    <h3>Offline map tiles</h3>
+    <p class="hint">Saves the current basemap for the area on screen, from this zoom to 3 levels closer. Tiles you browse are also kept. Save small areas only; tile servers are free community services.</p>
+    <div class="route-btns">
+      <button type="button" id="oSave" class="primary">Save this area</button>
+      <button type="button" id="oClear">Delete saved tiles</button>
+    </div>
+    <div id="oStatus" class="hint"></div>
+    <h3>Install</h3>
+    <p class="hint">On a phone, use "Add to Home Screen" (iPhone: Share menu; Android: browser menu). The app and site data then work without signal.</p>
+    <div class="route-btns"><button value="close">Close</button></div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

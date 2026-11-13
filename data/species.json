@@ -1,0 +1,14 @@
+[
+  {"code":"WSCT","name":"Westslope cutthroat trout","group":"Native","color":"#c0392b","note":"Threatened (federal SARA). Native to the Bow and Oldman drainages. Catch-and-release in nearly all eastern-slopes waters."},
+  {"code":"BLTR","name":"Bull trout","group":"Native","color":"#1f6f8b","note":"Alberta's provincial fish. Catch-and-release province-wide. Tell it from brook trout: no black markings on the dorsal fin."},
+  {"code":"ATRT","name":"Athabasca rainbow trout","group":"Native","color":"#8e44ad","note":"Native only to the upper Athabasca drainage (McLeod, Berland, Wildhay, Embarras and tributaries). Threatened. Catch-and-release in most of its range."},
+  {"code":"ARGR","name":"Arctic grayling","group":"Native (north) / introduced (south)","color":"#16a085","note":"Native in the Athabasca, Smoky and Peace drainages near Grande Cache and Hinton. Stocked in a few southern waters such as Wedge Pond."},
+  {"code":"MNWH","name":"Mountain whitefish","group":"Native","color":"#7f8c8d","note":"Common in larger rivers. Good winter fishery on some open sections."},
+  {"code":"LKTR","name":"Lake trout","group":"Native / introduced","color":"#2c3e50","note":"Native in Waterton and some northern lakes; present in a few big lakes and reservoirs (Spray, Abraham, Minnewanka)."},
+  {"code":"GOTR","name":"Golden trout","group":"Introduced, rare","color":"#e1a100","note":"Stocked in 1959 into a handful of high Castle-area lakes. Backcountry only."},
+  {"code":"CTBW","name":"Cuttbow (hybrid)","group":"Introduced, rare","color":"#d35400","note":"Rainbow x cutthroat hybrids where stocked rainbows overlap native cutthroat. No official AB code; CTBW used here."},
+  {"code":"YSCT","name":"Yellowstone cutthroat trout","group":"Introduced, rare","color":"#a0522d","note":"Historically stocked in some alpine lakes. No confirmed site in this dataset yet; check the Alberta stocking reports."},
+  {"code":"RNTR","name":"Rainbow trout","group":"Introduced, common","color":"#e84393","note":"Widely stocked and naturalized south of the Athabasca drainage."},
+  {"code":"BNTR","name":"Brown trout","group":"Introduced, common","color":"#8d6e63","note":"Mostly lower-elevation rivers. Fall spawners."},
+  {"code":"BKTR","name":"Brook trout","group":"Introduced, common","color":"#27ae60","note":"Lower-elevation lakes and streams. Often generous limits; check regs."}
+]
