@@ -76,7 +76,7 @@ def runs_w(runs, size):
     return sum(stringWidth(t, f, size) for t, f, c in runs) * PT
 
 
-def glyph_layout(path, cum, s0, chars, size, win):
+def glyph_layout(path, cum, s0, chars, size, win, bend=28, total=75):
     """Per-character (x, y, angle) for text starting at distance s0 along path, angle from a chord over +-win mm.
     Returns None if the bend is too sharp."""
     pos = []
@@ -94,10 +94,10 @@ def glyph_layout(path, cum, s0, chars, size, win):
     # bend limits
     for i in range(1, len(angs)):
         d = abs((angs[i] - angs[i - 1] + math.pi) % (2 * math.pi) - math.pi)
-        if d > math.radians(28):
+        if d > math.radians(bend):
             return None
     tot = abs((angs[-1] - angs[0] + math.pi) % (2 * math.pi) - math.pi)
-    if tot > math.radians(75):
+    if tot > math.radians(total):
         return None
     out = []
     for (p, ang, w), (ch, font, col) in zip(pos, chars):
@@ -127,7 +127,7 @@ def line_candidates(path, runs, size, step=3.0, offset=0.0, smax=None):
         a = at(path, cum, s); b = at(path, cum, s + tw)
         rev = b[0] < a[0]
         p2, c2, s2 = (path, cum, s) if not rev else (path[::-1], resample(path[::-1]), L - s - tw)
-        g = glyph_layout(p2, c2, s2, chars, size, win)
+        g = glyph_layout(p2, c2, s2, chars, size, win, *((14, 40) if offset else (28, 75)))
         if g:
             # straightness score: distance of chord midpoint from path midpoint
             m = at(path, cum, s + tw / 2)

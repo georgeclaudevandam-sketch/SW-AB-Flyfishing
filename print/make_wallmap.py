@@ -201,6 +201,20 @@ class WallMap:
         opt = lambda n, d: jload(os.path.join(PDATA, n)) if os.path.exists(os.path.join(PDATA, n)) else d
         self.ab_roads = opt("ab_roads.json.gz", {"features": [], "fields": []})
         self.ab_trails = opt("ab_trails.json.gz", {"layers": []})
+        # supplementary strips (north end of ES3, east edge of ES1); drop features already present
+        rx = opt("ab_roads_x.json.gz", None)
+        if rx:
+            if not self.ab_roads["features"]:
+                self.ab_roads["fields"] = rx["fields"]
+            have = {f["a"].get("OBJECTID") for f in self.ab_roads["features"]}
+            self.ab_roads["features"] += [f for f in rx["features"] if f["a"].get("OBJECTID") not in have or f["a"].get("OBJECTID") is None]
+        tx = opt("ab_trails_x.json.gz", None)
+        if tx:
+            have = {f["a"].get("OBJECTID") for L in self.ab_trails["layers"] for f in L["features"]}
+            for L in tx["layers"]:
+                L["features"] = [f for f in L["features"] if f["a"].get("OBJECTID") not in have]
+                have |= {f["a"].get("OBJECTID") for f in L["features"]}
+                self.ab_trails["layers"].append(L)
         w, s, e, n = self.llb
         self.byid = {it["id"]: it for it in ITEMS}
         d = INDEX["meta"]["chunkDeg"]
@@ -422,6 +436,10 @@ class WallMap:
             if hw not in ("path", "footway", "bridleway", "steps"):
                 continue
             nm = t.get("name") or rel_name.get(wid) or ""
+            if hw in ("footway", "steps") and not nm:
+                pts = self.P([w["g"][0], w["g"][-1]])
+                if not (self.inside_zone(*pts[0]) or self.inside_zone(*pts[1])):
+                    continue
             out.append((nm, w["g"], "trail", "osm"))
         for L in self.ab_trails.get("layers", []):
             for f in L["features"]:
@@ -435,8 +453,11 @@ class WallMap:
         c = self.c
         self.trail_named = defaultdict(list)
         osm_lines, ab_lines = [], []
+        self.cities = self.urban_circles()
         for nm, g, kind, src in self.trail_feats():
             pts = self.P(g)
+            if src == "osm" and self.urban(*pts[0]) and self.urban(*pts[-1]):
+                continue
             if src == "ab":
                 ab_lines.append(pts)
             else:
@@ -467,33 +488,47 @@ class WallMap:
         return "gravel"
 
     def draw_roads(self):
+        """Road lines from the Government of Alberta access roads (every class); OpenStreetMap supplies the highways
+        outside Alberta and the local road names that the provincial layer lacks. Labels merge both sources by name."""
         c = self.c
         by = defaultdict(list)
-        self.road_named = defaultdict(list)
+        named = defaultdict(list)
+        ncls = {}
         self.shields = defaultdict(list)
+        prio = {"hwy": 0, "major": 1, "paved": 2, "gravel": 3, "track": 4}
+
+        def add_name(nm, cl, pts):
+            nm = nm.strip()
+            if not nm:
+                return
+            k = nm.lower()
+            named[k].append(pts)
+            if k not in ncls or prio[cl] < prio[ncls[k][1]]:
+                ncls[k] = (nm, cl)
+        have_ab = bool(self.ab_roads.get("features"))
         for wid, w in self.osm["ways"].items():
             t = w["t"]
             hw = t.get("highway")
             if hw not in ("motorway", "trunk", "primary", "secondary", "tertiary", "motorway_link", "trunk_link", "primary_link",
-                          "secondary_link", "unclassified", "track", "road", "residential", "service", "living_street"):
+                          "secondary_link", "unclassified", "track", "road"):
                 continue
             cl = self.road_class(t)
             pts = self.P(w["g"])
-            by[cl].append(pts)
+            if not have_ab or cl in ("hwy", "major"):
+                by[cl].append(pts)
             ref = (t.get("ref") or "").split(";")[0].strip()
             nm = t.get("name") or ""
-            if nm:
-                self.road_named[(nm, cl)].append(pts)
-            if ref and cl in ("hwy", "major", "paved", "gravel") and hw in ("motorway", "trunk", "primary", "secondary", "tertiary"):
+            add_name(nm, cl, pts)
+            if ref and hw in ("motorway", "trunk", "primary", "secondary", "tertiary") and cl != "track":
                 self.shields[ref].append(pts)
             elif ref and not nm:
-                self.road_named[(ref, cl)].append(pts)
-        # Government of Alberta access roads that OSM does not have (drawn as gravel / track by their class)
-        self.ab_road_lines = self.ab_roads_extra()
-        for cl, pts, nm in self.ab_road_lines:
+                add_name(ref, cl, pts)
+        for cl, pts, nm, hwy in self.ab_roads_extra():
             by[cl].append(pts)
-            if nm:
-                self.road_named[(nm, cl)].append(pts)
+            add_name(nm, cl, pts)
+            if hwy:
+                self.shields[hwy].append(pts)
+        self.road_named = {(ncls[k][0], ncls[k][1]): v for k, v in named.items()}
         order = ["track", "gravel", "paved", "major", "hwy"]
         for cl in order:  # casings
             cw, lw, col, dash = ROAD[cl]
@@ -507,8 +542,38 @@ class WallMap:
         for cl in order:
             self.stats["roads_" + cl] = len(by[cl])
 
+    # access_facility_roads FEATURE_TYPE (codes read from the data: 6 divided highway, 8 and 9 paved, 3 urban paved,
+    # 5 and 4 and 7 gravel or dirt roads, 10 / 14 / 2 truck trails, 12 winter roads)
+    AB_CLASS = {6: "paved", 8: "paved", 9: "paved", 3: "paved", 5: "gravel", 4: "gravel", 7: "gravel", 10: "track", 14: "track", 2: "track", 12: "track"}
+
     def ab_roads_extra(self):
-        return []  # filled in after looking at the attributes of access_facility_roads
+        out = []
+        w, s, e, n = self.llb
+        for f in self.ab_roads.get("features", []):
+            a = f["a"]
+            ft = a.get("FEATURE_TYPE")
+            cl = self.AB_CLASS.get(ft, "track")
+            if a.get("ROAD_CLASS") == "URBAN" and cl != "paved":
+                continue
+            hwy = a.get("HWY_NUMBER")
+            if hwy and cl == "paved":
+                try:
+                    num = int("".join(ch for ch in str(hwy) if ch.isdigit()) or 999)
+                except ValueError:
+                    num = 999
+                cl = "hwy" if (num < 100 or a.get("ROAD_CLASS") == "PRIMARY") else "major"
+            for g in f["g"]:
+                if not g:
+                    continue
+                if not any(w <= q[0] <= e and s <= q[1] <= n for q in (g[0], g[-1], g[len(g) // 2])):
+                    continue
+                pts = self.P(g)
+                nm = a.get("NAME") or ""
+                if nm and nm.isupper():
+                    nm = " ".join(x.capitalize() if not any(ch.isdigit() for ch in x) else x for x in nm.split())
+                    nm = nm.replace(" Rd", " Road").replace(" St ", " Street ")
+                out.append((cl, pts, nm, str(hwy) if hwy else ""))
+        return out
 
     def draw_outside_fade(self):
         c = self.c
@@ -604,6 +669,12 @@ class WallMap:
                 kind = "info"
             if not kind:
                 continue
+            if kind in ("parking", "info") and (not nm or self.urban(x, y)):
+                continue
+            if kind == "gate":
+                e = self.elev_at(x, y)
+                if e is None or e < 1350:
+                    continue
             if not inside and kind not in ("city", "town", "village", "peak") and not (kind == "hamlet"):
                 continue
             if not inside and kind in ("peak",) and self.scale > 400000:
@@ -714,10 +785,23 @@ class WallMap:
                 self.labels.append(("curve", glyphs, size, halo))
         return len(placed)
 
+    def urban_circles(self):
+        km = 1e6 / self.scale
+        out = []
+        for key, n in self.osm["nodes"].items():
+            pl = n["t"].get("place")
+            if pl in ("city", "town"):
+                x, y = self.fr.p(*n["c"])
+                out.append((x, y, (19 if pl == "city" else 2.5) * km))
+        return out
+
+    def urban(self, x, y):
+        return any((x - cx) ** 2 + (y - cy) ** 2 < r * r for cx, cy, r in self.cities)
+
     def touches_zone(self, lines):
         for p in lines:
             for q in p[:: max(1, len(p) // 8)] + [p[-1]]:
-                if self.inside_zone(*q):
+                if self.inside_zone(*q) and not self.urban(*q):
                     return True
         return False
 
@@ -732,7 +816,7 @@ class WallMap:
             p = ln.interpolate(f, normalized=True)
             if not (FX0 < p.x < FX1 and FY0 < p.y < FY1) or not self.inside_zone(p.x, p.y):
                 continue
-            if self.try_point_label(p.x, p.y, [(str(num), FB, col)], 4.2, True, gap=0.4,
+            if self.try_point_label(p.x, p.y, [(str(num), FB, col)], 3.8, True, gap=0.3,
                                     positions=("NE", "SE", "NW", "SW", "E", "W", "N", "S")):
                 lon, lat = self.fr.inv(p.x, p.y)
                 self.tags.append((num, name, kind, self.gridref(lon, lat)))
@@ -769,6 +853,8 @@ class WallMap:
 
     def place_labels(self):
         st = self.stats
+        km = 1e6 / self.scale
+        self.cities = self.urban_circles()
         sm = 1.0 if self.scale <= 400000 else 0.92
         # 1. towns
         rank = {"city": 0, "town": 1, "village": 2, "hamlet": 3, "locality": 9}
@@ -780,6 +866,9 @@ class WallMap:
                 st["lbl_place"] += 1
             else:
                 st["miss_place"] += 1
+        # 1b. campgrounds, huts, trailheads and other access points (numbered if there is no room for the name)
+        self.tags = []
+        self.place_pois(("camp", "trailhead", "hut", "ranger", "launch"), sm, tag=True)
         # 2. national / provincial park names (large, green italic) at a point inside the area
         for nm, gm, nat in self.parks:
             if not nm:
@@ -797,10 +886,12 @@ class WallMap:
             self.place_shields(ref, lines)
         # 4. road names (all named roads in the zone)
         rprio = {"hwy": 0, "major": 1, "paved": 2, "gravel": 3, "track": 4}
-        self.tags = []
+        import re as _re
         for (nm, cl), lines in sorted(self.road_named.items(), key=lambda kv: (rprio[kv[0][1]], -sum(LineString(p).length for p in kv[1] if len(p) > 1))):
             if not self.touches_zone(lines):
                 continue
+            if cl not in ("hwy", "major") and _re.search(r"\s(NW|NE|SW|SE)$", nm):
+                continue  # city streets (Calgary, Airdrie, Chestermere quadrants)
             size = {"hwy": 5.6, "major": 5.2, "paved": 4.8, "gravel": 4.6, "track": 4.3}[cl] * sm
             col = "#7f1d00" if cl != "track" else "#4e342e"
             n = self.try_line_label(lines, [(nm, FB if cl in ("hwy", "major") else F, col)], size, True, 110, 6, offset=0)
@@ -834,32 +925,50 @@ class WallMap:
                 self.missed.append(("trail", nm))
         # 6. waters: lakes then streams (name + species codes)
         self.place_water_labels(sm)
-        # 7. peaks, passes, camps, huts, trailheads, etc.
-        order = {"peak": 0, "pass": 1, "camp": 2, "hut": 3, "trailhead": 4, "ranger": 5, "lookout": 6, "falls": 7, "launch": 8, "dam": 9, "view": 10, "parking": 11, "info": 12}
-        pk = [p for p in self.pt_labels if p[0] in order]
-        pk.sort(key=lambda p: (order[p[0]], -(float(str(p[4]).split()[0].replace(",", ".")) if p[4] and str(p[4]).split()[0].replace(",", ".").replace(".", "", 1).isdigit() else 0)))
+        # 7. peaks, passes and other points
+        self.place_pois(("peak", "pass", "lookout", "falls", "dam", "view", "parking", "info"), sm)
+        for nm, gm in getattr(self, "glaciers", []):
+            p = gm.representative_point()
+            if self.inside_zone(p.x, p.y):
+                self.try_point_label(p.x, p.y, [(nm, FI, "#4f83a8")], 3.9 * sm, True, positions=("C", "N", "S", "E", "W"))
+
+    def place_pois(self, kinds, sm, tag=False):
+        st = self.stats
+        order = {k: i for i, k in enumerate(kinds)}
+        pk = [p for p in self.pt_labels if p[0] in order and p[5]]
+        num = lambda e: float(e) if e.replace(".", "", 1).isdigit() else 0
+        pk.sort(key=lambda p: (order[p[0]], -num(str(p[4]).split()[0].replace(",", ".") if p[4] else "0")))
+        done = getattr(self, "poi_done", {})
+        self.poi_done = done
         for kind, nm, x, y, ele, inside in pk:
-            if not inside:
-                continue
-            col = {"peak": "#3e2723", "pass": "#3e2723", "camp": "#1b5e20", "hut": "#4e342e", "trailhead": TRAIL_COL, "falls": "#0d47a1", "launch": "#0d47a1", "dam": "#263238"}.get(kind, "#333333")
-            runs = [(nm, FI if kind in ("peak", "pass") else F, col)]
+            if any(abs(x - a) < 12 and abs(y - b) < 12 for a, b in done.get(nm.lower(), [])):
+                continue  # same place mapped twice (point and area)
+            done.setdefault(nm.lower(), []).append((x, y))
+            col = {"peak": "#3e2723", "pass": "#3e2723", "camp": "#1b5e20", "hut": "#4e342e", "trailhead": TRAIL_COL, "falls": "#0d47a1",
+                   "launch": "#0d47a1", "dam": "#263238", "ranger": "#33691e"}.get(kind, "#333333")
+            if nm.isupper():
+                nm = nm.title()
+            runs = [(nm, FI if kind in ("peak", "pass") else (FB if kind == "camp" else F), col)]
             if kind == "peak" and ele:
                 e = str(ele).split()[0].replace(",", ".")
                 try:
                     runs.append((f" {round(float(e)):,}".replace(",", " "), F, col))
                 except ValueError:
                     pass
-            size = {"peak": 4.4, "pass": 4.2}.get(kind, 4.0) * sm
+            size = {"peak": 4.4, "pass": 4.2, "camp": 4.4}.get(kind, 4.1) * sm
             if self.try_point_label(x, y, runs, size, True, gap=1.0):
                 st["lbl_" + kind] += 1
+            elif self.try_point_label(x, y, [(nm, runs[0][1], col)], size * 0.85, True, gap=0.9):
+                st["lbl_" + kind] += 1
+            elif tag and self.try_point_label(x, y, [(str(len(self.tags) + 1), FB, col)], 4.2, True, gap=0.8):
+                lon, lat = self.fr.inv(x, y)
+                self.tags.append((len(self.tags) + 1, nm, {"camp": "Campground", "hut": "Hut", "trailhead": "Trailhead",
+                                                            "ranger": "Ranger station", "launch": "Boat launch"}.get(kind, kind), self.gridref(lon, lat)))
+                st["tag_" + kind] += 1
             else:
                 st["miss_" + kind] += 1
                 if kind in ("camp", "trailhead", "hut"):
                     self.missed.append((kind, nm))
-        for nm, gm in getattr(self, "glaciers", []):
-            p = gm.representative_point()
-            if self.inside_zone(p.x, p.y):
-                self.try_point_label(p.x, p.y, [(nm, FI, "#4f83a8")], 3.9 * sm, True, positions=("C", "N", "S", "E", "W"))
 
     def place_shields(self, ref, lines):
         try:

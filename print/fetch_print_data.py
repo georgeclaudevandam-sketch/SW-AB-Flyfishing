@@ -93,6 +93,8 @@ def overpass(q):
 
 
 BBOX = [-119.0, 48.9, -113.1, 54.35]  # ES1-ES3 with a margin (zones are also saved for the exact outline)
+# Strips the first download missed: north end of ES3 (to 54.63 N) and the east edge of ES1 (to 112.98 W)
+EXTRA = [[-119.2, 54.3, -114.3, 54.95], [-113.15, 48.95, -112.75, 51.0]]
 
 
 def main():
@@ -103,6 +105,23 @@ def main():
         save("ab_roads", layer_query(ROADS, BBOX, simplify=0.0001))
     if part in ("trails", "all"):
         part_trails(BBOX)
+    if part == "roadsx":
+        feats = []
+        for i, bb in enumerate(EXTRA):
+            d = layer_query(ROADS, bb, simplify=0.0001)
+            feats += d["features"]
+        d["features"] = feats
+        save("ab_roads_x", d)
+    if part == "trailsx":
+        out = {"layers": []}
+        for bb in EXTRA:
+            part_trails(bb, save_as=None, out=out)
+        save("ab_trails_x", out)
+    if part.startswith("osmx"):
+        k, n = map(int, part.split(":")[1].split("/"))
+        for i, bb in enumerate(EXTRA):
+            part_osm(bb, k, n, tag=f"x{i}_")
+        return
     if part.startswith("osm") or part == "all":
         k, n = (map(int, part.split(":")[1].split("/")) if ":" in part else (0, 1))
         part_osm(BBOX, k, n)
@@ -122,10 +141,10 @@ def part_zones():
     print("zone bbox", [min(xs), min(ys), max(xs), max(ys)], file=sys.stderr)
 
 
-def part_trails(bbox):
+def part_trails(bbox, save_as="ab_trails", out=None):
     # 3. Government of Alberta designated and provincial trails (every line layer)
     meta = http(TRAILS, {"f": "json"})
-    out = {"layers": []}
+    out = {"layers": []} if out is None else out
     for L in meta.get("layers", []):
         if L.get("subLayerIds"):
             continue
@@ -138,10 +157,11 @@ def part_trails(bbox):
             out["layers"].append(d)
         except Exception as e:
             print("trail layer", L, e, file=sys.stderr)
-    save("ab_trails", out)
+    if save_as:
+        save(save_as, out)
 
 
-def part_osm(bbox, k, n):
+def part_osm(bbox, k, n, tag=""):
     # 4. OpenStreetMap, in tiles; job k of n takes every n-th tile
     osm = {"ways": {}, "nodes": {}, "rels": {}}
     step = 0.5
@@ -238,7 +258,7 @@ out tags center;"""
                 osm["ways"][e["id"]] = {"t": e.get("tags") or {}, "g": [rnd([p["lon"], p["lat"]]) for p in e["geometry"]], "bm": 1}
     osm["bbox"] = bbox
     osm["built"] = time.strftime("%Y-%m-%d")
-    save(f"osm_{k}", osm)
+    save(f"osm_{tag}{k}", osm)
 
 
 if __name__ == "__main__":
