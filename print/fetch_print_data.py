@@ -82,17 +82,33 @@ def layer_query(layer_url, bbox, simplify=0.00005):
 
 def overpass(q):
     last = None
-    for attempt in range(4):
+    for attempt in range(3):
         for url in OVERPASS:
             try:
-                return http(url, {"data": q}, timeout=400, tries=1)
+                return http(url, {"data": q}, timeout=200, tries=1)
             except Exception as e:
                 last = e
         time.sleep(20 * (attempt + 1))
     raise RuntimeError(f"overpass failed: {last}")
 
 
+BBOX = [-119.0, 48.9, -113.1, 54.35]  # ES1-ES3 with a margin (zones are also saved for the exact outline)
+
+
 def main():
+    part = sys.argv[1] if len(sys.argv) > 1 else "all"
+    if part in ("zones", "all"):
+        part_zones()
+    if part in ("roads", "all"):
+        save("ab_roads", layer_query(ROADS, BBOX, simplify=0.0001))
+    if part in ("trails", "all"):
+        part_trails(BBOX)
+    if part.startswith("osm") or part == "all":
+        k, n = (map(int, part.split(":")[1].split("/")) if ":" in part else (0, 1))
+        part_osm(BBOX, k, n)
+
+
+def part_zones():
     # 1. Zones
     z = http(FMZ, {"where": "FISHUNIT_NAME IN ('ES1','ES2','ES3','ES4','PP1','PP2')", "outFields": "*", "returnGeometry": "true",
                    "outSR": 4326, "geometryPrecision": 5, "maxAllowableOffset": 0.0002, "f": "json"})
@@ -103,12 +119,10 @@ def main():
     save("zones", zones)
     xs = [c[0] for k in ZONES for r in zones.get(k, []) for c in r]
     ys = [c[1] for k in ZONES for r in zones.get(k, []) for c in r]
-    bbox = [min(xs) - 0.25, min(ys) - 0.12, max(xs) + 0.25, max(ys) + 0.12]
-    print("bbox", bbox, file=sys.stderr)
+    print("zone bbox", [min(xs), min(ys), max(xs), max(ys)], file=sys.stderr)
 
-    # 2. Government of Alberta roads
-    save("ab_roads", layer_query(ROADS, bbox))
 
+def part_trails(bbox):
     # 3. Government of Alberta designated and provincial trails (every line layer)
     meta = http(TRAILS, {"f": "json"})
     out = {"layers": []}
@@ -126,16 +140,34 @@ def main():
             print("trail layer", L, e, file=sys.stderr)
     save("ab_trails", out)
 
-    # 4. OpenStreetMap, in tiles
+
+def part_osm(bbox, k, n):
+    # 4. OpenStreetMap, in tiles; job k of n takes every n-th tile
     osm = {"ways": {}, "nodes": {}, "rels": {}}
     step = 0.5
     w0, s0, e0, n0 = bbox
+    tiles = []
     y = s0
     while y < n0:
         x = w0
         while x < e0:
+            tiles.append((x, y))
+            x += step
+        y += step
+    # only tiles near ES1-ES3 (skip the plains, Calgary and Edmonton)
+    from shapely.geometry import Polygon, box
+    from shapely.ops import unary_union
+    z = http(FMZ, {"where": "FISHUNIT_NAME IN ('ES1','ES2','ES3')", "outFields": "FISHUNIT_NAME", "returnGeometry": "true",
+                   "outSR": 4326, "geometryPrecision": 4, "maxAllowableOffset": 0.01, "f": "json"})
+    near = unary_union([Polygon(r).buffer(0) for f in z.get("features", []) for r in esri_paths(f["geometry"]) if len(r) > 3]).buffer(0.2)
+    tiles = [t for t in tiles if box(t[0], t[1], t[0] + step, t[1] + step).intersects(near)]
+    print(f"{len(tiles)} tiles near the zones", file=sys.stderr)
+    for ti, (x, y) in enumerate(tiles):
+        if ti % n != k:
+            continue
+        if True:
             bb = f"{y:.4f},{x:.4f},{min(y + step, n0):.4f},{min(x + step, e0):.4f}"
-            q = f"""[out:json][timeout:300];
+            q = f"""[out:json][timeout:180];
 (
  way["highway"~"^(motorway|trunk|primary|secondary|tertiary|motorway_link|trunk_link|primary_link|secondary_link|unclassified|track|road|path|footway|bridleway|steps)$"]({bb});
  way["highway"~"^(residential|service|living_street)$"]["name"]({bb});
@@ -184,10 +216,8 @@ out tags center;"""
                         continue
                     key = f"{e['type'][0]}{e['id']}"
                     osm["nodes"][key] = {"t": t, "c": rnd([c["lon"], c["lat"]])}
-            print(f"osm tile {bb}: ways {len(osm['ways'])} rels {len(osm['rels'])} nodes {len(osm['nodes'])}", file=sys.stderr)
-            time.sleep(3)
-            x += step
-        y += step
+            print(f"osm tile {ti} {bb}: ways {len(osm['ways'])} rels {len(osm['rels'])} nodes {len(osm['nodes'])}", file=sys.stderr, flush=True)
+            time.sleep(2)
     # Relation members (hiking routes take their name onto the ways; boundaries need member way geometry)
     rid = list(osm["rels"].keys())
     members = {}
@@ -208,7 +238,7 @@ out tags center;"""
                 osm["ways"][e["id"]] = {"t": e.get("tags") or {}, "g": [rnd([p["lon"], p["lat"]]) for p in e["geometry"]], "bm": 1}
     osm["bbox"] = bbox
     osm["built"] = time.strftime("%Y-%m-%d")
-    save("osm", osm)
+    save(f"osm_{k}", osm)
 
 
 if __name__ == "__main__":

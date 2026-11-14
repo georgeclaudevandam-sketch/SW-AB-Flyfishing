@@ -6,22 +6,30 @@ on:
     paths: ['print/fetch_print_data.py', '.github/workflows/print-data.yml']
 permissions:
   contents: write
-concurrency: print-data
+concurrency:
+  group: print-data-v2
+  cancel-in-progress: true
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        part: ['zones', 'roads', 'trails', 'osm:0/6', 'osm:1/6', 'osm:2/6', 'osm:3/6', 'osm:4/6', 'osm:5/6']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - run: python3 print/fetch_print_data.py
+      - run: pip install -q shapely==2.0.6
+      - run: python3 print/fetch_print_data.py '${{ matrix.part }}'
       - run: ls -la print/data
-      - run: |
+      - name: Commit this part
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add print/data
           git diff --cached --quiet && exit 0
-          git commit -m "Wall map data: roads, trails, zones, OSM"
-          git pull --rebase
-          git push
+          git commit -m "Wall map data: ${{ matrix.part }}"
+          for i in 1 2 3 4 5 6 7 8; do git pull --rebase && git push && exit 0; sleep $((RANDOM % 20 + 5)); done
+          exit 1
