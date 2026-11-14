@@ -431,8 +431,134 @@
   window.addEventListener('resize', () => { if (!isMobile()) closePanels(); map.invalidateSize(); });
 
   /* ---------------- Route planner ---------------- */
+
+  /* ---------------- Routing helpers: OSRM routes, OSM surfaces, parking ---------------- */
+  const routeLayer = L.layerGroup().addTo(map);
+  // Line type per surface. Surface comes only from OpenStreetMap tags on the ways the route uses.
+  const RT_STYLE = {
+    paved: { label: 'Paved road', line: { color: '#d84315', weight: 6, opacity: 1 }, casing: true },
+    gravel: { label: 'Gravel or dirt road', line: { color: '#d84315', weight: 5, dashArray: '12 7', opacity: 1 }, casing: true },
+    unknown: { label: 'Road, surface not mapped', line: { color: '#d84315', weight: 4, dashArray: '2 6 10 6', opacity: 0.85 }, casing: true },
+    foot: { label: 'On foot (trail or path)', line: { color: '#1b5e20', weight: 5, dashArray: '1 9', lineCap: 'round', opacity: 1 }, casing: true },
+    straight: { label: 'Straight line (not routed)', line: { color: '#ff5722', weight: 3, dashArray: '4 4', opacity: 0.9 } },
+  };
+  const rtSwatch = c => { const l = RT_STYLE[c].line; return `<svg width="38" height="10" class="rt-sw"><line x1="3" y1="5" x2="35" y2="5" stroke="#fff" stroke-width="${l.weight + 3}" stroke-linecap="round"/><line x1="3" y1="5" x2="35" y2="5" stroke="${l.color}" stroke-width="${l.weight}" stroke-dasharray="${l.dashArray || ''}" stroke-linecap="${l.lineCap || 'butt'}"/></svg>`; };
+  const PAVED = /^(paved|asphalt|concrete|concrete:plates|concrete:lanes|paving_stones|sett|chipseal|metal|wood)$/;
+  const UNPAVED = /^(unpaved|gravel|fine_gravel|compacted|dirt|earth|ground|mud|sand|grass|pebblestone|rock|gravel;ground|woodchips|clay|stone)$/;
+  const FOOTWAY = /^(path|footway|bridleway|steps|pedestrian|cycleway|via_ferrata|corridor)$/;
+  function surfaceClass(t, legMode) {
+    if (!t) return legMode === 'foot' ? 'foot' : 'unknown';
+    if (FOOTWAY.test(t.highway || '')) return 'foot';
+    const sf = (t.surface || '').toLowerCase();
+    if (PAVED.test(sf)) return 'paved';
+    if (UNPAVED.test(sf)) return 'gravel';
+    if (t.highway === 'track' && /^grade[2-5]$/.test(t.tracktype || '')) return 'gravel';
+    if (t.highway === 'track' && t.tracktype === 'grade1') return 'paved';
+    return 'unknown';
+  }
+  async function osrm(mode, pts) {
+    const prof = mode === 'drivehike' ? 'car' : mode;
+    const coords = pts.map(p => `${p.lng.toFixed(5)},${p.lat.toFixed(5)}`).join(';');
+    const r = await fetch(`https://routing.openstreetmap.de/routed-${prof}/route/v1/driving/${coords}?overview=full&geometries=geojson&annotations=nodes`);
+    const j = await r.json();
+    if (!j.routes || !j.routes[0]) throw new Error('No route found along roads or trails.');
+    const rt = j.routes[0], nodes = [];
+    (rt.legs || []).forEach(l => ((l.annotation || {}).nodes || []).forEach(n => { if (nodes[nodes.length - 1] !== n) nodes.push(n); }));
+    return { path: rt.geometry.coordinates.map(c => L.latLng(c[1], c[0])), nodes, dur: rt.duration, dist: rt.distance };
+  }
+  // Split each leg into runs of the same surface class, using the OSM ways that hold each pair of route nodes.
+  async function classifyLegs(legs) {
+    const ids = [...new Set(legs.flatMap(l => l.r.nodes))];
+    let pos = {}, pair = {};
+    if (ids.length) {
+      try {
+        const j = await overpass(`[out:json][timeout:60];node(id:${ids.join(',')});out skel qt;way(bn)["highway"];out body qt;`);
+        for (const e of j.elements || []) {
+          if (e.type === 'node') pos[e.id] = L.latLng(e.lat, e.lon);
+          else if (e.type === 'way') for (let k = 1; k < e.nodes.length; k++) pair[Math.min(e.nodes[k - 1], e.nodes[k]) + ':' + Math.max(e.nodes[k - 1], e.nodes[k])] = e.tags;
+        }
+      } catch (e) { console.warn('surface lookup', e); pos = {}; }
+    }
+    const runs = [];
+    const push = (cls, a, b) => { const last = runs[runs.length - 1]; if (last && last.cls === cls) last.pts.push(b); else runs.push({ cls, pts: [a, b] }); };
+    for (const l of legs) {
+      const n = l.r.nodes;
+      if (n.length < 2 || n.some(id => !pos[id])) {  // no node data: keep OSRM geometry, class from leg mode only
+        const g = l.r.path; for (let k = 1; k < g.length; k++) push(l.mode === 'foot' ? 'foot' : 'unknown', g[k - 1], g[k]);
+        continue;
+      }
+      push(l.mode === 'foot' ? 'foot' : surfaceClass(pair[Math.min(n[0], n[1]) + ':' + Math.max(n[0], n[1])], l.mode), l.r.path[0], pos[n[0]]);
+      for (let k = 1; k < n.length; k++) push(surfaceClass(pair[Math.min(n[k - 1], n[k]) + ':' + Math.max(n[k - 1], n[k])], l.mode), pos[n[k - 1]], pos[n[k]]);
+      push(runs[runs.length - 1].cls, pos[n[n.length - 1]], l.r.path[l.r.path.length - 1]);
+    }
+    return runs.length ? runs : [{ cls: 'unknown', pts: legs[0].r.path }];
+  }
+  // Where the route leaves a road for a trail (ignoring short footpath bits under 300 m).
+  function transitions(runs) {
+    const out = [], len = pts => { let d = 0; for (let k = 1; k < pts.length; k++) d += pts[k - 1].distanceTo(pts[k]); return d; };
+    let onFoot = runs.length && runs[0].cls === 'foot';
+    for (let k = 1; k < runs.length; k++) {
+      const foot = runs[k].cls === 'foot';
+      if (foot === onFoot) continue;
+      if (foot) { let d = 0; for (let m = k; m < runs.length && runs[m].cls === 'foot'; m++) d += len(runs[m].pts); if (d < 300) continue; }
+      else { let d = 0; for (let m = k; m < runs.length && runs[m].cls !== 'foot'; m++) d += len(runs[m].pts); if (d < 300) continue; }
+      out.push({ kind: foot ? 'tofoot' : 'toroad', at: runs[k].pts[0] });
+      onFoot = foot;
+    }
+    return out;
+  }
+  async function findParking(at, radius) {
+    const j = await overpass(`[out:json][timeout:25];nwr["amenity"="parking"]["access"!~"^(private|no|customers)$"](around:${radius},${at.lat.toFixed(5)},${at.lng.toFixed(5)});out center tags;`);
+    return (j.elements || []).map(e => ({ at: L.latLng(e.lat || e.center.lat, e.lon || e.center.lon), tags: e.tags || {}, id: e.type + e.id }));
+  }
+  async function parkingNear(points, have) {
+    const seen = new Set(have.filter(m => m.pid).map(m => m.pid)), out = [];
+    try {
+      const found = (await Promise.all(points.slice(0, 8).map(p => findParking(p, 400)))).flat();
+      for (const f of found) if (!seen.has(f.id)) { seen.add(f.id); out.push({ kind: 'parking', at: f.at, tags: f.tags, pid: f.id }); }
+    } catch (e) { console.warn('parking lookup', e); }
+    return out;
+  }
+  // Drive from the first point to the mapped parking lot nearest the last point that gives the shortest walk, then walk.
+  async function driveThenHike(pts) {
+    const start = pts[0], walkPts = pts.slice(1), dest = pts[pts.length - 1];
+    let cands = [];
+    try { cands = (await findParking(dest, 10000)).sort((a, b) => a.at.distanceTo(dest) - b.at.distanceTo(dest)).slice(0, 3); } catch (e) { console.warn('parking', e); }
+    let best = null;
+    for (const c of cands) {
+      try { const f = await osrm('foot', [c.at, ...walkPts]); if (!best || f.dist < best.foot.dist) best = { c, foot: f }; } catch (e) { /* no foot route from this lot */ }
+    }
+    if (best) {
+      const car = await osrm('car', [start, best.c.at]);
+      return { legs: [{ mode: 'road', r: car }, { mode: 'foot', r: best.foot }], marks: [{ kind: 'park', at: best.c.at, tags: best.c.tags, pid: best.c.id }],
+        note: `Parking chosen: the mapped OpenStreetMap parking area (within 10 km of the destination) with the shortest walk.` };
+    }
+    const car = await osrm('car', [start, dest]);
+    const end = car.path[car.path.length - 1], foot = await osrm('foot', [end, ...walkPts]);
+    return { legs: [{ mode: 'road', r: car }, { mode: 'foot', r: foot }], marks: [{ kind: 'roadend', at: end, tags: {} }],
+      note: 'No public parking area is mapped in OpenStreetMap within 10 km of the destination, so the drive ends where the road comes closest.' };
+  }
+  function drawRoute(runs, marks) {
+    routeLayer.clearLayers();
+    for (const r of runs) { const st = RT_STYLE[r.cls]; if (st.casing) L.polyline(r.pts, { color: '#fff', weight: st.line.weight + 4, opacity: 0.95, interactive: false }).addTo(routeLayer); }
+    for (const r of runs) L.polyline(r.pts, RT_STYLE[r.cls].line).bindTooltip(RT_STYLE[r.cls].label, { sticky: true }).addTo(routeLayer);
+    for (const m of marks) {
+      const t = m.tags || {}, nm = t.name || '';
+      if (m.kind === 'park' || m.kind === 'parking') {
+        const info = [nm || 'Parking', t.fee === 'yes' ? 'fee' : t.fee === 'no' ? 'free' : '', t.capacity ? t.capacity + ' spaces' : '', t.surface ? t.surface : ''].filter(Boolean).join(' · ');
+        L.marker(m.at, { icon: L.divIcon({ className: '', html: `<div class="rt-p${m.kind === 'park' ? ' main' : ''}">P</div>`, iconSize: [22, 22], iconAnchor: [11, 11] }), zIndexOffset: 500 })
+          .bindTooltip((m.kind === 'park' ? '<b>Park here</b><br>' : '') + esc(info) + '<br><span class="hint">OpenStreetMap</span>', { permanent: m.kind === 'park' || !!nm, direction: 'right', offset: [10, 0], className: 'rt-lbl' }).addTo(routeLayer);
+      } else if (m.kind === 'roadend') {
+        L.marker(m.at, { icon: L.divIcon({ className: '', html: '<div class="rt-foot">🥾</div>', iconSize: [24, 24], iconAnchor: [12, 12] }), zIndexOffset: 500 })
+          .bindTooltip('<b>Drive ends here</b><br>No mapped parking; walk from here', { permanent: true, direction: 'right', offset: [12, 0], className: 'rt-lbl' }).addTo(routeLayer);
+      } else {
+        L.marker(m.at, { icon: L.divIcon({ className: '', html: `<div class="rt-foot">${m.kind === 'tofoot' ? '🥾' : '🚗'}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), zIndexOffset: 400 })
+          .bindTooltip(m.kind === 'tofoot' ? '<b>On foot from here</b><br>Road ends, trail begins' : '<b>Back on a road</b>', { permanent: m.kind === 'tofoot', direction: 'right', offset: [12, 0], className: 'rt-lbl' }).addTo(routeLayer);
+      }
+    }
+  }
   const route = {
-    drawing: false, pts: [], markers: [], line: L.polyline([], { color: '#ff5722', weight: 4, opacity: .9 }).addTo(map), path: [],
+    drawing: false, pts: [], markers: [], path: [], runs: [], marks: [],
     add(ll) { this.pts.push(ll); this.redraw(); },
     redraw() {
       this.markers.forEach(m => map.removeLayer(m));
@@ -449,28 +575,52 @@
       toast('Finding your location…');
       navigator.geolocation.getCurrentPosition(p => {
         this.pts = [L.latLng(p.coords.latitude, p.coords.longitude), dest];
-        $('#rSnap').checked = true; showTab('route'); openPanel('side');
+        $('#rSnap').checked = true; $('#rMode').value = 'drivehike'; showTab('route'); openPanel('side');
         this.redraw().then(() => this.path.length > 1 && map.fitBounds(L.latLngBounds(this.path).pad(0.15)));
       }, () => toast('Could not get your location'), { enableHighAccuracy: true, timeout: 15000 });
     },
     async compute() {
-      let path = this.pts.slice(); this.dur = null;
+      const token = (this.token = (this.token || 0) + 1);
+      let runs = null, marks = [], dur = null, note = '';
+      const mode = $('#rMode').value;
       if ($('#rSnap').checked && this.pts.length > 1) {
         try {
-          const coords = this.pts.map(p => `${p.lng.toFixed(5)},${p.lat.toFixed(5)}`).join(';');
-          const mode = $('#rMode').value;
-          const r = await fetch(`https://routing.openstreetmap.de/routed-${mode}/route/v1/driving/${coords}?overview=full&geometries=geojson`);
-          const j = await r.json();
-          if (j.routes && j.routes[0]) { path = j.routes[0].geometry.coordinates.map(c => L.latLng(c[1], c[0])); this.dur = j.routes[0].duration; }
-          else toast('No route found along roads or trails. Using straight lines.');
-        } catch (e) { toast('Auto-routing needs signal. Using straight lines.'); }
+          let legs;
+          if (mode === 'drivehike') {
+            ({ legs, marks, note } = await driveThenHike(this.pts));
+          } else {
+            const r = await osrm(mode, this.pts);
+            legs = [{ mode: mode === 'foot' ? 'foot' : 'road', r }];
+          }
+          if (token !== this.token) return;
+          dur = legs.reduce((a, l) => a + (l.r.dur || 0), 0);
+          runs = await classifyLegs(legs);
+          if (token !== this.token) return;
+          marks = marks.concat(transitions(runs).filter(t => !marks.some(m => m.at.distanceTo(t.at) < 300)));
+          marks = marks.concat(await parkingNear(marks.map(m => m.at).concat([runs[0].pts[0], runs[runs.length - 1].pts.slice(-1)[0]]), marks));
+        } catch (e) {
+          console.warn('route', e);
+          toast(e.message && e.message.startsWith('No ') ? e.message + ' Using straight lines.' : 'Auto-routing needs signal. Using straight lines.');
+          runs = null;
+        }
       }
-      this.path = path;
-      this.line.setLatLngs(path);
-      let d = 0; for (let i = 1; i < path.length; i++) d += path[i - 1].distanceTo(path[i]);
-      const km = d / 1000, rt = $('#rReturn').checked ? km * 2 : km;
+      if (token !== this.token) return;
+      if (!runs) runs = this.pts.length > 1 ? [{ cls: 'straight', pts: this.pts.slice() }] : [];
+      this.runs = runs; this.marks = marks; this.dur = dur;
+      this.path = runs.flatMap((r, k) => k ? r.pts.slice(1) : r.pts);
+      drawRoute(runs, marks);
+      const len = pts => { let d = 0; for (let k = 1; k < pts.length; k++) d += pts[k - 1].distanceTo(pts[k]); return d; };
+      const by = {}; runs.forEach(r => { by[r.cls] = (by[r.cls] || 0) + len(r.pts); });
+      const km = Object.values(by).reduce((a, b) => a + b, 0) / 1000, rt = $('#rReturn').checked ? km * 2 : km;
+      const hrs = d => Math.round(d / 60) >= 60 ? (d / 3600).toFixed(1) + ' h' : Math.round(d / 60) + ' min';
       $('#rStats').innerHTML = this.pts.length < 2 ? (this.pts.length ? '1 point. Add another.' : 'No route yet.') :
-        `<b>${km.toFixed(1)} km</b> one way · <b>${rt.toFixed(1)} km</b> ${$('#rReturn').checked ? 'round trip' : 'total'}${this.dur ? `<br>About ${Math.round(this.dur / 60) >= 60 ? (this.dur / 3600).toFixed(1) + ' h' : Math.round(this.dur / 60) + ' min'} one way by ${$('#rMode').value} (routing estimate)` : ''}${rt > 40 ? '<br><b>Over 40 km: plan an overnight.</b>' : ''}`;
+        `<b>${km.toFixed(1)} km</b> one way · <b>${rt.toFixed(1)} km</b> ${$('#rReturn').checked ? 'round trip' : 'total'}` +
+        (dur ? `<br>About ${hrs(dur)} one way (routing estimate)` : '') +
+        (rt > 40 ? '<br><b>Over 40 km: plan an overnight.</b>' : '') +
+        `<div class="rt-legend">${Object.keys(RT_STYLE).filter(c => by[c]).map(c => `<div>${rtSwatch(c)} ${RT_STYLE[c].label} <b>${(by[c] / 1000).toFixed(1)} km</b></div>`).join('')}` +
+        (marks.some(m => m.kind === 'parking' || m.kind === 'park') ? `<div><span class="rt-p">P</span> Parking (OpenStreetMap)</div>` : '') +
+        (marks.some(m => m.kind === 'tofoot') ? `<div><span class="rt-foot">🥾</span> Road ends, continue on foot</div>` : '') + '</div>' +
+        (note ? `<p class="hint">${note}</p>` : '');
       store.set('routeDraft', this.pts.map(p => [p.lat, p.lng]));
     },
     setDrawing(on) {
@@ -492,7 +642,11 @@
     if (route.path.length < 2) return toast('Draw a route first');
     const name = $('#rName').value || 'Route';
     const trk = route.path.map(p => `<trkpt lat="${p.lat.toFixed(6)}" lon="${p.lng.toFixed(6)}"></trkpt>`).join('\n');
-    download(name.replace(/\W+/g, '_') + '.gpx', gpxWrap(`<trk><name>${esc(name)}</name><trkseg>\n${trk}\n</trkseg></trk>`), 'application/gpx+xml');
+    const wpts = (route.marks || []).map(m => {
+      const nm = m.kind === 'park' ? 'Park here' + (m.tags.name ? ': ' + m.tags.name : '') : m.kind === 'parking' ? 'Parking' + (m.tags.name ? ': ' + m.tags.name : '') : m.kind === 'tofoot' ? 'On foot from here' : m.kind === 'roadend' ? 'Drive ends here' : 'Back on road';
+      return `<wpt lat="${m.at.lat.toFixed(6)}" lon="${m.at.lng.toFixed(6)}"><name>${esc(nm)}</name><sym>${/park/i.test(m.kind) ? 'Parking Area' : 'Trail Head'}</sym></wpt>`;
+    }).join('\n');
+    download(name.replace(/\W+/g, '_') + '.gpx', gpxWrap(`${wpts}\n<trk><name>${esc(name)}</name><trkseg>\n${trk}\n</trkseg></trk>`), 'application/gpx+xml');
   };
   function renderSaved() {
     const saved = store.get('routes', []);

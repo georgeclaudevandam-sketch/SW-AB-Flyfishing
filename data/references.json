@@ -161,7 +161,7 @@
    "title": "routing.openstreetmap.de car, bike and foot routing (OSRM)",
    "url": "https://routing.openstreetmap.de",
    "licence": "Map data ODbL",
-   "note": "Route planner auto-routing and \"Route here from me\" (online only)."
+   "note": "Route planner auto-routing (car, bike, foot and drive-then-hike) and \"Route here from me\"; also gives the OpenStreetMap node ids along the route (online only)."
   },
   {
    "id": "R19",
@@ -206,7 +206,7 @@
    "title": "OpenStreetMap trails, route relations, peaks, passes, places and campsites",
    "url": "https://www.openstreetmap.org",
    "licence": "ODbL 1.0",
-   "note": "Trail lines and names, official/operator tags and hiking route names; names of towns, villages, hamlets, localities, peaks, hills, passes, ridges, glaciers, waterfalls, campsites, huts, trailheads, viewpoints and historic sites. Loaded live as you zoom in."
+   "note": "Trail lines and names, official/operator tags and hiking route names; names of towns, villages, hamlets, localities, peaks, hills, passes, ridges, glaciers, waterfalls, campsites, huts, trailheads, viewpoints and historic sites. Loaded live as you zoom in. Also: road and trail surface tags along planned routes, and parking areas."
   },
   {
    "id": "R24",
@@ -411,6 +411,22 @@
     "R1"
    ],
    "how": "Codes from FWMIS whose species is on Schedule 1 Part 1 (Arctic grayling, goldeye, lake sturgeon, mooneye, sauger, tullibee/cisco, plus the trout, whitefish, pike, walleye, perch and burbot already listed) are game fish. All other codes go in the Non-game species group; amphibian, mollusc, crayfish and family-level or unknown records are listed separately inside it. Hybrids and kokanee keep the groups in data/species.json."
+  },
+  {
+   "feature": "Route line types (paved road, gravel or dirt road, road with surface not mapped, on foot)",
+   "refs": [
+    "R18",
+    "R23"
+   ],
+   "how": "OSRM returns the OpenStreetMap nodes the route passes; each stretch takes the highway, surface and tracktype tags of the OSM way that holds it. Paths, footways, bridleways and steps are 'on foot'. Roads with no surface tag are shown as 'surface not mapped' rather than guessed."
+  },
+  {
+   "feature": "Parking areas and 'on foot from here' points on routes",
+   "refs": [
+    "R18",
+    "R23"
+   ],
+   "how": "Public parking areas (amenity=parking, not private) from OSM near where the route leaves a road and at the route ends. 'Drive, then hike' drives to the mapped parking area within 10 km of the destination that gives the shortest walk; if none is mapped, the drive ends where the road comes closest."
   }
  ]
 }

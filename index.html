@@ -109,7 +109,7 @@
     </div>
     <div class="tab" id="tab-detail" hidden><p class="hint">Tap a lake or stream on the map, or one in the list.</p></div>
     <div class="tab" id="tab-route" hidden>
-      <p class="hint" id="routeHint">Turn on drawing, then tap the map to add points. Drag points to adjust; tap a point to remove it.</p>
+      <p class="hint" id="routeHint">Turn on drawing, then tap the map to add points. Drag points to adjust; tap a point to remove it. With "Drive, then hike", the first point is where you start driving and the rest are walked from the parking area.</p>
       <div class="route-btns">
         <button id="rDraw" class="primary">Start drawing</button>
         <button id="rUndo">Undo</button>
@@ -117,7 +117,7 @@
       </div>
       <label class="chk"><input type="checkbox" id="rSnap" checked> Auto-route along roads and trails (needs signal)</label>
       <label class="sel">Travel by
-        <select id="rMode"><option value="foot">Foot (trails and roads)</option><option value="car">Car (roads)</option><option value="bike">Bike</option></select></label>
+        <select id="rMode"><option value="drivehike">Drive, then hike from parking</option><option value="foot">Foot (trails and roads)</option><option value="car">Car (roads)</option><option value="bike">Bike</option></select></label>
       <label class="chk"><input type="checkbox" id="rReturn" checked> Count return trip (out and back)</label>
       <div class="route-stats" id="rStats">No route yet.</div>
       <label class="sel">Route name <input id="rName" value="My route"></label>
