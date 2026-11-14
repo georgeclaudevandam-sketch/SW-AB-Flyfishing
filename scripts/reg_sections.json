@@ -1,0 +1,112 @@
+{
+ "_about": "Where each section of a river listing starts and ends, read from the section's own wording in the Alberta sportfishing regulation tables. Breaks are located by scripts/build_sections.py: road = Government of Alberta road crossing by highway number or road name; trib = mouth of the named stream (FWMIS); lake = where the river enters (in) or leaves (out) the named lake (FWMIS); osm = a named OpenStreetMap feature (falls, day-use area); ats = Alberta Township System location (LSD-section-township-range-meridian), snapped to a road crossing when road=true; head / mouth = ends of the mapped provincial river. main/tribs say whether the section covers the mainstem and/or its tributaries. A break that can't be located leaves the river unsplit.",
+ "ES1|Belly River": [
+  {"d": "Mainstem upstream of Sec. Rd. 800", "main": true, "tribs": true, "up": "head", "down": {"road": "800"}},
+  {"d": "Mainstem and tributaries; downstream of Sec. Rd. 800", "main": true, "tribs": true, "up": {"road": "800"}, "down": "mouth"}
+ ],
+ "ES1|Crowsnest River": [
+  {"d": "Mainstem from outlet of Crowsnest Lake downstream to the Cowley Bridge", "main": true, "up": {"lake": "Crowsnest Lake", "end": "out"}, "down": {"unresolved": "Cowley Bridge (which crossing is not identified in the table)"}},
+  {"d": "All tributaries of Crowsnest River except Gold Creek", "tribs": true, "up": "head", "down": "mouth", "except": ["Gold Creek"]},
+  {"d": "All tributaries of Crowsnest River except Gold Creek", "tribs": true, "up": "head", "down": "mouth", "except": ["Gold Creek"]}
+ ],
+ "ES1|Elbow River": [
+  {"d": "Headwater downstream to Elbow Falls", "main": true, "tribs": true, "up": "head", "down": {"osm": "Elbow Falls"}, "except": ["Quirk Creek"]},
+  {"d": "Mainstem, Elbow Falls downstream to Canyon Creek", "main": true, "up": {"osm": "Elbow Falls"}, "down": {"trib": "Canyon Creek"}},
+  {"d": "Mainstem, Canyon Creek downstream to Hwy. 22", "main": true, "up": {"trib": "Canyon Creek"}, "down": {"road": "22"}},
+  {"d": "Mainstem, Hwy. 22 downstream to Glenmore Reservoir", "main": true, "tribs": true, "up": {"road": "22"}, "down": {"lake": "Glenmore Reservoir", "end": "in"}},
+  {"d": "Mainstem, from Glenmore Reservoir downstream to Bow River", "main": true, "up": {"lake": "Glenmore Reservoir", "end": "out"}, "down": "mouth"}
+ ],
+ "ES1|Highwood River": [
+  {"d": "Headwater originating at Storm Ck and Mist Ck confluence", "main": true, "tribs": true, "up": "head", "down": {"osm": "Kananaskis Country", "boundary": true}, "except": ["Storm Creek"]},
+  {"d": "Mainstem from K-Country boundary downstream to 500m above the mouth", "main": true, "tribs": true, "up": {"osm": "Kananaskis Country", "boundary": true}, "down": {"mouth": true, "offset": 500}, "except": ["Sheep River"]},
+  {"d": "Mainstem within 500m of Bow River", "main": true, "up": {"mouth": true, "offset": 500}, "down": "mouth"}
+ ],
+ "ES1|Kananaskis River": [
+  {"d": "Headwater downstream to Hwy. 1", "main": true, "tribs": true, "up": "head", "down": {"road": "1"}, "except": ["Smith-Dorrien Creek"]},
+  {"d": "Mainstem from Hwy. 1 downstream to Bow River", "main": true, "up": {"road": "1"}, "down": "mouth"}
+ ],
+ "ES1|Mill Creek": [
+  {"d": "Including Gladstone and Whitney creeks", "main": true, "tribs": true, "up": "head", "down": "mouth"},
+  {"d": "Includes tributaries including Gladstone and Whitney creeks", "main": true, "tribs": true, "up": "head", "down": "mouth"}
+ ],
+ "ES1|Oldman River": [
+  {"d": "Tributaries of Oldman River from headwater downstream to Sec. Rd. 510", "tribs": true, "up": "head", "down": {"road": "510"}, "except": ["Livingstone River", "Hidden Creek"]},
+  {"d": "Mainstem - headwater downstream to Racehorse Creek", "main": true, "up": "head", "down": {"trib": "Racehorse Creek"}},
+  {"d": "Mainstem - Racehorse Creek downstream to Hwy. 22", "main": true, "up": {"trib": "Racehorse Creek"}, "down": {"road": "22"}},
+  {"d": "Mainstem - Hwy. 22 downstream to Sec. Rd. 510", "main": true, "up": {"road": "22"}, "down": {"road": "510"}},
+  {"d": "Mainstem downstream from Sec. Rd. 510 - see Oldman Reservoir", "main": true, "up": {"road": "510"}, "down": {"lake": "Oldman Reservoir", "end": "in"}},
+  {"d": "Oldman Reservoir dam downstream to Sec. Rd. 509", "main": true, "up": {"lake": "Oldman Reservoir", "end": "out"}, "down": {"road": "509"}}
+ ],
+ "ES1|Sheep River": [
+  {"d": "Includes tributaries; Headwater downstream to the bridge at Indian Oils Day-use Site", "main": true, "tribs": true, "up": "head", "down": {"osm": "Indian Oils", "road": true}},
+  {"d": "Bridge at Indian Oils Day-use Site downstream to Gorge Creek", "main": true, "tribs": true, "up": {"osm": "Indian Oils", "road": true}, "down": {"trib": "Gorge Creek"}, "except": ["Gorge Creek"]},
+  {"d": "Mainstem and tributaries (except Threepoint Creek) - Gorge Creek downstream to Highwood River", "main": true, "tribs": true, "up": {"trib": "Gorge Creek"}, "down": "mouth", "except": ["Threepoint Creek"]}
+ ],
+ "ES1|Waterton River": [
+  {"d": "Tributaries upstream of Waterton Reservoir including Drywood Creek", "tribs": true, "up": "head", "down": {"lake": "Waterton Reservoir", "end": "in"}},
+  {"d": "Mainstem - upstream of Waterton Reservoir", "main": true, "up": "head", "down": {"lake": "Waterton Reservoir", "end": "in"}},
+  {"d": "Mainstem and tributaries - downstream of Waterton Reservoir", "main": true, "tribs": true, "up": {"lake": "Waterton Reservoir", "end": "out"}, "down": "mouth"}
+ ],
+ "ES1|Willow Creek": [
+  {"d": "Mainstream and tributaries upstream of Pine Coulee Reservoir Diversion Headpond", "main": true, "tribs": true, "up": "head", "down": {"unresolved": "Pine Coulee Reservoir Diversion Headpond"}},
+  {"d": "Mainstem only downstream of Pine Coulee Reservoir Diversion Headpond", "main": true, "up": {"unresolved": "Pine Coulee Reservoir Diversion Headpond"}, "down": "mouth"},
+  {"d": "Tributaries downstream of Pine Coulee Reservoir Diversion Headpond", "tribs": true, "up": {"unresolved": "Pine Coulee Reservoir Diversion Headpond"}, "down": "mouth"}
+ ],
+ "ES2|Bighorn River": [
+  {"d": "Mainstem and tributaries upstream of Crescent Falls", "main": true, "tribs": true, "up": "head", "down": {"osm": "Crescent Falls"}},
+  {"d": "Mainstem and tributaries downstream of Crescent Falls", "main": true, "tribs": true, "up": {"osm": "Crescent Falls"}, "down": "mouth"}
+ ],
+ "ES2|Blackstone River": [
+  {"d": "Mainstem and tributaries upstream of Mons Creek including Mons Creek", "main": true, "tribs": true, "up": "head", "down": {"trib": "Mons Creek"}, "include": ["Mons Creek"]},
+  {"d": "Mainstem downstream of Mons Creek and tributaries (except Rundell Creek)", "main": true, "tribs": true, "up": {"trib": "Mons Creek"}, "down": "mouth", "except": ["Rundell Creek", "Mons Creek"]}
+ ],
+ "ES2|Brazeau River": [
+  {"d": "Mainstem upstream of Forestry Trunk Road (bridge at 6-16-45-18-W5)", "main": true, "tribs": true, "up": "head", "down": {"ats": "6-16-45-18-W5", "road": true}, "except": ["Cardinal River"]},
+  {"d": "Mainstem downstream of the Forestry Trunk Road (bridge at 6-16-45-18-W5) to the Brazeau Reservoir", "main": true, "up": {"ats": "6-16-45-18-W5", "road": true}, "down": {"lake": "Brazeau Reservoir", "end": "in"}},
+  {"d": "Mainstem downstream of Brazeau Reservoir", "main": true, "up": {"lake": "Brazeau Reservoir", "end": "out"}, "down": "mouth"}
+ ],
+ "ES2|Clearwater River": [
+  {"d": "Mainstem from the Banff National Park boundary downstream to Timber Creek", "main": true, "up": "head", "down": {"trib": "Timber Creek"}},
+  {"d": "Tributaries from the Banff National Park boundary downstream to and including Timber Creek", "tribs": true, "up": "head", "down": {"trib": "Timber Creek"}, "include": ["Timber Creek"]},
+  {"d": "Mainstem from Timber Creek downstream to the Forestry Trunk Road (bridge at 5-35-09-W5)", "main": true, "tribs": true, "up": {"trib": "Timber Creek"}, "down": {"ats": "5-35-9-W5", "road": true}, "except": ["Elk Creek", "Timber Creek"]},
+  {"d": "Mainstem from Forestry Trunk Road (bridge at 5-35-09-W5) downstream to the North Saskatchewan River", "main": true, "up": {"ats": "5-35-9-W5", "road": true}, "down": "mouth"}
+ ],
+ "ES2|Fall Creek": [
+  {"d": "Upstream of the falls at 11-31-37-11-W5", "main": true, "tribs": true, "up": "head", "down": {"ats": "11-31-37-11-W5", "falls": true}},
+  {"d": "Mainstem and tributaries downstream of the falls at 11-31-37-11-W5", "main": true, "tribs": true, "up": {"ats": "11-31-37-11-W5", "falls": true}, "down": "mouth"}
+ ],
+ "ES2|North Saskatchewan River": [
+  {"d": "Mainstem and tributaries from Banff National Park boundary downstream to Abraham Lake", "main": true, "tribs": true, "up": "head", "down": {"lake": "Abraham Lake", "end": "in"}, "except": ["Cline River", "Siffleur River"]},
+  {"d": "Mainstem from Bighorn Dam downstream to Hwy 22/39", "main": true, "up": {"lake": "Abraham Lake", "end": "out"}, "down": {"road": "22"}},
+  {"d": "Tributaries from Bighorn Dam downstream to Hwy 22/39", "tribs": true, "up": {"lake": "Abraham Lake", "end": "out"}, "down": {"road": "22"}, "except": ["Baptiste River", "Bighorn River", "Brazeau River", "Clearwater River", "Ram River", "Wolf Creek", "Washout Creek"]}
+ ],
+ "ES2|Prairie Creek": [
+  {"d": "Mainstem upstream of the North Fork Road and all tributaries", "main": true, "tribs": true, "up": "head", "down": {"road": "North Fork Road"}, "except": ["Swan Creek"]},
+  {"d": "The portion of the mainstem and tributaries between Vetch and Swan Creeks", "main": true, "tribs": true, "up": {"trib": "Vetch Creek"}, "down": {"trib": "Swan Creek"}, "prio": 1},
+  {"d": "The remainder of the mainstem downstream of the North Fork Road", "main": true, "up": {"road": "North Fork Road"}, "down": "mouth"}
+ ],
+ "ES2|Red Deer River": [
+  {"d": "Mainstem and tributaries from Banff National Park boundary downstream to the Forestry Trunk Road (13-31-10-W5)", "main": true, "tribs": true, "up": "head", "down": {"ats": "13-31-10-W5", "road": true}},
+  {"d": "Mainstem from Forestry Trunk Road downstream to Gleniffer (Reservoir) Lake", "main": true, "tribs": true, "up": {"ats": "13-31-10-W5", "road": true}, "down": {"lake": "Gleniffer Lake", "end": "in"}, "except": ["Fallentimber Creek", "Raven River", "North Raven River", "Pinto Creek"]}
+ ],
+ "ES2|Swan Creek": [
+  {"d": "Mainstem and tributaries; Downstream for 2 km below Swan Lake", "main": true, "tribs": true, "up": {"lake": "Swan Lake", "end": "out"}, "down": {"lake": "Swan Lake", "end": "out", "offset": -2000}, "prio": 1},
+  {"d": "The remainder including tributaries to Swan Lake", "main": true, "tribs": true, "up": "head", "down": "mouth"}
+ ],
+ "ES3|Mcleod River": [
+  {"d": "Mainstem only; Headwater downstream to Hwy 47", "main": true, "up": "head", "down": {"road": "47"}},
+  {"d": "Mainstem only; Hwy 47 downstream to the Athabasca River", "main": true, "up": {"road": "47"}, "down": "mouth"}
+ ],
+ "ES3|Pembina River": [
+  {"d": "Headwater downstream to Sec. Rd. 753 near Lodgepole", "main": true, "tribs": true, "up": "head", "down": {"road": "753"}},
+  {"d": "Mainstem only - downstream from Sec. Rd. 753 (near Lodgepole) to Hwy. 43", "main": true, "up": {"road": "753"}, "down": {"road": "43"}}
+ ],
+ "ES4|Little Smoky River": [
+  {"d": "Headwaters downstream to Hwy. 43", "main": true, "up": "head", "down": {"road": "43"}},
+  {"d": "Mainstem; Downstream of Hwy. 43", "main": true, "up": {"road": "43"}, "down": "mouth"}
+ ],
+ "ES4|Smoky River": [
+  {"d": "Headwater downstream to Hwy. 43", "main": true, "tribs": true, "up": "head", "down": {"road": "43"}, "except": ["Kakwa River", "Muskeg River", "Simonette River"]},
+  {"d": "Mainstem - downstream of Hwy. 43 to 21st Base Line", "main": true, "up": {"road": "43"}, "down": {"unresolved": "21st Base Line"}}
+ ]
+}

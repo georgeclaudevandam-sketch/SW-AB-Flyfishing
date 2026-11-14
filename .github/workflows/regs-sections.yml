@@ -1,0 +1,23 @@
+name: Regulation sections (test build)
+on:
+  workflow_dispatch:
+  push:
+    branches: ['route-test']
+    paths: ['scripts/build_sections.py', 'scripts/reg_sections.json', '.github/workflows/regs-sections.yml']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -q pdfplumber==0.11.10
+      - run: python3 scripts/build_regs.py
+      - run: python3 scripts/build_sections.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/regs && git commit -m "Test build: regulation sections" && git push
