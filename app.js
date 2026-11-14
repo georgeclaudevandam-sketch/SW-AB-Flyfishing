@@ -83,18 +83,35 @@
   map.createPane('trails').style.zIndex = 390;
   const trailCanvas = L.canvas({ pane: 'trails', padding: 0.3, tolerance: 6 });
   const trailLayer = L.layerGroup().addTo(map), nameLayer = L.layerGroup().addTo(map);
-  const TRAIL_ZOOM = 13, PLACE_ZOOM = 10, TOWN_ZOOM = 8, ROAD_ZOOM = 12, OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+  const TRAIL_ZOOM = 13, PLACE_ZOOM = 10, TOWN_ZOOM = 8, ROAD_ZOOM = 12, OVERPASS = ['https://overpass-api.de/api/interpreter'];
   const osm = { trails: [], places: [], roads: [], boxes: [], busy: false };  // boxes: [kind, south, west, north, east]
   const covered = (kind, v) => osm.boxes.some(x => x[0] === kind && x[1] <= v.getSouth() && x[2] <= v.getWest() && x[3] >= v.getNorth() && x[4] >= v.getEast());
   const withTimeout = ms => (typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined);
-  async function overpass(q, ms = 25000) {
+  // Overpass allows only a couple of requests at once per user, so requests queue and run one at a time.
+  // Route lookups (priority) jump ahead of background name loading. A busy answer (429) waits and retries.
+  const ovq = []; let ovBusy = false;
+  function overpass(q, ms = 25000, priority = false) {
+    return new Promise((resolve, reject) => { (priority ? ovq.unshift.bind(ovq) : ovq.push.bind(ovq))({ q, ms, resolve, reject }); pumpOverpass(); });
+  }
+  async function pumpOverpass() {
+    if (ovBusy || !ovq.length) return;
+    ovBusy = true;
+    const job = ovq.shift();
+    try { job.resolve(await overpassFetch(job.q, job.ms)); } catch (e) { job.reject(e); }
+    ovBusy = false; pumpOverpass();
+  }
+  async function overpassFetch(q, ms) {
     let last;
-    for (const url of OVERPASS) {  // main server, then a public mirror if it is busy
-      try {
-        const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: withTimeout(ms) });
-        if (r.ok) return await r.json();
-        last = new Error('Overpass ' + r.status);
-      } catch (e) { last = e; }
+    for (let attempt = 0; attempt < 3; attempt++) {
+      for (const url of OVERPASS) {
+        try {
+          const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: withTimeout(ms) });
+          if (r.ok) return await r.json();
+          last = new Error('Overpass ' + r.status);
+          if (r.status !== 429 && r.status < 500) throw last;
+        } catch (e) { last = e; if (e.name === 'TimeoutError' || e.name === 'AbortError') throw e; }
+      }
+      await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
     }
     throw last;
   }
@@ -516,7 +533,7 @@
     let pos = {}, pair = {};
     if (ids.length) {
       try {
-        const j = await overpass(`[out:json][timeout:30];node(id:${ids.join(',')});out skel qt;way(bn)["highway"];out body qt;`, 30000);
+        const j = await overpass(`[out:json][timeout:30];node(id:${ids.join(',')});out skel qt;way(bn)["highway"];out body qt;`, 30000, true);
         for (const e of j.elements || []) {
           if (e.type === 'node') pos[e.id] = L.latLng(e.lat, e.lon);
           else if (e.type === 'way') for (let k = 1; k < e.nodes.length; k++) pair[Math.min(e.nodes[k - 1], e.nodes[k]) + ':' + Math.max(e.nodes[k - 1], e.nodes[k])] = e.tags;
@@ -552,14 +569,14 @@
     return out;
   }
   async function findParking(at, radius) {
-    const j = await overpass(`[out:json][timeout:15];nwr["amenity"="parking"](around:${radius},${at.lat.toFixed(5)},${at.lng.toFixed(5)});out center tags;`, 10000);
+    const j = await overpass(`[out:json][timeout:15];nwr["amenity"="parking"](around:${radius},${at.lat.toFixed(5)},${at.lng.toFixed(5)});out center tags;`, 10000, true);
     return (j.elements || []).filter(e => !/^(private|no|customers)$/.test((e.tags || {}).access || '') && (e.lat || e.center)).map(e => ({ at: L.latLng(e.lat || e.center.lat, e.lon || e.center.lon), tags: e.tags || {}, id: e.type + e.id }));
   }
   async function parkingNear(points, have) {
     const seen = new Set(have.filter(m => m.pid).map(m => m.pid)), out = [];
     try {
       const pts = points.slice(0, 8);
-      const j = await overpass(`[out:json][timeout:15];(${pts.map(p => `nwr["amenity"="parking"](around:400,${p.lat.toFixed(5)},${p.lng.toFixed(5)});`).join('')});out center tags;`, 15000);
+      const j = await overpass(`[out:json][timeout:15];(${pts.map(p => `nwr["amenity"="parking"](around:400,${p.lat.toFixed(5)},${p.lng.toFixed(5)});`).join('')});out center tags;`, 15000, true);
       const found = (j.elements || []).filter(e => !/^(private|no|customers)$/.test((e.tags || {}).access || '') && (e.lat || e.center)).map(e => ({ at: L.latLng(e.lat || e.center.lat, e.lon || e.center.lon), tags: e.tags || {}, id: e.type + e.id }));
       for (const f of found) if (!seen.has(f.id)) { seen.add(f.id); out.push({ kind: 'parking', at: f.at, tags: f.tags, pid: f.id }); }
     } catch (e) { console.warn('parking lookup', e); }
