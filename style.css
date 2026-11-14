@@ -159,3 +159,17 @@ dialog.wide{max-width:min(980px,calc(100vw - 32px));width:100%}
 .leaflet-bar a.mt-hand.on{background:#1d3b2a;color:#fff}
 body:not(.drawing) .leaflet-container{cursor:grab}
 body:not(.drawing) .leaflet-container.leaflet-drag-target,body:not(.drawing) .leaflet-dragging .leaflet-container{cursor:grabbing}
+.mt-open{width:auto!important;padding:0 6px;font-size:11px!important}
+.mt-open.on{background:#2e7d32!important;color:#fff!important}
+.reg-state{font-weight:800;margin:.3em 0;padding:3px 8px;border-radius:6px;display:inline-block}
+.reg-state.open{background:#e8f5e9;color:#1b5e20}.reg-state.closed{background:#ffebee;color:#b71c1c}.reg-state.part{background:#fff8e1;color:#8d6e00}.reg-state.unknown{background:#eceff1;color:#455a64}
+.reg-l{border-left:3px solid #90a4ae;padding:2px 0 2px 8px;margin:.5em 0}
+.reg-d{font-style:italic;margin-top:.35em}
+.reg-row{margin:.25em 0;padding:2px 4px;border-radius:4px}.reg-row.on{background:#e8f5e9}
+.reg-s{font-weight:700;font-size:.92em}
+.reg-now{color:#2e7d32;font-weight:800}
+.reg-n{margin:.2em 0 .2em 1.2em;padding:0;font-size:.9em}
+.lim{display:inline-block;margin:0 .6em .1em 0;font-size:.92em;white-space:nowrap}
+.reg-tip{font-weight:700}.reg-tip.open{color:#2e7d32}.reg-tip.closed{color:#c62828}.reg-tip.part{color:#9a7400}
+.warn{color:#b71c1c;font-weight:700}
+@media (prefers-color-scheme:dark){.reg-state.open,.reg-row.on{background:#1b3a1e;color:#a5d6a7}.reg-state.closed{background:#3b1a1a;color:#ef9a9a}.reg-state.part{background:#3a3214;color:#ffe082}.reg-state.unknown{background:#263238;color:#b0bec5}}

@@ -119,6 +119,14 @@
     L.DomEvent.on(hand, 'click', e => { L.DomEvent.preventDefault(e); if (typeof route !== 'undefined' && route.drawing) route.setDrawing(false); });
     return d; } });
   new Tools().addTo(map);
+  // Overall "open only" switch: shows only waters open to fishing today (or on the date chosen in Filters).
+  const OpenCtl = L.Control.extend({ options: { position: 'topleft' }, onAdd() {
+    const d = L.DomUtil.create('div', 'leaflet-bar'), a = L.DomUtil.create('a', 'max-zoom mt-open', d);
+    a.href = '#'; a.setAttribute('role', 'button'); a.textContent = 'OPEN';
+    L.DomEvent.disableClickPropagation(d);
+    L.DomEvent.on(a, 'click', e => { L.DomEvent.preventDefault(e); const c = document.getElementById('openOnly'); c.checked = !c.checked; c.dispatchEvent(new Event('change', { bubbles: true })); });
+    return d; } });
+  new OpenCtl().addTo(map);
   map.on('baselayerchange', e => { baseName = e.name; store.set('base', e.name); applyFade(); });
   document.getElementById('fade').value = fade;
   document.getElementById('fade').addEventListener('input', e => { fade = +e.target.value; store.set('fade', fade); applyFade(); });
@@ -274,7 +282,7 @@
   let hiLayer = null;
 
   /* ---------------- Filters ---------------- */
-  const F = Object.assign({ species: null, match: 'any', lakes: true, streams: true, minOrder: 1, noRecord: false, onlyStocked: false, labels: false, since: 0, sites: true, trailNames: true, placeNames: true, roadNames: true }, store.get('filters3', {}));
+  const F = Object.assign({ species: null, match: 'any', lakes: true, streams: true, minOrder: 1, noRecord: false, onlyStocked: false, labels: false, since: 0, sites: true, trailNames: true, placeNames: true, roadNames: true, openOnly: false, openDate: '' }, store.get('filters3', {}));
   if (!store.get('labelsHover', false)) { F.labels = false; store.set('labelsHover', true); }
   function readFilters() {
     F.species = $$('#speciesList input:checked:not(.grp)').map(i => i.value); syncGroups();
@@ -283,6 +291,7 @@
     F.minOrder = +$('#minOrder').value;
     F.noRecord = $('#showNoRecord').checked; F.onlyStocked = $('#onlyStocked').checked;
     F.labels = $('#labels').checked; F.trailNames = $('#trailNames').checked; F.roadNames = $('#roadNames').checked; F.placeNames = $('#placeNames').checked; F.since = +$('#since').value; F.sites = $('#showSites').checked;
+    F.openOnly = $('#openOnly').checked; F.openDate = $('#openDate').value || ''; syncOpenBtn();
     store.set('filters3', F);
   }
   function writeFilters() {
@@ -291,6 +300,7 @@
     $('#showLakes').checked = F.lakes; $('#showStreams').checked = F.streams;
     $('#minOrder').value = F.minOrder; $('#showNoRecord').checked = F.noRecord; $('#onlyStocked').checked = F.onlyStocked;
     $('#labels').checked = F.labels; $('#trailNames').checked = F.trailNames; $('#roadNames').checked = F.roadNames; $('#placeNames').checked = F.placeNames; $('#since').value = F.since; $('#showSites').checked = F.sites;
+    $('#openOnly').checked = F.openOnly; $('#openDate').value = F.openDate || ''; syncOpenBtn();
   }
   // Species in a {code: lastYear} map that pass the "records since" filter (year 0 = undated list).
   const spIn = y => Object.keys(y || {}).filter(c => !F.since || y[c] === 0 || y[c] >= F.since).sort();
@@ -305,8 +315,90 @@
     if (it.k === 'l' ? !F.lakes : !F.streams) return false;
     if (it.k === 's' && (it.o || 1) < F.minOrder) return false;
     if (F.onlyStocked && !it.st) return false;
+    if (F.openOnly && REGS) { const st = regStatus(it).state; if (st !== 'open' && st !== 'part') return false; }
     return selMatch(allSp(it));
   }
+
+  /* ---------------- Fishing regulations ----------------
+     Alberta Guide to Sportfishing Regulations (albertaregulations.ca), matched to each water by scripts/build_regs.py:
+     the water's Fish Management Zone (from the Government of Alberta zone polygons) and its name in that zone's tables
+     (lakes listed with a legal land location must also lie within 3 km of it). Unlisted waters get the zone default. */
+  let REGS = null;
+  const REG_BASE = 'https://www.albertaregulations.ca/fishingregs/';
+  const PARKS_REGS = { Banff: 'https://parks.canada.ca/pn-np/ab/banff/activ/peche-fishing', Jasper: 'https://parks.canada.ca/pn-np/ab/jasper/activ/experience/ete-summer/peche-fishing',
+    Waterton: 'https://pcweb2.azureedge.net/-/media/pn-np/ab/waterton/WET4/pdf/2025/2025-wlnp-fishing-regulations.pdf' };
+  const regDay = () => { const d = F.openDate ? new Date(F.openDate + 'T12:00') : new Date(); return { d, md: (d.getMonth() + 1) * 100 + d.getDate() }; };
+  const inRange = (md, r) => r[0] <= r[1] ? md >= r[0] && md <= r[1] : md >= r[0] || md <= r[1];
+  // A season row is open on a date inside one of its OPEN periods; any date not covered by an open row is closed.
+  const rowOpen = (row, md) => (row.s.open || []).some(r => inRange(md, r));
+  const secOpen = (rows, md) => rows.some(r => rowOpen(r, md));
+  // Lake listings may also carry rows for the lake's tributaries or outlet; those don't decide whether the lake is open.
+  const sideSec = (L, sec) => L.kind === 'lake' && /^(tributar|outlet|inlet|all tributar)/i.test(sec.d || '');
+  // All regulation pieces that apply to a water (or one stretch of it): [{zone, listing|null, possible, default}]
+  function regParts(it, reachIdx) {
+    const w = REGS && REGS.w[it.id];
+    if (!w) return [];
+    let zs = Array.isArray(w[0]) ? (reachIdx != null ? [w[0][reachIdx]] : [...new Set(w[0])]) : [w[0]];
+    zs = zs.filter(Boolean);
+    const kind = it.k === 'l' ? 'lake' : 'stream', out = [];
+    for (const z of zs) {
+      const ls = ((w[1] || {})[z] || []);
+      const sure = ls.filter(i => i >= 0).map(i => REGS.list[i]), maybe = ls.filter(i => i < 0).map(i => REGS.list[-1 - i]);
+      const def = ((REGS.defaults[z] || {})[kind]) || null;
+      if (sure.length) sure.forEach(L => out.push({ zone: z, L }));
+      else { maybe.forEach(L => out.push({ zone: z, L, possible: true })); out.push({ zone: z, def, possible: maybe.length > 0 }); }
+    }
+    return out;
+  }
+  // open / closed / part (some listed sections or candidates open) / unknown (no provincial data: national parks, outside zones)
+  function regStatus(it, reachIdx) {
+    const parts = regParts(it, reachIdx), { md } = regDay();
+    if (!parts.length) return { state: 'unknown', parts };
+    const states = [];
+    for (const p of parts) {
+      if (p.L) p.L.sec.filter(sc => !sideSec(p.L, sc) && sc.rows.length).forEach(sc => states.push(secOpen(sc.rows, md)));
+      else if (p.def) states.push(secOpen(p.def, md));
+    }
+    if (!states.length) return { state: 'unknown', parts };
+    return { state: states.every(Boolean) ? 'open' : states.some(Boolean) ? 'part' : 'closed', parts };
+  }
+  const REG_WORD = { open: 'Open', closed: 'Closed', part: 'Partly open', unknown: 'No provincial regulation data' };
+  const limName = h => ({ 'Trout Total': 'Trout total', 'WALL + SAUG': 'WALL + SAUG' })[h] || h;
+  function regRowsHtml(rows, md) {
+    return rows.map(r => {
+      const on = rowOpen(r, md);
+      const lim = r.l ? Object.entries(r.l).map(([k, v]) => `<span class="lim"><b class="code">${esc(limName(k))}</b> ${esc(v)}</span>`).join(' ') : '';
+      const notes = r.n ? `<ul class="reg-n">${r.n.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '';
+      return `<div class="reg-row${on ? ' on' : ''}"><div class="reg-s">${esc(r.s.t)}${r.s.cond ? ' <span class="hint">(time conditions)</span>' : ''}${on ? ' <span class="reg-now">◀ ' + (F.openDate ? 'on ' + esc(F.openDate) : 'today') + '</span>' : ''}</div>` +
+        (r.b ? `<div class="hint">${esc(r.b)}</div>` : '') + (lim ? `<div>${lim}</div>` : '') + notes + '</div>';
+    }).join('');
+  }
+  function regsHtml(it, reachIdx) {
+    if (!REGS) return '';
+    const st = regStatus(it, reachIdx), { md, d } = regDay(), m = REGS.meta || {};
+    const when = F.openDate ? 'on ' + F.openDate : 'today';
+    const late = m.until && d.toISOString().slice(0, 10) > m.until;
+    let h = `<h3 class="dh">Fishing regulations${m.effective ? ` <span class="hint">(${esc(m.effective[0])} – ${esc(m.effective[1])})</span>` : ''}</h3>`;
+    if (st.state === 'unknown') {
+      const pk = Object.keys(it.pk || {});
+      return h + `<p class="reg-state unknown">${REG_WORD.unknown}</p><p class="hint">${pk.length ? 'This water is in ' + esc(pk.join(', ')) + ' National Park, where Parks Canada fishing regulations apply instead: ' + pk.map(p => PARKS_REGS[p] ? `<a href="${PARKS_REGS[p]}" target="_blank" rel="noopener">${esc(p)} regulations</a>` : '').join(' ') : 'This water is outside the provincial Fish Management Zones (for example inside a national park).'}</p>`;
+    }
+    h += `<p class="reg-state ${st.state}">${REG_WORD[st.state]} ${when}${st.state === 'part' ? ': depends on the section, see below' : ''}</p>`;
+    if (late) h += `<p class="warn">These regulations ended ${esc(m.effective[1])}. Check the current guide.</p>`;
+    for (const p of st.parts) {
+      const zl = `<a href="${REG_BASE}${p.zone.toLowerCase()}.html" target="_blank" rel="noopener">${p.zone}</a>`;
+      if (p.L) {
+        h += `<div class="reg-l"><div><b>${esc(p.L.name)}</b> <span class="hint">· listed in ${zl} ${p.L.kind === 'lake' ? 'Lakes' : 'Rivers'} table${p.possible ? ' · <b>possible match</b>: more than one water in ' + p.zone + ' has this name and the listing does not say which' : ''}</span></div>` +
+          p.L.sec.map(sc => `<div class="reg-sec">${sc.d ? `<div class="reg-d">${esc(sc.d)}</div>` : ''}${sc.rows.length ? regRowsHtml(sc.rows, md) : '<div class="hint">(no season on this line of the table)</div>'}</div>`).join('') + '</div>';
+      } else if (p.def) {
+        h += `<div class="reg-l"><div><b>${p.zone} default for ${it.k === 'l' ? 'lakes' : 'streams'}</b> <span class="hint">· ${p.possible ? 'applies if this is not the listed water above' : 'not listed by name'}</span></div>${regRowsHtml(p.def, md)}` +
+          (it.k === 's' ? `<p class="hint">Small streams are often covered by a listed stream's "includes tributaries" rule. If this flows into a listed stream, that listing applies instead: check ${zl}.</p>` : '') + '</div>';
+      }
+    }
+    h += `<p class="hint">Source: <a href="${REG_BASE}" target="_blank" rel="noopener">Alberta Guide to Sportfishing Regulations</a>, matched to this water by zone and name. Limits are possession and size limits per angler; "0 fish" means catch and release. Always check <a href="https://mywildalberta.ca/fishing/advisories-corrections-closures/default.aspx" target="_blank" rel="noopener">advisories, corrections and closures</a> before you go.</p>`;
+    return h;
+  }
+  function syncOpenBtn() { const b = document.querySelector('.mt-open'); if (b) { b.classList.toggle('on', !!F.openOnly); b.title = F.openOnly ? 'Showing only waters open ' + (F.openDate ? 'on ' + F.openDate : 'today') + '. Tap to show all.' : 'Show only waters open to fishing today'; } }
   const rarest = sp => RARITY.find(c => sp.includes(c)) || sp[0];
   const colorOfSp = sp => { const t = rarest(sp); return t ? spColor(t) : NO_REC; };
   const topSpecies = it => rarest(allSp(it));
@@ -378,11 +470,12 @@
         const col = colorOf(it);
         L.polygon(swap(f.g), { renderer: canvas, color: '#ffffff', weight: 6, fill: false, opacity: 0.9, interactive: false }).addTo(waterLayer);
         L.polygon(swap(f.g), { renderer: canvas, color: colorOfSp(selOnly(allSp(it))), weight: 3, fillColor: colorOfSp(selOnly(allSp(it))), fillOpacity: 0.5 })
-          .bindTooltip(hoverCodes(dispName(it), selOnly(allSp(it))), { sticky: true, className: 'codes-lbl hover' }).on('click', () => select(it.id, false)).addTo(waterLayer);
+          .bindTooltip(hoverCodes(dispName(it), selOnly(allSp(it))) + regTip(it), { sticky: true, className: 'codes-lbl hover' }).on('click', () => select(it.id, false)).addTo(waterLayer);
         labels.push([it.c[1], it.c[0], selOnly(allSp(it)), 1000]);
         continue;
       }
       // Streams: each stretch (reach) shows only the species caught on that stretch.
+      const rtip = regTip(it);
       for (const r of f.r || []) {
         const sp = spIn(r.y);
         const w = Math.min(1 + (r.o || it.o || 1) * 0.7, 6);
@@ -390,7 +483,7 @@
         const lyr = selMatch(sp)
           ? L.polyline(swap(r.g), { renderer: canvas, color: colorOfSp(selOnly(sp)), weight: w + 1, opacity: 1 })
           : L.polyline(swap(r.g), { renderer: canvas, color: '#6f8f9a', weight: Math.max(1, w - 2), opacity: 0.55, dashArray: '4 5' });
-        lyr.bindTooltip(selMatch(sp) ? hoverCodes(dispName(it), selOnly(sp)) : `${esc(dispName(it))}<br><span class="hint">No survey record of the selected fish on this stretch</span>`, { sticky: true, className: 'codes-lbl hover' })
+        lyr.bindTooltip((selMatch(sp) ? hoverCodes(dispName(it), selOnly(sp)) : `${esc(dispName(it))}<br><span class="hint">No survey record of the selected fish on this stretch</span>`) + rtip, { sticky: true, className: 'codes-lbl hover' })
           .on('click', () => select(it.id, false, r)).addTo(waterLayer);
         if (selOnly(sp).length) { const m = mid(r.g); labels.push([m[1], m[0], selOnly(sp), r.o || 1]); }
       }
@@ -436,6 +529,7 @@
     for (const it of items) { const f = (chunkData[it.ch] || {})[it.id]; const lines = it.k === 's' && f && f.r ? f.r.map(r => r.g) : null; (f && f.s || []).forEach(s => { if (b.contains([s[1], s[0]])) siteLayer(s, dispName(it), lines); }); }
     for (const k of keys) (chunkPts[k] || []).forEach(s => { if (b.contains([s[1], s[0]])) siteLayer(s, s[6] ? s[6] + ' (not on a mapped water)' : 'Survey site not on a mapped water'); });
   }
+  const regTip = it => { if (!REGS) return ''; const s = regStatus(it).state; return s === 'unknown' ? '' : `<br><span class="reg-tip ${s}">${REG_WORD[s]} ${F.openDate ? 'on ' + esc(F.openDate) : 'today'}</span>`; };
   const hoverCodes = (name, codes) => `<b class="hn">${esc(name)}</b><br>` + codes.map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ');
   function drawLabels(labels) {
     if (!F.labels || map.getZoom() < LABEL_ZOOM) return;
@@ -448,7 +542,7 @@
 
   function applyFilters() {
     passing = new Set(ITEMS.filter(passes).map(it => it.id));
-    $('#count').textContent = `${passing.size.toLocaleString()} waters with selected fish · ${(META.total || ITEMS.length).toLocaleString()} lakes & streams mapped`;
+    $('#count').textContent = `${passing.size.toLocaleString()} waters with selected fish${F.openOnly ? ' open ' + (F.openDate ? 'on ' + F.openDate : 'today') : ''} · ${(META.total || ITEMS.length).toLocaleString()} lakes & streams mapped`;
     $('#ordOut').textContent = F.minOrder <= 1 ? 'all' : `order ${F.minOrder}+`;
     draw();
   }
@@ -501,6 +595,7 @@
       <h3 class="dh">${it.k === 's' ? (reach ? 'Whole stream, all stretches' : 'Caught at survey sites along this stream') : 'Recorded in this lake'}${F.since ? ` (since ${F.since})` : ''}</h3>
       <div>${selOnly(sp).length ? chips(selOnly(sp), it) : '<span class="hint">None of the selected species.</span>'}</div>
       ${sp.filter(c => !selOnly([c]).length).length ? `<details><summary class="hint">Other fish recorded (${sp.filter(c => !selOnly([c]).length).length})</summary>${chips(sp.filter(c => !selOnly([c]).length), it)}</details>` : ''}
+      ${regsHtml(it, reach && f && f.r ? f.r.indexOf(reach) : null)}
       ${it.k === 's' ? '<p class="hint">Tap a stretch on the map to see what was caught on that stretch. Dashed stretches have no survey record of the selected species.</p>' : ''}
       ${stocked ? `<h3 class="dh">Stocking records</h3><ul class="stock">${stocked}</ul>` : ''}
       ${sites.length ? `<h3 class="dh">Survey sites (${sites.length})</h3><ul class="stock">${sites.slice(0, 40).map(s => `<li><span class="code">${Object.keys(s[2]).sort().join(' ')}</span> · ${Math.max(0, ...Object.values(s[2])) || 'undated'}${s[4].startsWith('pc:') ? ' · Parks Canada' : ''}${s[5] && s[5].length ? ' · ' + esc(s[5].join(', ')) : ''}</li>`).join('')}${sites.length > 40 ? '<li class="hint">…</li>' : ''}</ul>` : ''}
@@ -1081,8 +1176,9 @@
   $('#oClear').onclick = async () => { if ('caches' in window) { await caches.delete('tiles-v1'); $('#oStatus').textContent = 'Saved tiles deleted.'; } };
 
   /* ---------------- Boot ---------------- */
-  Promise.all([fetch('data/species_names.json').then(r => r.json()).then(n => { NAMES = n; }).catch(() => {}), fetch('data/species.json').then(r => r.json()), fetch('data/water/index.json').then(r => { if (!r.ok) throw new Error('nodata'); return r.json(); })])
-    .then(([, sp, idx]) => {
+  const regsP = fetch('data/regs/regs.json').then(r => r.ok ? r.json() : null).then(j => { REGS = j; }).catch(e => console.warn('regulations', e));
+  Promise.all([regsP, fetch('data/species_names.json').then(r => r.json()).then(n => { NAMES = n; }).catch(() => {}), fetch('data/species.json').then(r => r.json()), fetch('data/water/index.json').then(r => { if (!r.ok) throw new Error('nodata'); return r.json(); })])
+    .then(([, , sp, idx]) => {
       SPECIES = sp; SPECIES.forEach(s => SP[s.code] = s); RARITY = SPECIES.map(s => s.code);
       META = idx.meta; ITEMS = idx.items;
       const pk = (META.parks || {});
@@ -1121,6 +1217,7 @@
       $('#speciesList').addEventListener('change', e => { if (e.target.classList.contains('grp')) $$(`#speciesList .sub[data-grp="${e.target.dataset.grp}"] input`).forEach(i => { i.checked = e.target.checked; }); }, true);
       $('#spAll').onclick = () => { $$('#speciesList input').forEach(i => i.checked = true); readFilters(); applyFilters(); };
       $('#spNone').onclick = () => { $$('#speciesList input').forEach(i => i.checked = false); readFilters(); applyFilters(); };
+      $('#openToday').onclick = () => { $('#openDate').value = ''; readFilters(); applyFilters(); };
       $('#q').addEventListener('input', renderList);
       $('#inView').addEventListener('change', renderList);
       $$('.sites th').forEach(th => th.onclick = () => { sort.desc = sort.key === th.dataset.sort ? !sort.desc : false; sort.key = th.dataset.sort; store.set('sort2', sort); renderList(); });

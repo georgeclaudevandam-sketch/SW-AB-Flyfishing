@@ -1,0 +1,2438 @@
+[
+[
+"ES1",
+"lake",
+"Blairmore Water Supply (Unnamed) Reservoir",
+"name"
+],
+[
+"ES1",
+"lake",
+"Phillips Lake",
+"name"
+],
+[
+"ES1",
+"lake",
+"Sunken Lakes",
+"name"
+],
+[
+"ES1",
+"stream",
+"Ghost River Wilderness Area",
+"name"
+],
+[
+"ES1",
+"stream",
+"Inglewood Bird Sanctuary",
+"name"
+],
+[
+"ES1",
+"stream",
+"South Castle River",
+"name"
+],
+[
+"ES2",
+"lake",
+"Siffleur Wilderness Area",
+"name"
+],
+[
+"ES2",
+"lake",
+"White Goat Wilderness Area",
+"name"
+],
+[
+"ES2",
+"stream",
+"Devil’s Fork (Unnamed) Creek",
+"name"
+],
+[
+"ES2",
+"stream",
+"Raven Brood Trout Station",
+"name"
+],
+[
+"ES2",
+"stream",
+"Siffleur Wilderness Area",
+"name"
+],
+[
+"ES2",
+"stream",
+"White Goat Wilderness Area",
+"name"
+],
+[
+"ES3",
+"lake",
+"Bear Lake",
+"name"
+],
+[
+"ES3",
+"lake",
+"Chip Lake",
+"name"
+],
+[
+"ES3",
+"lake",
+"Horseshoe Lake",
+"name"
+],
+[
+"ES3",
+"lake",
+"Long Lake",
+"name"
+],
+[
+"ES3",
+"lake",
+"Pit 24 Lake",
+"name"
+],
+[
+"ES3",
+"lake",
+"Pit 35 Lake",
+"name"
+],
+[
+"ES3",
+"lake",
+"Pit 44 Lake",
+"name"
+],
+[
+"ES3",
+"lake",
+"Pit 45 Lake",
+"name"
+],
+[
+"ES3",
+"lake",
+"Shiningbank Lake",
+"name"
+],
+[
+"ES3",
+"stream",
+"Bigoray River",
+"name"
+],
+[
+"ES4",
+"lake",
+"County Sportplex Pond",
+"name"
+],
+[
+"ES4",
+"lake",
+"Iosegun Lake",
+"name"
+],
+[
+"ES4",
+"lake",
+"Meekwap Lake",
+"name"
+],
+[
+"ES4",
+"lake",
+"Raspberry Lake",
+"name"
+],
+[
+"ES4",
+"lake",
+"Snipe Lake",
+"name"
+],
+[
+"ES4",
+"lake",
+"Sturgeon Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Amisk Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Angling Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Bangs Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Beartrap Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Beaver Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Behan Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Bentley Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Big Chief Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Big Johnson (Chump) Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Bluet Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Bourque Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Brodrick (Unnamed) Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Burnt Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Calling Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Claude Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Clyde Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Cold Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Cow Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Crane (Moore) Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Crickett Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Drown Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Elinor Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Ethel (Bear) Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Fishing Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Floatingstone Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Fork Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Francis Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Frog Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Garner Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Garnier Lakes",
+"name"
+],
+[
+"NB1",
+"lake",
+"Goodfish Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Goodwin Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Halfmoon Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Hanmore Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Heart Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Hilda Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Hope Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Ironwood Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Island (Unnamed) Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Island Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Kaduk Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Kehiwin Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Lac Bellevue",
+"name"
+],
+[
+"NB1",
+"lake",
+"Lac La Biche",
+"name"
+],
+[
+"NB1",
+"lake",
+"Lac La Biche Trout Pond",
+"name"
+],
+[
+"NB1",
+"lake",
+"Lac Saint Cyr",
+"name"
+],
+[
+"NB1",
+"lake",
+"Lac Sante",
+"name"
+],
+[
+"NB1",
+"lake",
+"Lakeland Provincial Park",
+"name"
+],
+[
+"NB1",
+"lake",
+"Laurier Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Legal Reservoir",
+"name"
+],
+[
+"NB1",
+"lake",
+"Little Bear Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Lodge Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Logan Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Lone Pine Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Long Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Long Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Manatokan Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Marie Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"May Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Minnie Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Mons Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Moonshine Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Moose Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Moosehills Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"North Buck Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Piche Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Pinehurst Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Primrose Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Reed Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Rock Island Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Ross Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Seibert Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Sinclair Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Skeleton Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Soars Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Sowka (Unnamed) Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Spencer Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Stoney (Siler) Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Sunday Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Touchwood Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Tucker Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Victor Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Wayetenaw Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Whitefish Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Whitemud (Unnamed) Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Whitney Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Wiau Lake",
+"name"
+],
+[
+"NB1",
+"lake",
+"Wolf Lake Complex",
+"name"
+],
+[
+"NB1",
+"stream",
+"Athabasca River",
+"name"
+],
+[
+"NB1",
+"stream",
+"Beaver River",
+"name"
+],
+[
+"NB1",
+"stream",
+"La Biche River",
+"name"
+],
+[
+"NB1",
+"stream",
+"Lakeland Provincial Park",
+"name"
+],
+[
+"NB1",
+"stream",
+"Martineau River",
+"name"
+],
+[
+"NB1",
+"stream",
+"Medley River",
+"name"
+],
+[
+"NB1",
+"stream",
+"Owl River",
+"name"
+],
+[
+"NB1",
+"stream",
+"Piche River",
+"name"
+],
+[
+"NB1",
+"stream",
+"Redwater River",
+"name"
+],
+[
+"NB2",
+"lake",
+"Baptiste Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Blue Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Bolloque Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Chain (Lower) Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Crooked Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Dolberg Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Fawcett Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Francis Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Freeman Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Ghost Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Gilroy Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Goose Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Island Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Jenkins Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Lac La Nonne",
+"name"
+],
+[
+"NB2",
+"lake",
+"Lawrence Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Lesser Slave Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Lily Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Long Island Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Long Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Meyer Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Mitsue Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Nakamun Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Narrow Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Orloff Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Paul Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Schuman Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"South Heart Reservoir",
+"name"
+],
+[
+"NB2",
+"lake",
+"Steele (Cross) Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Thunder Lake",
+"name"
+],
+[
+"NB2",
+"lake",
+"Whiteridge Recreation Area Pond (Blueridge Pit)",
+"name"
+],
+[
+"NB2",
+"lake",
+"Winagami Lake",
+"name"
+],
+[
+"NB2",
+"stream",
+"Athabasca River",
+"name"
+],
+[
+"NB2",
+"stream",
+"East Prairie R., Strawberry Ck., Travers Ck., West Prairie R.",
+"name"
+],
+[
+"NB2",
+"stream",
+"Freeman River",
+"name"
+],
+[
+"NB2",
+"stream",
+"Lesser Slave River and tributaries to Lesser Slave Lake",
+"name"
+],
+[
+"NB2",
+"stream",
+"Pembina River",
+"name"
+],
+[
+"NB2",
+"stream",
+"South Heart River",
+"name"
+],
+[
+"NB3",
+"lake",
+"Albright Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Artisinn (unnamed) Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Beatty Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Berry Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Bistcho Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Brintnell Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Cadotte Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Calder Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Caribou Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Equisetum Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Fish (Jackfish) Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Gods Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Goodfish Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Graham (Trout) Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Haig Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Hebephrenic (Jackfish) Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Hutch Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Joker Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Legend Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Little Sandy Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Long Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Long Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Margaret Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Mink Lake #1",
+"name"
+],
+[
+"NB3",
+"lake",
+"Mistehae Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Muskwa Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Nipisi Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"North Wabasca Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Pastecho Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Peerless Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Pitchimi Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Rainbow Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Round Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Sandy Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Sawn Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Semo Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"South Wabasca Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Spawn Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Talbot Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Thurston Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Twin Lakes",
+"name"
+],
+[
+"NB3",
+"lake",
+"Utikuma Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Utikumasis Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Vandersteene Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Wadlin Lake",
+"name"
+],
+[
+"NB3",
+"lake",
+"Wentzel Lake",
+"name"
+],
+[
+"NB3",
+"stream",
+"Chinchaga River",
+"name"
+],
+[
+"NB3",
+"stream",
+"Hay River",
+"name"
+],
+[
+"NB3",
+"stream",
+"Loon River",
+"name"
+],
+[
+"NB3",
+"stream",
+"Mikkwa River",
+"name"
+],
+[
+"NB3",
+"stream",
+"Muskwa River",
+"name"
+],
+[
+"NB3",
+"stream",
+"Nipisi River",
+"name"
+],
+[
+"NB3",
+"stream",
+"Notikewin River",
+"name"
+],
+[
+"NB3",
+"stream",
+"Peace River",
+"name"
+],
+[
+"NB3",
+"stream",
+"Petitot River",
+"name"
+],
+[
+"NB3",
+"stream",
+"Smoky River",
+"name"
+],
+[
+"NB3",
+"stream",
+"Wabasca River",
+"name"
+],
+[
+"NB4",
+"lake",
+"Alexander Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Andrew Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Arch Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Ashton Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Barrow Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Base Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Bayonet Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Big Island Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Blanche Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Bocquene Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Bryant Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Burstall Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Charles Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Cherry Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Christina Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Cockscomb Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Colin Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Collins Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Cornwall Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Cowper Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Daly Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Darwin Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Dawson Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Disappointment Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Ells Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Fletcher Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Florence Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Gardiner Lakes",
+"name"
+],
+[
+"NB4",
+"lake",
+"Gipsy Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Glover (Birch) Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Gregoire (Willow) Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Grist Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Hooker Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Kimowin (Hook) Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Kirby (Sterner) Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Lake Athabasca",
+"name"
+],
+[
+"NB4",
+"lake",
+"Leggo Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Leland Lakes",
+"name"
+],
+[
+"NB4",
+"lake",
+"Limon Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Loutit Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Mcclelland Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Mercredi Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Myers Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Namur Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"One Week Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Pans Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Peters Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Potts Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Richardson Backcountry",
+"name"
+],
+[
+"NB4",
+"lake",
+"Richardson Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Roderick Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Royemma Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Ryan Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"St. Agnes Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Steepbank Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Treasure Loch Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Tulip Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Turtle Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Wappau Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Weekes Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Winefred Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Winnifred Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Woodman Lake",
+"name"
+],
+[
+"NB4",
+"lake",
+"Wylie Lake",
+"name"
+],
+[
+"NB4",
+"stream",
+"Athabasca River",
+"name"
+],
+[
+"NB4",
+"stream",
+"Birch Creek",
+"name"
+],
+[
+"NB4",
+"stream",
+"Christina Lake Tributaries and Outflows",
+"name"
+],
+[
+"NB4",
+"stream",
+"Clearwater River",
+"name"
+],
+[
+"NB4",
+"stream",
+"Ells River",
+"name"
+],
+[
+"NB4",
+"stream",
+"Hangingstone River",
+"name"
+],
+[
+"NB4",
+"stream",
+"House River",
+"name"
+],
+[
+"NB4",
+"stream",
+"Monday Creek",
+"name"
+],
+[
+"NB4",
+"stream",
+"Richardson Backcountry",
+"name"
+],
+[
+"NB4",
+"stream",
+"Richardson River",
+"name"
+],
+[
+"NB4",
+"stream",
+"Sunday Creek",
+"name"
+],
+[
+"NB4",
+"stream",
+"Winefred Lake Tributaries and Outflows",
+"name"
+],
+[
+"PP1",
+"lake",
+"Badger Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Bassano Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Burdett (Unnamed) Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"CPR Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Chin Lakes",
+"name"
+],
+[
+"PP1",
+"lake",
+"Clear Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Cowoki Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Crawling Valley Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Cross Coulee Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Eagle Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Elkwater Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Fincastle Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Forty Mile Coulee Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Gun Club (Cann) Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Hays (Grantham Reservoir) Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Henderson Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Horsefly Lake Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Jamieson Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Jensen Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Johnson Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Keho Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Kitsim Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Lake Newell",
+"name"
+],
+[
+"PP1",
+"lake",
+"Lethbridge University Pond",
+"name"
+],
+[
+"PP1",
+"lake",
+"Little Bow Lake Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Lost Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Marsh Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Mcgregor Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Mcvinnie Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Michel Creek Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Milk River Ridge Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Murray Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Park Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Picture Butte Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Rattlesnake (Sauder) Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Raymond Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Raymond Sugar Factory Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Reesor Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Rock Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Rolling Hills Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Scope (Unnamed) Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Shays Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Sherburne Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Snake Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Spruce Coulee Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"St. Mary Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Stafford Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Stonehill Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Taber Lake",
+"name"
+],
+[
+"PP1",
+"lake",
+"Tilley B Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Timko Lake (J Or Bantry Reservoir)",
+"name"
+],
+[
+"PP1",
+"lake",
+"Travers Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Twelve Mile Coulee Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Twin Valley Reservoir",
+"name"
+],
+[
+"PP1",
+"lake",
+"Yellow Lake",
+"name"
+],
+[
+"PP1",
+"stream",
+"Battle Creek",
+"name"
+],
+[
+"PP1",
+"stream",
+"Bow River",
+"name"
+],
+[
+"PP1",
+"stream",
+"Carseland-Bow River Headwater Canal",
+"name"
+],
+[
+"PP1",
+"stream",
+"Graburn Creek",
+"name"
+],
+[
+"PP1",
+"stream",
+"Oldman River",
+"name"
+],
+[
+"PP1",
+"stream",
+"South Saskatchewan River",
+"name"
+],
+[
+"PP2",
+"lake",
+"Arm Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Battle Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Berry Creek (Carolside) Reservoir",
+"name"
+],
+[
+"PP2",
+"lake",
+"Big Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Blood Indian Creek Reservoir",
+"name"
+],
+[
+"PP2",
+"lake",
+"Buck Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Buffalo Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Chain Lakes (Upper and Middle)",
+"name"
+],
+[
+"PP2",
+"lake",
+"Clear (Barnes) Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Coal Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Driedmeat Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"East Twin Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Forestburg Reservoir",
+"name"
+],
+[
+"PP2",
+"lake",
+"Gull Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Hubbles Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Isle Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Jack Fish Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Kerbe's Pond",
+"name"
+],
+[
+"PP2",
+"lake",
+"Lac Ste. Anne",
+"name"
+],
+[
+"PP2",
+"lake",
+"Lessard Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Little Fish Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Lloydminster Pond",
+"name"
+],
+[
+"PP2",
+"lake",
+"Magee Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Matchayaw (Devil's) Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Mayatan Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Medicine Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Mere Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Mink Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Muir Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Pigeon Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Pine Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Raft Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Rat Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Spotted Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Spring Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Sylvan Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Wabamun Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"West Twin Lake",
+"name"
+],
+[
+"PP2",
+"lake",
+"Wizard Lake",
+"name"
+],
+[
+"PP2",
+"stream",
+"Battle River",
+"name"
+],
+[
+"PP2",
+"stream",
+"Berry Creek",
+"name"
+],
+[
+"PP2",
+"stream",
+"Blindman River",
+"name"
+],
+[
+"PP2",
+"stream",
+"Little Red Deer River",
+"name"
+],
+[
+"PP2",
+"stream",
+"Medicine River",
+"name"
+],
+[
+"PP2",
+"stream",
+"North Saskatchewan River",
+"name"
+],
+[
+"PP2",
+"stream",
+"Parlby Creek",
+"name"
+],
+[
+"PP2",
+"stream",
+"Red Deer River",
+"name"
+],
+[
+"PP2",
+"stream",
+"Sturgeon River",
+"name"
+],
+[
+"PP2",
+"stream",
+"Sylvan Creek",
+"name"
+]
+]

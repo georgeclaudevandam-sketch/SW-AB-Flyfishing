@@ -252,6 +252,15 @@
    "url": "https://geospatial.alberta.ca/mimas/rest/services/recreation/alberta_designated_and_provincial_trails/MapServer",
    "licence": "Copyright Government of Alberta (open data)",
    "note": "Overlay 'Alberta designated trails (Gov. of Alberta)': trails designated under the Public Lands Act, drawn from the service's map images. The service notes trail names are not fully validated."
+  },
+  {
+   "id": "R29",
+   "type": "Regulations",
+   "author": "Government of Alberta (published by Sports Scene Publications Inc.)",
+   "title": "Alberta Guide to Sportfishing Regulations, effective April 1, 2026 to March 31, 2027: watershed unit pages (default regulations) and waterbody tables (ESn-Lakes.pdf, ESn-Rivers.pdf)",
+   "url": "https://www.albertaregulations.ca/fishingregs/",
+   "licence": "Copyright Government of Alberta / Sports Scene Publications; season dates and limits are shown as facts with a link to the source",
+   "note": "Read monthly by scripts/build_regs.py. Each water is placed in its Fish Management Zone (R27) and matched by name to that zone's table; lakes with a legal land location must lie within 3 km of it. Same-named waters that can't be told apart are marked 'possible match'. Unlisted waters get the zone default."
   }
  ],
  "features": [
@@ -491,6 +500,14 @@
     "R23"
    ],
    "how": "Two trail overlays, on by default: Alberta designated and provincial trails (Government of Alberta) and Waymarked Trails hiking routes (OpenStreetMap). Named OpenStreetMap trails are also drawn and labelled from zoom 13."
+  },
+  {
+   "feature": "Fishing regulations: open dates, catch limits, bait, and the 'open only' filter",
+   "refs": [
+    "R29",
+    "R27"
+   ],
+   "how": "The details panel shows the listed sections, seasons, bait rule and possession/size limits for the water (or the zone default). The OPEN button and 'Only waters open to fishing' keep waters with at least one section open today or on a chosen date. National park waters have no provincial data and point to Parks Canada's regulations."
   }
  ]
 }
