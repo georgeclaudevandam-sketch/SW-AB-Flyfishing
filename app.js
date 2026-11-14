@@ -401,6 +401,8 @@
      Alberta Guide to Sportfishing Regulations (albertaregulations.ca), matched to each water by scripts/build_regs.py:
      the water's Fish Management Zone (from the Government of Alberta zone polygons) and its name in that zone's tables
      (lakes listed with a legal land location must also lie within 3 km of it). Unlisted waters get the zone default. */
+  // Waters the map owner has reported as no longer existing; they stay in the source data but are not shown.
+  const OWNER_HIDE = { l3470: 'Allen Bill Pond: map owner reports it no longer exists (FWMIS records end 1987, stocking 2013)' };
   let REGS = null;
   const REG_BASE = 'https://www.albertaregulations.ca/fishingregs/';
   const PARKS_REGS = { Banff: 'https://parks.canada.ca/pn-np/ab/banff/activ/peche-fishing', Jasper: 'https://parks.canada.ca/pn-np/ab/jasper/activ/experience/ete-summer/peche-fishing',
@@ -1305,7 +1307,7 @@
   Promise.all([regsP, fetch('data/species_names.json').then(r => r.json()).then(n => { NAMES = n; }).catch(() => {}), fetch('data/species.json').then(r => r.json()), fetch('data/water/index.json').then(r => { if (!r.ok) throw new Error('nodata'); return r.json(); })])
     .then(([, , sp, idx]) => {
       SPECIES = sp; SPECIES.forEach(s => SP[s.code] = s); RARITY = SPECIES.map(s => s.code);
-      META = idx.meta; ITEMS = idx.items;
+      META = idx.meta; ITEMS = idx.items.filter(it => !OWNER_HIDE[it.id]);
       const pk = (META.parks || {});
       ITEMS.forEach(it => BYID[it.id] = it);
       const noLoc = pk.unmatched || [];

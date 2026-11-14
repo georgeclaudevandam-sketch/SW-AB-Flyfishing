@@ -508,6 +508,11 @@
     "R27"
    ],
    "how": "The details panel shows the listed sections, seasons, bait rule and possession/size limits for the water (or the zone default). The OPEN button and 'Only waters open to fishing' keep waters with at least one section open today or on a chosen date. National park waters have no provincial data and point to Parks Canada's regulations."
+  },
+  {
+   "feature": "Waters hidden at the map owner's direction",
+   "refs": [],
+   "how": "Allen Bill Pond (FWMIS l3470) is not shown: the map owner reports it no longer exists. Its FWMIS records end in 1987 and stocking in 2013."
   }
  ]
 }
