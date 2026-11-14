@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['scripts/build_fwmis.py', 'scripts/build_regs.py', 'scripts/fetch_parks.py', 'scripts/parks.py', '.github/workflows/build-data.yml']
+    paths: ['scripts/build_fwmis.py', 'scripts/build_regs.py', 'scripts/build_sections.py', 'scripts/reg_sections.json', 'scripts/fetch_parks.py', 'scripts/parks.py', '.github/workflows/build-data.yml']
   schedule:
     - cron: '0 9 1 * *'   # monthly refresh
 permissions:
@@ -22,14 +22,14 @@ jobs:
       - name: Download lakes, streams and species from FWMIS and merge park records
         run: python3 scripts/build_fwmis.py
       - name: Match Alberta sportfishing regulations to the waters
-        run: pip install -q pdfplumber==0.11.10 && python3 scripts/build_regs.py || echo "regulations build failed; keeping the previous file"
+        run: pip install -q pdfplumber==0.11.10 && python3 scripts/build_regs.py && python3 scripts/build_sections.py || echo "regulations build failed; keeping the previous file"
       - name: Size report
         run: du -sh data/water && ls data/water | wc -l
       - name: Commit data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/water data/parks data/species_names.json data/regs/regs.json data/regs/unmatched.json
+          git add data/water data/parks data/species_names.json data/regs/regs.json data/regs/unmatched.json data/regs/sections_log.json
           git diff --cached --quiet && exit 0
           git commit -m "Update FWMIS water data"
           git pull --rebase

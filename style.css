@@ -183,3 +183,7 @@ body:not(.drawing) .leaflet-container.leaflet-drag-target,body:not(.drawing) .le
 .key-lbl.leaflet-tooltip::before{display:none}
 .key-note{font:700 11px system-ui;border:1px solid #999;border-radius:4px;padding:0 4px}
 .mt-key.on{background:#1565c0!important;color:#fff!important}
+.leaflet-container.pointer-mode,.leaflet-container.pointer-mode .leaflet-grab{cursor:default}
+.leaflet-container.pointer-mode .leaflet-interactive{cursor:pointer}
+.leaflet-container.pointer-mode.leaflet-dragging .leaflet-grab{cursor:grabbing}
+.drawing .leaflet-container.pointer-mode{cursor:crosshair}

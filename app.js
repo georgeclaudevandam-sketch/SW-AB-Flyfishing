@@ -113,10 +113,13 @@
   const Tools = L.Control.extend({ options: { position: 'topleft' }, onAdd() {
     const d = L.DomUtil.create('div', 'leaflet-bar map-tools');
     const me = L.DomUtil.create('a', 'mt-btn', d); me.href = '#'; me.title = 'Show my location'; me.setAttribute('role', 'button'); me.innerHTML = '<span aria-hidden="true">◎</span>';
-    const hand = L.DomUtil.create('a', 'mt-btn mt-hand on', d); hand.href = '#'; hand.title = 'Hand tool: drag to move the map (stops route drawing)'; hand.setAttribute('role', 'button'); hand.innerHTML = '<span aria-hidden="true">✋</span>';
+    const hand = L.DomUtil.create('a', 'mt-btn mt-hand', d); hand.href = '#'; hand.title = 'Hand tool: on = hand cursor for dragging the map; off = arrow pointer for hovering to identify things (the map still drags). Also stops route drawing.'; hand.setAttribute('role', 'button'); hand.innerHTML = '<span aria-hidden="true">✋</span>';
     L.DomEvent.disableClickPropagation(d);
     L.DomEvent.on(me, 'click', e => { L.DomEvent.preventDefault(e); document.getElementById('btnLocate').click(); });
-    L.DomEvent.on(hand, 'click', e => { L.DomEvent.preventDefault(e); if (typeof route !== 'undefined' && route.drawing) route.setDrawing(false); });
+    // Arrow pointer by default so hovering identifies waters, trails and roads; the hand tool switches to a grab cursor.
+    const setHand = on => { hand.classList.toggle('on', on); map.getContainer().classList.toggle('pointer-mode', !on); store.set('hand', on); };
+    setHand(store.get('hand', false));
+    L.DomEvent.on(hand, 'click', e => { L.DomEvent.preventDefault(e); if (typeof route !== 'undefined' && route.drawing) { route.setDrawing(false); setHand(true); } else setHand(!hand.classList.contains('on')); });
     return d; } });
   new Tools().addTo(map);
   // Overall "open only" switch: shows only waters open to fishing today (or on the date chosen in Filters).
@@ -1125,7 +1128,7 @@
     },
     setDrawing(on) {
       this.drawing = on; document.body.classList.toggle('drawing', on);
-      const h = document.querySelector('.mt-hand'); if (h) h.classList.toggle('on', !on);
+      const h = document.querySelector('.mt-hand'); if (h && on) h.classList.remove('on');
       $('#rDraw').textContent = on ? 'Stop drawing' : 'Start drawing';
       $('#btnRoute').classList.toggle('on', on);
       if (on) { toast('Tap the map to add points'); if (isMobile()) closePanels(); }
