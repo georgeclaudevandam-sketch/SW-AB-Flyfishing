@@ -121,15 +121,15 @@
    {
     "d": "Headwater downstream to Elbow Falls and tributaries except Quirk Creek",
     "up": "uppermost mapped stretch in the zone",
-    "down": "Elbow Falls: not found in OpenStreetMap",
+    "down": "Elbow Falls (OpenStreetMap) at 50.86769, -114.77899",
     "upD": 122119,
-    "downD": null
+    "downD": 84430
    },
    {
     "d": "Mainstem, Elbow Falls downstream to Canyon Creek",
-    "up": "Elbow Falls: not found in OpenStreetMap",
+    "up": "Elbow Falls (OpenStreetMap) at 50.86769, -114.77899",
     "down": "mouth of Canyon Creek at 50.86595, -114.75067",
-    "upD": null,
+    "upD": 84430,
     "downD": 81959
    },
    {
@@ -154,7 +154,11 @@
     "downD": -1
    }
   ],
-  "result": "not split: a break could not be located"
+  "mainstem": {
+   "reaches": 130,
+   "assigned": 125
+  },
+  "tributary_reaches": 3182
  },
  "ES1|Fish Creek": {
   "water": "s587",
@@ -421,15 +425,15 @@
    {
     "d": "Includes tributaries; Headwater downstream to the bridge at Indian Oils Day-use Site",
     "up": "uppermost mapped stretch in the zone",
-    "down": "Indian Oils (OpenStreetMap): no road crossing within 2.5 km",
+    "down": "Indian Oils: OpenStreetMap did not answer",
     "upD": 105365,
     "downD": null
    },
    {
     "d": "Bridge at Indian Oils Day-use Site downstream to Gorge Creek and tributaries (except Gorge Creek)",
-    "up": "Indian Oils (OpenStreetMap): no road crossing within 2.5 km",
+    "up": "road crossing nearest Indian Oils (OpenStreetMap) at 50.61953, -114.69791 (265 m away)",
     "down": "mouth of Gorge Creek at 50.64441, -114.64563",
-    "upD": null,
+    "upD": 87180,
     "downD": 81164
    },
    {
@@ -612,19 +616,23 @@
    {
     "d": "Mainstem and tributaries upstream of Crescent Falls",
     "up": "uppermost mapped stretch in the zone",
-    "down": "Crescent Falls: several places beside the river",
+    "down": "Crescent Falls (OpenStreetMap) at 52.38724, -116.35567",
     "upD": 37278,
-    "downD": null
+    "downD": 10412
    },
    {
     "d": "Mainstem and tributaries downstream of Crescent Falls",
-    "up": "Crescent Falls: several places beside the river",
+    "up": "Crescent Falls (OpenStreetMap) at 52.38724, -116.35567",
     "down": "mouth",
-    "upD": null,
+    "upD": 10412,
     "downD": -1
    }
   ],
-  "result": "not split: a break could not be located"
+  "mainstem": {
+   "reaches": 63,
+   "assigned": 63
+  },
+  "tributary_reaches": 1524
  },
  "ES2|Blackstone River": {
   "water": "s1984",
@@ -656,13 +664,13 @@
    {
     "d": "Mainstem upstream of Forestry Trunk Road (bridge at 6-16-45-18-W5) and tributaries (except Cardinal River), outside of Jasper National Park",
     "up": "uppermost mapped stretch in the zone",
-    "down": "road crossing nearest location 6-16-45-18-W5 at 52.87808, -116.55810 (2063 m away)",
+    "down": "road crossing, Hwy 734 nearest location 6-16-45-18-W5 at 52.87808, -116.55810 (2063 m away)",
     "upD": 242030,
     "downD": 152756
    },
    {
     "d": "Mainstem downstream of the Forestry Trunk Road (bridge at 6-16-45-18-W5) to the Brazeau Reservoir",
-    "up": "road crossing nearest location 6-16-45-18-W5 at 52.87808, -116.55810 (2063 m away)",
+    "up": "road crossing, Hwy 734 nearest location 6-16-45-18-W5 at 52.87808, -116.55810 (2063 m away)",
     "down": "Brazeau Reservoir inlet at 52.88339, -115.67847",
     "upD": 152756,
     "downD": 67824
@@ -752,13 +760,13 @@
    {
     "d": "Mainstem from Timber Creek downstream to the Forestry Trunk Road (bridge at 5-35-09-W5) and tributaries (except Elk Creek)",
     "up": "mouth of Timber Creek at 51.93330, -115.69058",
-    "down": "road crossing nearest location 5-35-9-W5 at 51.97046, -115.23937 (2393 m away)",
+    "down": "road crossing, Hwy 734 nearest location 5-35-9-W5 at 51.97046, -115.23937 (2393 m away)",
     "upD": 142614,
     "downD": 84748
    },
    {
     "d": "Mainstem from Forestry Trunk Road (bridge at 5-35-09-W5) downstream to the North Saskatchewan River",
-    "up": "road crossing nearest location 5-35-9-W5 at 51.97046, -115.23937 (2393 m away)",
+    "up": "road crossing, Hwy 734 nearest location 5-35-9-W5 at 51.97046, -115.23937 (2393 m away)",
     "down": "mouth",
     "upD": 84748,
     "downD": -1
@@ -1019,13 +1027,13 @@
    {
     "d": "Mainstem and tributaries from Banff National Park boundary downstream to the Forestry Trunk Road (13-31-10-W5)",
     "up": "uppermost mapped stretch in the zone",
-    "down": "road crossing nearest location 13-31-10-W5 at 51.65693, -115.28691 (1366 m away)",
+    "down": "road crossing, Hwy 734 nearest location 13-31-10-W5 at 51.65693, -115.28691 (1366 m away)",
     "upD": 154031,
     "downD": 114655
    },
    {
     "d": "Mainstem from Forestry Trunk Road downstream to Gleniffer (Reservoir) Lake and tributaries (except Fallentimber Creek, Raven River, North Raven River and Pinto Creek)",
-    "up": "road crossing nearest location 13-31-10-W5 at 51.65693, -115.28691 (1366 m away)",
+    "up": "road crossing, Hwy 734 nearest location 13-31-10-W5 at 51.65693, -115.28691 (1366 m away)",
     "down": "Gleniffer Lake inlet at 52.01524, -114.34760",
     "upD": 114655,
     "downD": 7943
