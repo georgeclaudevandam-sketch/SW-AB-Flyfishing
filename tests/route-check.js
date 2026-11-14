@@ -11,6 +11,9 @@ const { chromium } = require('playwright');
   d.on('response', r => { if (/routing\.openstreetmap|overpass|geospatial\.alberta/.test(r.url())) log.push(`${r.status()} ${r.request().method()} ${r.url().slice(0, 110)}`); });
   d.on('requestfailed', r => log.push(`FAILED ${r.url().slice(0, 110)} ${r.failure() && r.failure().errorText}`));
   await d.goto(url); await d.waitForTimeout(4000);
+  console.log('fish zones:', await d.$$eval('.fmz-lbl', e => e.map(x => x.textContent).join(' ')));
+  console.log('game group:', await d.$$eval('#speciesList .sp-group:not(.ng) .code', e => e.map(x => x.textContent).filter(c => /ARCH|BLBK|CISC/.test(c)).join(' ')));
+  await d.screenshot({ path: 'route-check-zones.png' });
   await d.uncheck('#inView');
   for (const water of (process.argv[3] || 'Bear Pond').split(',')) {
     console.log(`=== Calgary to ${water} ===`);

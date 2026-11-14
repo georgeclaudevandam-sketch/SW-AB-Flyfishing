@@ -153,3 +153,5 @@ dialog.wide{max-width:min(980px,calc(100vw - 32px));width:100%}
 .leaflet-tooltip.road-lbl{background:#fff;border:1px solid #777;box-shadow:0 1px 2px rgba(0,0,0,.25);padding:0 5px;font:700 11px/1.35 system-ui,sans-serif;color:#333;border-radius:9px;white-space:nowrap}
 .leaflet-tooltip.road-lbl.major{background:#fff3e0;border-color:#c45a00;color:#7a3500}
 .leaflet-tooltip.road-lbl::before{display:none}
+.leaflet-tooltip.fmz-lbl{background:rgba(255,255,255,.85);border:2px solid #6a1b9a;color:#4a148c;font:900 15px/1.2 system-ui,sans-serif;padding:2px 8px;border-radius:6px;box-shadow:none}
+.leaflet-tooltip.fmz-lbl::before{display:none}

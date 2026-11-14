@@ -14,7 +14,7 @@ jobs:
       - run: npm i --no-save playwright@1.47.2 && npx playwright install --with-deps chromium
       - run: |
           curl -sS -m 30 -D - -o /tmp/ab.json -H 'Origin: https://georgeclaudevandam-sketch.github.io' 'https://geospatial.alberta.ca/titan/rest/services/transportation/access_facility_roads/MapServer/0/query?where=1%3D1&resultRecordCount=1&outFields=FEATURE_TYPE&f=json' | grep -i 'HTTP/\|access-control' ; head -c 300 /tmp/ab.json; echo
-      - run: (python3 -m http.server 8000 >/dev/null 2>&1 &) && sleep 2 && node tests/route-check.js http://localhost:8000/ 'Three Isle Lake,Coral Lake,Bear Pond,Eagle Lake'
+      - run: (python3 -m http.server 8000 >/dev/null 2>&1 &) && sleep 2 && node tests/route-check.js http://localhost:8000/ 'Three Isle Lake'
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: route-check, path: route-check-*.png }

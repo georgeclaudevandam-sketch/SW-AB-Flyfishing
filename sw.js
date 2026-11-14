@@ -1,10 +1,10 @@
 /* Offline support: app shell + data are cached; map tiles are cached as you view them. */
-const SHELL = 'shell-v21';
+const SHELL = 'shell-v22';
 const TILES = 'tiles-v1';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest',
   'data/species.json', 'data/species_names.json', 'data/references.json', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css',
   'vendor/leaflet/images/layers.png', 'vendor/leaflet/images/layers-2x.png', 'icons/icon.svg', 'icons/icon-192.png'];
-const TILE_HOSTS = /opentopomap\.org|tile\.openstreetmap\.org|cyclosm|arcgisonline\.com|waymarkedtrails\.org|geogratis\.gc\.ca/;
+const TILE_HOSTS = /opentopomap\.org|tile\.openstreetmap\.org|cyclosm|arcgisonline\.com|waymarkedtrails\.org|geogratis\.gc\.ca|geospatial\.alberta\.ca/;
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));

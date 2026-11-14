@@ -234,6 +234,15 @@
    "url": "https://geospatial.alberta.ca/titan/rest/services/transportation/access_facility_roads/MapServer/0",
    "licence": "Open Government Licence - Alberta",
    "note": "Authoritative provincial road data. FEATURE_TYPE gives paved (divided, 1-, 2-, 4-lane), gravel (1- or 2-lane), dry-weather road, winter road and ford. Queried live along planned routes."
+  },
+  {
+   "id": "R27",
+   "type": "Regulation boundaries",
+   "author": "Government of Alberta",
+   "title": "Fish Management Zones, fisheries_regulations MapServer layer 4",
+   "url": "https://geospatial.alberta.ca/titan/rest/services/fisheries/fisheries_regulations/MapServer/4",
+   "licence": "Open Government Licence - Alberta",
+   "note": "Overlay 'Fish management zones (ES1, ES2…)': ES1-ES4, PP1-PP2, NB1-NB4 boundaries and names, simplified to about 200 m."
   }
  ],
  "features": [
@@ -419,7 +428,7 @@
     "R25",
     "R1"
    ],
-   "how": "Codes from FWMIS whose species is on Schedule 1 Part 1 (Arctic grayling, goldeye, lake sturgeon, mooneye, sauger, tullibee/cisco, plus the trout, whitefish, pike, walleye, perch and burbot already listed) are game fish. All other codes go in the Non-game species group; amphibian, mollusc, crayfish and family-level or unknown records are listed separately inside it. Hybrids and kokanee keep the groups in data/species.json."
+   "how": "Codes from FWMIS whose species is on Schedule 1 Part 1 (Arctic grayling, goldeye, lake sturgeon, mooneye, sauger, tullibee/cisco, plus the trout, whitefish, pike, walleye, perch and burbot already listed) are game fish. All other codes go in the Non-game species group; amphibian, mollusc, crayfish and family-level or unknown records are listed separately inside it. Hybrids and kokanee keep the groups in data/species.json. Arctic char (ARCH) and bull trout x brook trout hybrid (BLBK) are also grouped as game fish at the map owner's direction."
   },
   {
    "feature": "Route line types (paved, gravel, dry-weather road, winter road, ford, surface not mapped, on foot)",
@@ -457,6 +466,13 @@
     "R9"
    ],
    "how": "Hovering (or tapping) a stream stretch or lake shows its name and the selected species recorded there. 'Always show species code labels' brings back the permanent labels."
+  },
+  {
+   "feature": "Fish management zone boundaries and labels",
+   "refs": [
+    "R27"
+   ],
+   "how": "Zone polygons drawn as a dashed outline with the zone name; loaded live and kept for offline use."
   }
  ]
 }

@@ -24,7 +24,8 @@
   const dispName = it => it.n || it.a || 'Unnamed ' + (it.k === 'l' ? 'lake' : 'stream');
   let NAMES = {};
   // Codes outside data/species.json that are game fish in Alberta Fishery Regulations, 1998 (SOR/98-246), Schedule 1 Part 1.
-  const GAME_EXTRA = new Set(['AGMN', 'GOLD', 'LKST', 'MOON', 'SAUG', 'CISC']);
+  // ARCH (Arctic char) and BLBK (bull x brook trout hybrid) are grouped with game fish at the map owner's direction.
+  const GAME_EXTRA = new Set(['AGMN', 'GOLD', 'LKST', 'MOON', 'SAUG', 'CISC', 'ARCH', 'BLBK']);
   // FWMIS codes that are not fish (amphibians, molluscs, crustaceans) or only identified to family / unknown.
   const NOT_FISH = new Set(['ANOG', 'BOTO', 'CICH', 'FAM1', 'GEN1', 'NOCY', 'TISA', 'WOFR', 'TESTFISH', 'UNKN', 'TEMP355', 'SLMN', 'FAMCATO', 'FAMCYPR']);
   const syncGroups = () => document.querySelectorAll('#speciesList .grp').forEach(g => {
@@ -35,6 +36,26 @@
   const spName = c => (SP[c] ? SP[c].name : NAMES[c] ? cap(NAMES[c]) : c);
   const spColor = c => (SP[c] ? SP[c].color : '#666');
 
+  /* Alberta Fish Management Zones (ES1-ES4, PP1-PP2, NB1-NB4) from the Government of Alberta fisheries regulations service.
+     Loaded the first time the layer is turned on; the service worker keeps a copy for offline use. */
+  function fmzLayer() {
+    const g = L.layerGroup(); let loaded = false;
+    const url = 'https://geospatial.alberta.ca/titan/rest/services/fisheries/fisheries_regulations/MapServer/4/query?where=1%3D1&outFields=FISHUNIT_NAME&returnGeometry=true&outSR=4326&maxAllowableOffset=0.002&geometryPrecision=4&f=geojson';
+    const COL = { ES: '#6a1b9a', PP: '#ad1457', NB: '#283593' };
+    g.on('add', async () => {
+      if (loaded) return; loaded = true;
+      try {
+        const j = await (await fetch(url)).json();
+        for (const f of j.features || []) {
+          const nm = (f.properties || {}).FISHUNIT_NAME || '', col = COL[nm.slice(0, 2)] || '#6a1b9a';
+          const lyr = L.geoJSON(f, { style: { color: col, weight: 3, dashArray: '10 6', opacity: 0.9, fill: true, fillColor: col, fillOpacity: 0.04 }, interactive: false }).addTo(g);
+          const c = lyr.getBounds().getCenter();
+          L.tooltip({ permanent: true, direction: 'center', className: 'fmz-lbl', interactive: false }).setLatLng(c).setContent(esc(nm)).addTo(g);
+        }
+      } catch (e) { loaded = false; toast('Fish management zones need signal the first time.'); }
+    });
+    return g;
+  }
   /* ---------------- Map and layers ---------------- */
   // One shared canvas for every vector layer: a second canvas on top would swallow hover and taps for the one below.
   const canvas = L.canvas({ padding: 0.3, tolerance: 6 });
@@ -52,6 +73,7 @@
     'Hiking trails (Waymarked)': L.tileLayer('https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.85, attribution: '<a href="https://hiking.waymarkedtrails.org">Waymarked Trails</a>' }),
     'Roads & place names': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Esri' }),
     'Place names (Esri)': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Esri' }),
+    'Fish management zones (ES1, ES2…)': fmzLayer(),
     'Hillshade': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, opacity: 0.35, attribution: 'Esri' })
   };
   let baseName = store.get('base', 'Topo (OpenTopoMap)');
@@ -61,6 +83,7 @@
   const applyFade = () => { Object.values(bases).forEach(l => l.setOpacity(1 - fade / 100)); const o = document.getElementById('fadeOut'); if (o) o.textContent = fade + '%'; };
   applyFade();
   if (store.get('overlaysV', 0) < 2) { store.set('overlays', [...new Set([...store.get('overlays', []), 'Place names (Esri)'])]); store.set('overlaysV', 2); }
+  if (store.get('overlaysV', 0) < 3) { store.set('overlays', [...new Set([...store.get('overlays', []), 'Fish management zones (ES1, ES2…)'])]); store.set('overlaysV', 3); }
   store.get('overlays', []).forEach(n => overlays[n] && overlays[n].addTo(map));
   L.control.layers(bases, overlays, { position: 'topright', collapsed: true }).addTo(map);
   L.control.scale({ imperial: false }).addTo(map);
