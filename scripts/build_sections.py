@@ -16,7 +16,7 @@ from collections import defaultdict
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 AB_ROADS = "https://geospatial.alberta.ca/titan/rest/services/transportation/access_facility_roads/MapServer/0/query"
-OVERPASS = "https://overpass-api.de/api/interpreter"
+OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://maps.mail.ru/osm/tools/overpass/api/interpreter"]
 UA = {"User-Agent": "sw-ab-flyfishing-data-build/1.0 (GitHub Actions)", "Accept": "*/*"}
 LOG = {}
 
@@ -240,12 +240,14 @@ def _ab_roads(bbox, where):
 
 
 def overpass(q):
-    for k in range(2):
+    import time
+    for k in range(6):
         try:
-            return http(OVERPASS, {"data": q}, timeout=90)
+            return http(OVERPASS[k % len(OVERPASS)], {"data": q}, timeout=90)
         except Exception as e:
-            print("overpass retry", e, file=sys.stderr)
-    return {"elements": []}
+            print("overpass retry", OVERPASS[k % len(OVERPASS)], e, file=sys.stderr)
+            time.sleep(5 * (k + 1))
+    return {"elements": [], "failed": True}
 
 
 def resolve(b, R, zone_reaches, ctx):
@@ -265,9 +267,9 @@ def resolve(b, R, zone_reaches, ctx):
             lines = [ln for p, ln in ab_roads(bb, f"HWY_NUMBER LIKE '%{r}%'") if re.sub(r"^0+", "", str(p.get("HWY_NUMBER") or "").strip()) == r]
             what = f"Highway {r}"
         else:
-            lines = [ln for p, ln in ab_roads(bb, f"UPPER(NAME) = '{r.upper()}'")]
+            lines = [ln for p, ln in ab_roads(bb, f"UPPER(NAME) LIKE '{r.upper().replace(' ROAD', '')}%'")]
             what = r
-        xs = R.crossings(lines, zone_reaches)
+        xs = R.crossings(lines, None)
         if len(xs) == 1:
             return xs[0][0], f"{what} crosses at {xs[0][1][1]:.5f}, {xs[0][1][0]:.5f}"
         return None, f"{what}: {len(xs)} crossings" + (" at " + "; ".join(f"{x[1]:.4f},{x[0]:.4f}" for _, x in xs[:5]) if xs else "")
@@ -278,7 +280,7 @@ def resolve(b, R, zone_reaches, ctx):
                 continue
             # the tributary's mouth: end of its downstream-most part
             mouth_pt = min(((t.vd[i][-1], ln[-1]) for i, (_, ln) in enumerate(t.parts)), key=lambda x: x[0])[1]
-            n = R.nearest(mouth_pt, zone_reaches)
+            n = R.nearest(mouth_pt)
             if n and n[0] < 250:
                 hits.append((n[1], mouth_pt))
         ds = sorted(set(round(h[0]) for h in hits))
@@ -290,8 +292,6 @@ def resolve(b, R, zone_reaches, ctx):
         for lk in ctx["lakes"].get(b["lake"].lower(), []):
             pts = []
             for i, (k, ln) in enumerate(R.parts):
-                if k not in zone_reaches:
-                    continue
                 for j, p in enumerate(ln):
                     if lk["bb"][0] - 0.003 <= p[0] <= lk["bb"][2] + 0.003 and lk["bb"][1] - 0.003 <= p[1] <= lk["bb"][3] + 0.003 and near_poly(p, lk["g"], 150):
                         pts.append((R.vd[i][j], p))
@@ -312,14 +312,15 @@ def resolve(b, R, zone_reaches, ctx):
                 if len(xs) == 1:
                     return xs[0][0], f"{b['osm']} boundary (OpenStreetMap) crosses at {xs[0][1][1]:.5f}, {xs[0][1][0]:.5f}"
                 return None, f"{b['osm']} boundary: {len(xs)} crossings"
-            j = overpass(f'[out:json][timeout:120];nwr["name"~"^{re.escape(b["osm"])}",i]({bb[1]},{bb[0]},{bb[3]},{bb[2]});out center;')
+            tag = '["waterway"="waterfall"]' if b.get("falls") else ""
+            j = overpass(f'[out:json][timeout:120];nwr{tag}["name"~"^{re.escape(b["osm"])}",i]({bb[1]},{bb[0]},{bb[3]},{bb[2]});out center;')
             pts = []
             for el in j.get("elements", []):
                 c = el.get("center") or ({"lat": el["lat"], "lon": el["lon"]} if "lat" in el else None)
                 if c:
                     pts.append(([c["lon"], c["lat"]], el.get("tags", {}).get("name", "")))
             if not pts:
-                return None, f"{b['osm']}: not found in OpenStreetMap"
+                return None, f"{b['osm']}: " + ("OpenStreetMap did not answer" if j.get("failed") else "not found in OpenStreetMap")
             near = [(R.nearest(p, zone_reaches), p, nm) for p, nm in pts]
             near = [(n, p, nm) for n, p, nm in near if n and n[0] < (1500 if b.get("road") else 400)]
             if not near:
@@ -350,14 +351,21 @@ def resolve(b, R, zone_reaches, ctx):
                 return None, f"{label}: river not within 2.5 km"
         # bridge: the road crossing of the river nearest the reference point (within 2.5 km)
         box = [ref[0] - 0.05, ref[1] - 0.03, ref[0] + 0.05, ref[1] + 0.03]
-        xs = R.crossings([ln for p, ln in ab_roads(box, "FEATURE_TYPE IN (2,3,4,5,6,7,8,9,10,14)")], zone_reaches)
+        rl = ab_roads(box, "FEATURE_TYPE IN (2,3,4,5,6,7,8,9,10,14)")
+        lines = [ln for p, ln in rl]
+        if "osm" in b:
+            jb = overpass(f'[out:json][timeout:60];way["bridge"](around:2500,{ref[1]},{ref[0]});out geom;')
+            lines += [[[q["lon"], q["lat"]] for q in el["geometry"]] for el in jb.get("elements", []) if el.get("geometry")]
+        xs = R.crossings(lines, None)
         xs = sorted(((dist(ref, x), d, x) for d, x in xs))
         xs = [t for t in xs if t[0] < 2500]
         if not xs:
             return None, f"{label}: no road crossing within 2.5 km"
         if len(xs) > 1 and xs[1][0] - xs[0][0] < 400:
             return None, f"{label}: {len(xs)} road crossings at similar distance"
-        return xs[0][1], f"road crossing nearest {label} at {xs[0][2][1]:.5f}, {xs[0][2][0]:.5f} ({xs[0][0]:.0f} m away)"
+        rn = [p for p, ln in rl if any(dist(q, xs[0][2]) < 60 for q in ln)]
+        rname = (", " + " / ".join(sorted({(("Hwy " + str(p.get("HWY_NUMBER")).lstrip("0")) if p.get("HWY_NUMBER") else (p.get("NAME") or "unnamed road")) for p in rn}))) if rn else ""
+        return xs[0][1], f"road crossing{rname} nearest {label} at {xs[0][2][1]:.5f}, {xs[0][2][0]:.5f} ({xs[0][0]:.0f} m away)"
     return None, "unknown break " + json.dumps(b)
 
 

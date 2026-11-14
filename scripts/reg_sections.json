@@ -10,8 +10,8 @@
   {"d": "All tributaries of Crowsnest River except Gold Creek", "tribs": true, "up": "head", "down": "mouth", "except": ["Gold Creek"]}
  ],
  "ES1|Elbow River": [
-  {"d": "Headwater downstream to Elbow Falls", "main": true, "tribs": true, "up": "head", "down": {"osm": "Elbow Falls"}, "except": ["Quirk Creek"]},
-  {"d": "Mainstem, Elbow Falls downstream to Canyon Creek", "main": true, "up": {"osm": "Elbow Falls"}, "down": {"trib": "Canyon Creek"}},
+  {"d": "Headwater downstream to Elbow Falls", "main": true, "tribs": true, "up": "head", "down": {"osm": "Elbow Falls", "falls": true}, "except": ["Quirk Creek"]},
+  {"d": "Mainstem, Elbow Falls downstream to Canyon Creek", "main": true, "up": {"osm": "Elbow Falls", "falls": true}, "down": {"trib": "Canyon Creek"}},
   {"d": "Mainstem, Canyon Creek downstream to Hwy. 22", "main": true, "up": {"trib": "Canyon Creek"}, "down": {"road": "22"}},
   {"d": "Mainstem, Hwy. 22 downstream to Glenmore Reservoir", "main": true, "tribs": true, "up": {"road": "22"}, "down": {"lake": "Glenmore Reservoir", "end": "in"}},
   {"d": "Mainstem, from Glenmore Reservoir downstream to Bow River", "main": true, "up": {"lake": "Glenmore Reservoir", "end": "out"}, "down": "mouth"}
@@ -53,8 +53,8 @@
   {"d": "Tributaries downstream of Pine Coulee Reservoir Diversion Headpond", "tribs": true, "up": {"unresolved": "Pine Coulee Reservoir Diversion Headpond"}, "down": "mouth"}
  ],
  "ES2|Bighorn River": [
-  {"d": "Mainstem and tributaries upstream of Crescent Falls", "main": true, "tribs": true, "up": "head", "down": {"osm": "Crescent Falls"}},
-  {"d": "Mainstem and tributaries downstream of Crescent Falls", "main": true, "tribs": true, "up": {"osm": "Crescent Falls"}, "down": "mouth"}
+  {"d": "Mainstem and tributaries upstream of Crescent Falls", "main": true, "tribs": true, "up": "head", "down": {"osm": "Crescent Falls", "falls": true}},
+  {"d": "Mainstem and tributaries downstream of Crescent Falls", "main": true, "tribs": true, "up": {"osm": "Crescent Falls", "falls": true}, "down": "mouth"}
  ],
  "ES2|Blackstone River": [
   {"d": "Mainstem and tributaries upstream of Mons Creek including Mons Creek", "main": true, "tribs": true, "up": "head", "down": {"trib": "Mons Creek"}, "include": ["Mons Creek"]},
