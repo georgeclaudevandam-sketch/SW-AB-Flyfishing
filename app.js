@@ -86,12 +86,13 @@
   const TRAIL_ZOOM = 13, PLACE_ZOOM = 10, TOWN_ZOOM = 8, ROAD_ZOOM = 12, OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
   const osm = { trails: [], places: [], roads: [], boxes: [], busy: false };  // boxes: [kind, south, west, north, east]
   const covered = (kind, v) => osm.boxes.some(x => x[0] === kind && x[1] <= v.getSouth() && x[2] <= v.getWest() && x[3] >= v.getNorth() && x[4] >= v.getEast());
-  async function overpass(q) {
+  const withTimeout = ms => (typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined);
+  async function overpass(q, ms = 25000) {
     let last;
     for (const url of OVERPASS) {  // main server, then a public mirror if it is busy
       try {
-        const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-        if (r.ok) return r.json();
+        const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: withTimeout(ms) });
+        if (r.ok) return await r.json();
         last = new Error('Overpass ' + r.status);
       } catch (e) { last = e; }
     }
@@ -502,7 +503,7 @@
   async function osrm(mode, pts) {
     const prof = mode === 'drivehike' ? 'car' : mode;
     const coords = pts.map(p => `${p.lng.toFixed(5)},${p.lat.toFixed(5)}`).join(';');
-    const r = await fetch(`https://routing.openstreetmap.de/routed-${prof}/route/v1/driving/${coords}?overview=full&geometries=geojson&annotations=nodes`);
+    const r = await fetch(`https://routing.openstreetmap.de/routed-${prof}/route/v1/driving/${coords}?overview=full&geometries=geojson&annotations=nodes`, { signal: withTimeout(20000) });
     const j = await r.json();
     if (!j.routes || !j.routes[0]) throw new Error('No route found along roads or trails.');
     const rt = j.routes[0], nodes = [];
@@ -515,7 +516,7 @@
     let pos = {}, pair = {};
     if (ids.length) {
       try {
-        const j = await overpass(`[out:json][timeout:60];node(id:${ids.join(',')});out skel qt;way(bn)["highway"];out body qt;`);
+        const j = await overpass(`[out:json][timeout:30];node(id:${ids.join(',')});out skel qt;way(bn)["highway"];out body qt;`, 30000);
         for (const e of j.elements || []) {
           if (e.type === 'node') pos[e.id] = L.latLng(e.lat, e.lon);
           else if (e.type === 'way') for (let k = 1; k < e.nodes.length; k++) pair[Math.min(e.nodes[k - 1], e.nodes[k]) + ':' + Math.max(e.nodes[k - 1], e.nodes[k])] = e.tags;
@@ -551,13 +552,15 @@
     return out;
   }
   async function findParking(at, radius) {
-    const j = await overpass(`[out:json][timeout:20];nwr["amenity"="parking"](around:${radius},${at.lat.toFixed(5)},${at.lng.toFixed(5)});out center tags;`);
+    const j = await overpass(`[out:json][timeout:15];nwr["amenity"="parking"](around:${radius},${at.lat.toFixed(5)},${at.lng.toFixed(5)});out center tags;`, 15000);
     return (j.elements || []).filter(e => !/^(private|no|customers)$/.test((e.tags || {}).access || '') && (e.lat || e.center)).map(e => ({ at: L.latLng(e.lat || e.center.lat, e.lon || e.center.lon), tags: e.tags || {}, id: e.type + e.id }));
   }
   async function parkingNear(points, have) {
     const seen = new Set(have.filter(m => m.pid).map(m => m.pid)), out = [];
     try {
-      const found = (await Promise.all(points.slice(0, 8).map(p => findParking(p, 400)))).flat();
+      const pts = points.slice(0, 8);
+      const j = await overpass(`[out:json][timeout:15];(${pts.map(p => `nwr["amenity"="parking"](around:400,${p.lat.toFixed(5)},${p.lng.toFixed(5)});`).join('')});out center tags;`, 15000);
+      const found = (j.elements || []).filter(e => !/^(private|no|customers)$/.test((e.tags || {}).access || '') && (e.lat || e.center)).map(e => ({ at: L.latLng(e.lat || e.center.lat, e.lon || e.center.lon), tags: e.tags || {}, id: e.type + e.id }));
       for (const f of found) if (!seen.has(f.id)) { seen.add(f.id); out.push({ kind: 'parking', at: f.at, tags: f.tags, pid: f.id }); }
     } catch (e) { console.warn('parking lookup', e); }
     return out;
@@ -570,13 +573,16 @@
     const tryLeg = (m, p) => osrm(m, p).catch(() => null);
     let lots = [];
     try { lots = (await findParking(dest, 10000)).sort((a, b) => a.at.distanceTo(dest) - b.at.distanceTo(dest)).slice(0, 4); } catch (e) { console.warn('parking', e); }
+    // Requests go one at a time: the free routing server limits how many it accepts at once.
     const direct = await tryLeg('car', [start, dest]);  // ends where the road network comes closest to the destination
     const cands = [];
-    if (direct) cands.push({ kind: 'roadend', at: direct.path[direct.path.length - 1], car: direct, tags: {} });
-    const lotRoutes = await Promise.all(lots.map(async c => ({ c, car: await tryLeg('car', [start, c.at]) })));
-    lotRoutes.forEach(({ c, car }) => { if (car) cands.push({ kind: 'park', at: c.at, car, tags: c.tags, pid: c.id }); });
-    const feet = await Promise.all(cands.map(c => tryLeg('foot', [c.at, ...walkPts])));
-    const ok = cands.map((c, k) => ({ ...c, foot: feet[k] })).filter(c => c.foot);
+    if (direct) cands.push({ kind: 'roadend', at: direct.path[direct.path.length - 1], car: direct, tags: {}, foot: await tryLeg('foot', [direct.path[direct.path.length - 1], ...walkPts]) });
+    const reach = cands[0] ? cands[0].at.distanceTo(dest) : Infinity;
+    for (const c of lots.filter(c => c.at.distanceTo(dest) < reach + 1500).slice(0, 3)) {
+      const car = await tryLeg('car', [start, c.at]); if (!car) continue;
+      cands.push({ kind: 'park', at: c.at, car, tags: c.tags, pid: c.id, foot: await tryLeg('foot', [c.at, ...walkPts]) });
+    }
+    const ok = cands.filter(c => c.foot);
     if (!ok.length) {
       if (direct) return { legs: [{ mode: 'road', r: direct }], marks: [], note: 'No walking route found from the road to the destination, so only the drive is shown.' };
       const walk = await tryLeg('foot', pts);
@@ -636,31 +642,36 @@
     },
     async compute() {
       const token = (this.token = (this.token || 0) + 1);
-      let runs = null, marks = [], dur = null, note = '';
-      const mode = $('#rMode').value;
-      if ($('#rSnap').checked && this.pts.length > 1) {
-        try {
-          let legs;
-          if (mode === 'drivehike') {
-            ({ legs, marks, note } = await driveThenHike(this.pts));
-          } else {
-            const r = await osrm(mode, this.pts);
-            legs = [{ mode: mode === 'foot' ? 'foot' : 'road', r }];
-          }
-          if (token !== this.token) return;
-          dur = legs.reduce((a, l) => a + (l.r.dur || 0), 0);
-          runs = await classifyLegs(legs);
-          if (token !== this.token) return;
-          marks = marks.concat(transitions(runs).filter(t => !marks.some(m => m.at.distanceTo(t.at) < 300)));
-          marks = marks.concat(await parkingNear(marks.map(m => m.at).concat([runs[0].pts[0], runs[runs.length - 1].pts.slice(-1)[0]]), marks));
-        } catch (e) {
-          console.warn('route', e);
-          toast(e.message && e.message.startsWith('No ') ? e.message + ' Using straight lines.' : navigator.onLine === false ? 'Auto-routing needs signal. Using straight lines.' : 'Routing service did not answer (' + (e.message || 'error') + '). Using straight lines.');
-          runs = null;
-        }
+      const mode = $('#rMode').value, live = () => token === this.token;
+      if (!$('#rSnap').checked || this.pts.length < 2) return this.show(this.pts.length > 1 ? [{ cls: 'straight', pts: this.pts.slice() }] : [], [], null, '');
+      $('#rStats').innerHTML = '<span class="hint">Finding a route…</span>';
+      let legs, marks = [], note = '';
+      try {
+        if (mode === 'drivehike') ({ legs, marks, note } = await driveThenHike(this.pts));
+        else legs = [{ mode: mode === 'foot' ? 'foot' : 'road', r: await osrm(mode, this.pts) }];
+      } catch (e) {
+        console.warn('route', e);
+        if (!live()) return;
+        toast(e.message && e.message.startsWith('No ') ? e.message + ' Using straight lines.' : navigator.onLine === false ? 'Auto-routing needs signal. Using straight lines.' : 'Routing service did not answer (' + (e.message || 'error') + '). Using straight lines.');
+        return this.show([{ cls: 'straight', pts: this.pts.slice() }], [], null, '');
       }
-      if (token !== this.token) return;
-      if (!runs) runs = this.pts.length > 1 ? [{ cls: 'straight', pts: this.pts.slice() }] : [];
+      if (!live()) return;
+      const dur = legs.reduce((a, l) => a + (l.r.dur || 0), 0);
+      // 1. Show the routed line straight away (road vs foot from the routing profile).
+      const quick = legs.map(l => ({ cls: l.mode === 'foot' ? 'foot' : 'unknown', pts: l.r.path }));
+      this.show(quick, marks, dur, note + ' <span class="hint">Checking road surfaces and parking…</span>');
+      // 2. Then add surfaces, on-foot points and nearby parking from OpenStreetMap (skipped if that is slow or offline).
+      try {
+        const runs = await classifyLegs(legs);
+        if (!live()) return;
+        marks = marks.concat(transitions(runs).filter(t => !marks.some(m => m.at.distanceTo(t.at) < 300)));
+        this.show(runs, marks, dur, note);
+        const more = await parkingNear(marks.map(m => m.at).concat([runs[0].pts[0], runs[runs.length - 1].pts.slice(-1)[0]]), marks);
+        if (!live() || !more.length) return;
+        this.show(runs, marks.concat(more), dur, note);
+      } catch (e) { console.warn('route details', e); if (live()) this.show(quick, marks, dur, note); }
+    },
+    show(runs, marks, dur, note) {
       this.runs = runs; this.marks = marks; this.dur = dur;
       this.path = runs.flatMap((r, k) => k ? r.pts.slice(1) : r.pts);
       drawRoute(runs, marks);

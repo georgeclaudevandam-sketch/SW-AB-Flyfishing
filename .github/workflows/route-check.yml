@@ -1,0 +1,18 @@
+name: Route check (live servers)
+on:
+  workflow_dispatch:
+  push:
+    branches: ['route-test']
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm i --no-save playwright@1.47.2 && npx playwright install --with-deps chromium
+      - run: (python3 -m http.server 8000 >/dev/null 2>&1 &) && sleep 2 && node tests/route-check.js http://localhost:8000/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: route-check, path: route-check.png }
