@@ -181,12 +181,13 @@ class River:
     def crossings(self, lines, reaches=None):
         """d of each place where any of `lines` crosses the river, clustered within 300 m along the river."""
         ds = []
+        lb = [(rl, min(p[0] for p in rl), min(p[1] for p in rl), max(p[0] for p in rl), max(p[1] for p in rl)) for rl in lines]
         for i, (k, ln) in enumerate(self.parts):
             if reaches is not None and k not in reaches:
                 continue
             bx = [min(p[0] for p in ln), min(p[1] for p in ln), max(p[0] for p in ln), max(p[1] for p in ln)]
-            for rl in lines:
-                if max(p[0] for p in rl) < bx[0] or min(p[0] for p in rl) > bx[2] or max(p[1] for p in rl) < bx[1] or min(p[1] for p in rl) > bx[3]:
+            for rl, x0, y0, x1, y1 in lb:
+                if x1 < bx[0] or x0 > bx[2] or y1 < bx[1] or y0 > bx[3]:
                     continue
                 for j in range(1, len(ln)):
                     for q in range(1, len(rl)):
@@ -204,7 +205,21 @@ class River:
         return [(sum(d for d, _ in c) / len(c), c[0][1]) for c in cl]
 
 
+_RC = {}
+
+
 def ab_roads(bbox, where):
+    key = (tuple(round(x, 3) for x in bbox), where)
+    if key not in _RC:
+        try:
+            _RC[key] = _ab_roads(bbox, where)
+        except Exception as e:
+            print("roads query failed", where, e, file=sys.stderr)
+            _RC[key] = []
+    return _RC[key]
+
+
+def _ab_roads(bbox, where):
     feats, off = [], 0
     while True:
         j = http(AB_ROADS, {"where": where, "geometry": ",".join(map(str, bbox)), "geometryType": "esriGeometryEnvelope", "inSR": "4326",
@@ -247,10 +262,10 @@ def resolve(b, R, zone_reaches, ctx):
     if "road" in b and isinstance(b["road"], str) and not b.get("ats") and not b.get("osm"):
         r = b["road"]
         if r.isdigit():
-            lines = [ln for p, ln in ctx["roads_hwy"] if re.sub(r"^0+", "", str(p.get("HWY_NUMBER") or "").strip()) == r]
+            lines = [ln for p, ln in ab_roads(bb, f"HWY_NUMBER LIKE '%{r}%'") if re.sub(r"^0+", "", str(p.get("HWY_NUMBER") or "").strip()) == r]
             what = f"Highway {r}"
         else:
-            lines = [ln for p, ln in ctx["roads_all"] if (p.get("NAME") or "").strip().lower() == r.lower()]
+            lines = [ln for p, ln in ab_roads(bb, f"UPPER(NAME) = '{r.upper()}'")]
             what = r
         xs = R.crossings(lines, zone_reaches)
         if len(xs) == 1:
@@ -334,7 +349,8 @@ def resolve(b, R, zone_reaches, ctx):
                     return n[1], f"river point nearest {label} ({n[0]:.0f} m)"
                 return None, f"{label}: river not within 2.5 km"
         # bridge: the road crossing of the river nearest the reference point (within 2.5 km)
-        xs = R.crossings([ln for p, ln in ctx["roads_all"]], zone_reaches)
+        box = [ref[0] - 0.05, ref[1] - 0.03, ref[0] + 0.05, ref[1] + 0.03]
+        xs = R.crossings([ln for p, ln in ab_roads(box, "FEATURE_TYPE IN (2,3,4,5,6,7,8,9,10,14)")], zone_reaches)
         xs = sorted(((dist(ref, x), d, x) for d, x in xs))
         xs = [t for t in xs if t[0] < 2500]
         if not xs:
@@ -405,7 +421,7 @@ def main():
                             walk(y)
                 walk(w["g"])
                 lakes[nm.lower()].append({"id": w["id"], "g": w["g"], "bb": [min(xs), min(ys), max(xs), max(ys)]})
-    print("streams", len(streams), file=sys.stderr)
+    print("streams", len(streams), file=sys.stderr, flush=True)
     # Global stream graph for tributary walks: reaches ending at each node.
     ends_at = defaultdict(list)          # node -> [(water, reach idx)]
     starts_of = {}                       # (water, reach) -> start nodes
@@ -438,7 +454,6 @@ def main():
             for z, ls in v[1].items():
                 if any(i >= 0 for i in ls):
                     own[z].add(wid)
-    road_cache = {}
     inherited = defaultdict(dict)   # trib water -> {listing: {reach: [sections]}}
     for li, Lst in enumerate(LIST):
         if Lst["kind"] != "stream":
@@ -475,20 +490,9 @@ def main():
         if not zone_reaches:
             continue
         mid = R.reach_mid_d()
-        bb = R.bbox()
+        zx = [p for i, (k, ln) in enumerate(R.parts) if k in zone_reaches for p in ln]
+        bb = [min(p[0] for p in zx) - 0.02, min(p[1] for p in zx) - 0.02, max(p[0] for p in zx) + 0.02, max(p[1] for p in zx) + 0.02]
         ctx = {"mid": mid, "bbox": bb, "by_name": Names(), "lakes": lakes}
-        needs_roads = any(isinstance(e, dict) and e for p in plan if p for e in (p.get("up"), p.get("down")) if isinstance(e, dict) and ("road" in e))
-        if needs_roads:
-            k = tuple(round(x, 3) for x in bb)
-            if k not in road_cache:
-                try:
-                    allr = ab_roads(bb, "FEATURE_TYPE IN (2,3,4,5,6,7,8,9,10,14)")
-                    road_cache[k] = allr
-                except Exception as e:
-                    print("roads failed", key, e, file=sys.stderr)
-                    road_cache[k] = []
-            ctx["roads_all"] = road_cache[k]
-            ctx["roads_hwy"] = [x for x in road_cache[k] if x[0].get("HWY_NUMBER")]
         log = {"water": wid, "sections": []}
         iv = []
         ok = True
@@ -507,6 +511,7 @@ def main():
             else:
                 iv.append((min(up, dn), max(up, dn), p))
         LOG[key] = log
+        print(key, "ok" if ok else "not split", flush=True, file=sys.stderr)
         if not ok:
             log["result"] = "not split: a break could not be located"
             # Single-section tributary inheritance doesn't need breaks; multi-section rivers stay unsplit.
