@@ -42,6 +42,7 @@
   const overlays = {
     'Hiking trails (Waymarked)': L.tileLayer('https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.85, attribution: '<a href="https://hiking.waymarkedtrails.org">Waymarked Trails</a>' }),
     'Roads & place names': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Esri' }),
+    'Place names (Esri)': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Esri' }),
     'Hillshade': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, opacity: 0.35, attribution: 'Esri' })
   };
   let baseName = store.get('base', 'Topo (OpenTopoMap)');
@@ -50,6 +51,7 @@
   let fade = store.get('fade', 45);
   const applyFade = () => { Object.values(bases).forEach(l => l.setOpacity(1 - fade / 100)); const o = document.getElementById('fadeOut'); if (o) o.textContent = fade + '%'; };
   applyFade();
+  if (store.get('overlaysV', 0) < 2) { store.set('overlays', [...new Set([...store.get('overlays', []), 'Place names (Esri)'])]); store.set('overlaysV', 2); }
   store.get('overlays', []).forEach(n => overlays[n] && overlays[n].addTo(map));
   L.control.layers(bases, overlays, { position: 'topright', collapsed: true }).addTo(map);
   L.control.scale({ imperial: false }).addTo(map);
@@ -60,17 +62,112 @@
   const waterLayer = L.layerGroup().addTo(map);
   const siteHi = L.layerGroup().addTo(map);
   const labelLayer = L.layerGroup().addTo(map);
+
+  /* ---------------- Trail and place names (OpenStreetMap via Overpass) ---------------- */
+  map.createPane('trails').style.zIndex = 390;
+  const trailCanvas = L.canvas({ pane: 'trails', padding: 0.3, tolerance: 6 });
+  const trailLayer = L.layerGroup().addTo(map), nameLayer = L.layerGroup().addTo(map);
+  const TRAIL_ZOOM = 13, PLACE_ZOOM = 10, OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+  const osm = { trails: [], places: [], boxes: [], busy: false };  // boxes: [kind, south, west, north, east]
+  const covered = (kind, v) => osm.boxes.some(x => x[0] === kind && x[1] <= v.getSouth() && x[2] <= v.getWest() && x[3] >= v.getNorth() && x[4] >= v.getEast());
+  async function overpass(q) {
+    let last;
+    for (const url of OVERPASS) {  // main server, then a public mirror if it is busy
+      try {
+        const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+        if (r.ok) return r.json();
+        last = new Error('Overpass ' + r.status);
+      } catch (e) { last = e; }
+    }
+    throw last;
+  }
+  async function loadOsm() {
+    const z = map.getZoom(), v = map.getBounds();
+    if (!osmReady || osm.busy || (!F.trailNames && !F.placeNames)) return;
+    const want = [];
+    if (F.trailNames && z >= TRAIL_ZOOM && !covered('t', v)) want.push('t');
+    if (F.placeNames && z >= PLACE_ZOOM && !covered('p', v)) want.push('p');
+    if (!want.length) return drawOsm();
+    osm.busy = true;
+    try {
+      for (const kind of want) {
+        const p = v.pad(kind === 't' ? 0.5 : 0.3), bb = `${p.getSouth().toFixed(4)},${p.getWest().toFixed(4)},${p.getNorth().toFixed(4)},${p.getEast().toFixed(4)}`;
+        if (kind === 't') {
+          // Named or officially operated trails, plus every way in a hiking route relation (takes the route's name).
+          const j = await overpass(`[out:json][timeout:25];relation["route"~"^(hiking|foot)$"](${bb})->.r;.r out tags;(way(r.r)(${bb});way["highway"~"^(path|footway|track|bridleway|steps)$"]["name"](${bb});way["highway"~"^(path|footway|track|bridleway)$"]["operator"](${bb}););out tags geom;`);
+          const rels = {}; (j.elements || []).filter(e => e.type === 'relation' && e.tags).forEach(e => { rels[e.id] = e.tags; });
+          // way -> route relation membership needs a second lookup; ask for it compactly
+          const wayIds = (j.elements || []).filter(e => e.type === 'way').map(e => e.id);
+          const memb = {};
+          if (Object.keys(rels).length && wayIds.length) {
+            const m = await overpass(`[out:json][timeout:25];relation(id:${Object.keys(rels).join(',')});out body;`);
+            (m.elements || []).forEach(rl => (rl.members || []).forEach(mm => { if (mm.type === 'way') (memb[mm.ref] = memb[mm.ref] || []).push(rl.id); }));
+          }
+          const seen = new Set(osm.trails.map(t => t.id));
+          for (const e of j.elements || []) {
+            if (e.type !== 'way' || !e.geometry || seen.has(e.id)) continue;
+            const t = e.tags || {}, routes = (memb[e.id] || []).map(id => rels[id]).filter(Boolean);
+            const route = routes.find(r => r.name) || routes[0];
+            const name = t.name || (route && route.name) || t.ref || (t.operator ? t.operator + ' trail' : '');
+            if (!name) continue;
+            osm.trails.push({ id: e.id, name, g: e.geometry.map(q => [q.lat, q.lon]), hw: t.highway, op: t.operator || (route && route.operator) || '',
+              official: !!(t.operator || route || t.ref), route: route && route.name || '', sac: t.sac_scale || '' });
+          }
+        } else {
+          const j = await overpass(`[out:json][timeout:25];(node["place"~"^(city|town|village|hamlet|locality|isolated_dwelling)$"]["name"](${bb});node["natural"~"^(peak|saddle|ridge)$"]["name"](${bb});node["mountain_pass"="yes"]["name"](${bb});node["tourism"~"^(camp_site|alpine_hut|wilderness_hut)$"]["name"](${bb});node["highway"="trailhead"]["name"](${bb}););out body;`);
+          const seen = new Set(osm.places.map(t => t.id));
+          for (const e of j.elements || []) if (!seen.has(e.id) && e.tags && e.tags.name) osm.places.push({ id: e.id, name: e.tags.name, lat: e.lat, lon: e.lon, kind: e.tags.place || e.tags.natural || e.tags.tourism || (e.tags.highway === 'trailhead' ? 'trailhead' : 'pass'), ele: e.tags.ele || '' });
+        }
+        osm.boxes.push([kind, p.getSouth(), p.getWest(), p.getNorth(), p.getEast()]);
+      }
+    } catch (err) { console.warn('Trail/place names unavailable:', err.message); }
+    osm.busy = false;
+    drawOsm();
+  }
+  const PLACE_MIN_Z = { city: 7, town: 9, village: 10, hamlet: 11, locality: 12, isolated_dwelling: 13, peak: 11, saddle: 12, ridge: 12, pass: 11, camp_site: 13, alpine_hut: 12, wilderness_hut: 12, trailhead: 13 };
+  const PLACE_ICON = { peak: '▲ ', saddle: '⌒ ', ridge: '⌒ ', pass: '⌒ ', camp_site: '⛺ ', alpine_hut: '⌂ ', wilderness_hut: '⌂ ', trailhead: '⬤ ' };
+  let osmReady = false;
+  function drawOsm() {
+    if (!osmReady) return;
+    trailLayer.clearLayers(); nameLayer.clearLayers();
+    const z = map.getZoom(), v = map.getBounds();
+    if (F.trailNames && z >= TRAIL_ZOOM) {
+      const labelled = new Map();
+      for (const t of osm.trails) {
+        if (!t.g.some(q => v.contains(q))) continue;
+        const tip = `<b>${esc(t.name)}</b>${t.route && t.route !== t.name ? '<br>Part of ' + esc(t.route) : ''}${t.op ? '<br>Operator: ' + esc(t.op) : ''}${t.sac ? '<br>Difficulty (SAC): ' + esc(t.sac.replace(/_/g, ' ')) : ''}<br><span class="hint">OpenStreetMap ${esc(t.hw || '')}</span>`;
+        L.polyline(t.g, { renderer: trailCanvas, color: t.official ? '#8b2f00' : '#6b4a2b', weight: t.official ? 3 : 2, opacity: 0.85, dashArray: t.hw === 'track' ? '8 4' : '5 4' }).bindTooltip(tip, { sticky: true }).addTo(trailLayer);
+        // one label per trail name per ~1.5 km, placed on the longest visible piece
+        const vis = t.g.filter(q => v.contains(q));
+        const key = t.name + '|' + Math.round(vis[0][0] * 70) + '|' + Math.round(vis[0][1] * 50);
+        if (!labelled.has(key) || labelled.get(key).n < vis.length) labelled.set(key, { n: vis.length, at: vis[Math.floor(vis.length / 2)], t });
+      }
+      const used = new Set();
+      [...labelled.values()].sort((a, c) => c.n - a.n).slice(0, 120).forEach(({ at, t }) => {
+        const cell = Math.round(at[0] * 120) + ':' + Math.round(at[1] * 80) + ':' + t.name;
+        if (used.has(cell)) return; used.add(cell);
+        L.tooltip({ permanent: true, direction: 'center', className: 'trail-lbl' + (t.official ? ' off' : ''), interactive: false }).setLatLng(at).setContent(esc(t.name)).addTo(nameLayer);
+      });
+    }
+    if (F.placeNames && z >= PLACE_ZOOM) {
+      osm.places.filter(p => z >= (PLACE_MIN_Z[p.kind] || 12) && v.contains([p.lat, p.lon])).slice(0, 250).forEach(p =>
+        L.tooltip({ permanent: true, direction: 'top', className: 'place-lbl k-' + p.kind, interactive: false }).setLatLng([p.lat, p.lon])
+          .setContent((PLACE_ICON[p.kind] || '') + esc(p.name) + (p.ele && /peak|pass|saddle/.test(p.kind) ? ` <small>${esc(String(p.ele).replace(/\s*m$/, ''))} m</small>` : '')).addTo(nameLayer));
+    }
+  }
+  let osmTimer = 0;
+  map.on('moveend', () => { clearTimeout(osmTimer); drawOsm(); osmTimer = setTimeout(loadOsm, 700); });
   let hiLayer = null;
 
   /* ---------------- Filters ---------------- */
-  const F = Object.assign({ species: null, match: 'any', lakes: true, streams: true, minOrder: 1, noRecord: false, onlyStocked: false, labels: true, since: 0, sites: true }, store.get('filters3', {}));
+  const F = Object.assign({ species: null, match: 'any', lakes: true, streams: true, minOrder: 1, noRecord: false, onlyStocked: false, labels: true, since: 0, sites: true, trailNames: true, placeNames: true }, store.get('filters3', {}));
   function readFilters() {
     F.species = $$('#speciesList input:checked').map(i => i.value);
     F.match = $('input[name=match]:checked').value;
     F.lakes = $('#showLakes').checked; F.streams = $('#showStreams').checked;
     F.minOrder = +$('#minOrder').value;
     F.noRecord = $('#showNoRecord').checked; F.onlyStocked = $('#onlyStocked').checked;
-    F.labels = $('#labels').checked; F.since = +$('#since').value; F.sites = $('#showSites').checked;
+    F.labels = $('#labels').checked; F.trailNames = $('#trailNames').checked; F.placeNames = $('#placeNames').checked; F.since = +$('#since').value; F.sites = $('#showSites').checked;
     store.set('filters3', F);
   }
   function writeFilters() {
@@ -78,7 +175,7 @@
     $$('input[name=match]').forEach(i => { i.checked = i.value === F.match; });
     $('#showLakes').checked = F.lakes; $('#showStreams').checked = F.streams;
     $('#minOrder').value = F.minOrder; $('#showNoRecord').checked = F.noRecord; $('#onlyStocked').checked = F.onlyStocked;
-    $('#labels').checked = F.labels; $('#since').value = F.since; $('#showSites').checked = F.sites;
+    $('#labels').checked = F.labels; $('#trailNames').checked = F.trailNames; $('#placeNames').checked = F.placeNames; $('#since').value = F.since; $('#showSites').checked = F.sites;
   }
   // Species in a {code: lastYear} map that pass the "records since" filter (year 0 = undated list).
   const spIn = y => Object.keys(y || {}).filter(c => !F.since || y[c] === 0 || y[c] >= F.since).sort();
@@ -513,7 +610,8 @@
       $('#dataInfo').textContent = `Data downloaded ${META.built}: ${(META.total || ITEMS.length).toLocaleString()} waters.`;
       if (F.species === null || !F.species.some(c => counts[c])) F.species = SPECIES.filter(s => s.group.startsWith('Trout')).map(s => s.code).concat(['MNWH']);
       writeFilters(); readFilters();
-      $('#filters').addEventListener('change', () => { readFilters(); applyFilters(); });
+      osmReady = true; setTimeout(loadOsm, 500);
+      $('#filters').addEventListener('change', () => { readFilters(); applyFilters(); drawOsm(); loadOsm(); });
       $('#minOrder').addEventListener('input', () => { readFilters(); applyFilters(); });
       $('#spAll').onclick = () => { $$('#speciesList input').forEach(i => i.checked = true); readFilters(); applyFilters(); };
       $('#spNone').onclick = () => { $$('#speciesList input').forEach(i => i.checked = false); readFilters(); applyFilters(); };

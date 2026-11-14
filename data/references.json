@@ -198,6 +198,24 @@
    "url": "https://parks.canada.ca/voyage-travel/experience/peche-fishing",
    "licence": "",
    "note": "Linked only."
+  },
+  {
+   "id": "R23",
+   "type": "Map data",
+   "author": "OpenStreetMap contributors (served by the Overpass API, overpass-api.de)",
+   "title": "OpenStreetMap trails, route relations, peaks, passes, places and campsites",
+   "url": "https://www.openstreetmap.org",
+   "licence": "ODbL 1.0",
+   "note": "Trail lines and names, official/operator tags and hiking route names; peak, pass, place, campsite, hut and trailhead names. Loaded live as you zoom in."
+  },
+  {
+   "id": "R24",
+   "type": "Overlay",
+   "author": "Esri",
+   "title": "World Boundaries and Places (reference labels)",
+   "url": "https://www.arcgis.com/home/item.html?id=f8a4a8e2d4d64d8ea3b06cf1f7e5ef8e",
+   "licence": "Esri terms of use",
+   "note": "Overlay 'Place names (Esri)', on by default."
   }
  ],
  "features": [
@@ -355,6 +373,27 @@
     "R22"
    ],
    "how": "Links only."
+  },
+  {
+   "feature": "Trail names and trail lines (zoom 13+)",
+   "refs": [
+    "R23"
+   ],
+   "how": "Paths, footways, tracks and bridleways that have a name, an operator, or belong to a hiking route in OpenStreetMap. A trail with no name of its own takes its hiking route's name, or '<operator> trail'. Trails with an operator, route or ref are drawn darker as official. Nothing is labelled that OSM does not name."
+  },
+  {
+   "feature": "Peaks, passes, towns, localities, campsites, huts and trailheads (zoom 10+)",
+   "refs": [
+    "R23"
+   ],
+   "how": "Named OSM nodes only, with elevation where OSM gives it."
+  },
+  {
+   "feature": "Place-name overlay",
+   "refs": [
+    "R24"
+   ],
+   "how": "Esri reference label tiles drawn above the faded basemap."
   }
  ]
 }
