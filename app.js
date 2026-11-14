@@ -501,6 +501,7 @@
     gravel: { label: 'Gravel or dirt road', line: { color: '#d84315', weight: 5, dashArray: '12 7', opacity: 1 }, casing: true },
     unknown: { label: 'Road, surface not mapped', line: { color: '#d84315', weight: 4, dashArray: '2 6 10 6', opacity: 0.85 }, casing: true },
     foot: { label: 'On foot (trail or path)', line: { color: '#1b5e20', weight: 5, dashArray: '1 9', lineCap: 'round', opacity: 1 }, casing: true },
+    unchecked: { label: 'Road (surface not checked)', line: { color: '#d84315', weight: 5, opacity: 0.75 }, casing: true },
     straight: { label: 'Straight line (not routed)', line: { color: '#ff5722', weight: 3, dashArray: '4 4', opacity: 0.9 } },
   };
   const rtSwatch = c => { const l = RT_STYLE[c].line; return `<svg width="38" height="10" class="rt-sw"><line x1="3" y1="5" x2="35" y2="5" stroke="#fff" stroke-width="${l.weight + 3}" stroke-linecap="round"/><line x1="3" y1="5" x2="35" y2="5" stroke="${l.color}" stroke-width="${l.weight}" stroke-dasharray="${l.dashArray || ''}" stroke-linecap="${l.lineCap || 'butt'}"/></svg>`; };
@@ -528,31 +529,58 @@
     return { path: rt.geometry.coordinates.map(c => L.latLng(c[1], c[0])), nodes, dur: rt.duration, dist: rt.distance };
   }
   // Split each leg into runs of the same surface class, using the OSM ways that hold each pair of route nodes.
+  // Vehicles allowed on this way by its OSM tags (no access=no/private and no motor_vehicle/vehicle ban).
+  const NO_CAR = /^(no|private|agricultural|forestry|delivery|permit|military)$/;
+  const carOk = t => !!t && !FOOTWAY.test(t.highway || '') && !/^(construction|proposed|abandoned|raceway|bus_guideway)$/.test(t.highway || '') &&
+    !NO_CAR.test(t.access || '') && !NO_CAR.test(t.motor_vehicle || '') && !NO_CAR.test(t.vehicle || '') && !NO_CAR.test(t.motorcar || '');
+  // Split each leg into runs of the same surface class, using the OSM ways that hold each pair of route nodes.
+  // Surfaces are looked up for the walk and the last part of the drive (about the last 30 km); the rest of a long
+  // drive is shown as "surface not checked" to keep the lookup small enough to answer.
   async function classifyLegs(legs) {
-    const ids = [...new Set(legs.flatMap(l => l.r.nodes))];
+    const all = [...new Set(legs.flatMap(l => l.r.nodes))];
+    const sub = [...new Set(legs.flatMap(l => l.mode === 'foot' ? l.r.nodes : l.r.nodes.slice(-700)))];
     let pos = {}, pair = {};
-    if (ids.length) {
+    if (all.length) {
       try {
-        const j = await overpass(`[out:json][timeout:90];node(id:${ids.join(',')});out skel qt;way(bn)["highway"];out body qt;`, 90000, true);
+        const j = await overpass(`[out:json][timeout:60];node(id:${all.join(',')});out skel qt;node(id:${sub.join(',')});way(bn)["highway"];out body qt;`, 60000, true);
         for (const e of j.elements || []) {
           if (e.type === 'node') pos[e.id] = L.latLng(e.lat, e.lon);
           else if (e.type === 'way') for (let k = 1; k < e.nodes.length; k++) pair[Math.min(e.nodes[k - 1], e.nodes[k]) + ':' + Math.max(e.nodes[k - 1], e.nodes[k])] = e.tags;
         }
       } catch (e) { console.warn('surface lookup', e); pos = {}; }
     }
-    const runs = [];
-    const push = (cls, a, b) => { const last = runs[runs.length - 1]; if (last && last.cls === cls) last.pts.push(b); else runs.push({ cls, pts: [a, b] }); };
-    for (const l of legs) {
+    const inSub = new Set(sub), runs = [];
+    const push = (cls, a, b, leg, drv) => { const last = runs[runs.length - 1]; if (last && last.cls === cls && last.leg === leg && last.drv === drv) last.pts.push(b); else runs.push({ cls, pts: [a, b], leg, drv }); };
+    legs.forEach((l, li) => {
       const n = l.r.nodes;
       if (n.length < 2 || n.some(id => !pos[id])) {  // no node data: keep OSRM geometry, class from leg mode only
-        const g = l.r.path; for (let k = 1; k < g.length; k++) push(l.mode === 'foot' ? 'foot' : 'unknown', g[k - 1], g[k]);
-        continue;
+        const g = l.r.path; for (let k = 1; k < g.length; k++) push(l.mode === 'foot' ? 'foot' : 'unchecked', g[k - 1], g[k], li, l.mode !== 'foot');
+        return;
       }
-      push(l.mode === 'foot' ? 'foot' : surfaceClass(pair[Math.min(n[0], n[1]) + ':' + Math.max(n[0], n[1])], l.mode), l.r.path[0], pos[n[0]]);
-      for (let k = 1; k < n.length; k++) push(surfaceClass(pair[Math.min(n[k - 1], n[k]) + ':' + Math.max(n[k - 1], n[k])], l.mode), pos[n[k - 1]], pos[n[k]]);
-      push(runs[runs.length - 1].cls, pos[n[n.length - 1]], l.r.path[l.r.path.length - 1]);
-    }
-    return runs.length ? runs : [{ cls: 'unknown', pts: legs[0].r.path }];
+      const seg = (a, b) => {
+        if (!inSub.has(a) || !inSub.has(b)) return ['unchecked', true];
+        const t = pair[Math.min(a, b) + ':' + Math.max(a, b)];
+        return [surfaceClass(t, l.mode), l.mode === 'foot' ? carOk(t) : true];
+      };
+      let [c0, d0] = seg(n[0], n[1]);
+      push(c0, l.r.path[0], pos[n[0]], li, d0);
+      for (let k = 1; k < n.length; k++) { const [c, d] = seg(n[k - 1], n[k]); push(c, pos[n[k - 1]], pos[n[k]], li, d); }
+      const lr = runs[runs.length - 1]; push(lr.cls, pos[n[n.length - 1]], l.r.path[l.r.path.length - 1], li, lr.drv);
+    });
+    return runs.length ? runs : [{ cls: 'unchecked', pts: legs[0].r.path, leg: 0, drv: true }];
+  }
+  // The car router skips some roads that OSM marks as open to vehicles (often gravel tracks to trailheads).
+  // If the walk starts on such a road, keep driving to where the road ends or becomes restricted.
+  function extendDrive(runs, marks) {
+    const footStart = runs.findIndex(r => r.leg === 1);
+    if (footStart < 0) return null;
+    let k = footStart, d = 0;
+    const len = pts => { let x = 0; for (let m = 1; m < pts.length; m++) x += pts[m - 1].distanceTo(pts[m]); return x; };
+    while (k < runs.length && runs[k].leg === 1 && runs[k].cls !== 'foot' && runs[k].drv) { runs[k].leg = 0; d += len(runs[k].pts); k++; }
+    if (!d || k >= runs.length) return null;
+    const end = runs[k].pts[0], main = marks.find(m => m.kind === 'roadend' || m.kind === 'park');
+    if (main && main.kind === 'roadend') main.at = end;
+    return d;
   }
   // Where the route leaves a road for a trail (ignoring short footpath bits under 300 m).
   function transitions(runs) {
@@ -594,9 +622,10 @@
     const direct = await tryLeg('car', [start, dest]);  // ends where the road network comes closest to the destination
     const cands = [];
     if (direct) cands.push({ kind: 'roadend', at: direct.path[direct.path.length - 1], car: direct, tags: {}, foot: await tryLeg('foot', [direct.path[direct.path.length - 1], ...walkPts]) });
-    const lots = await Promise.race([lotsP, new Promise(r => setTimeout(() => r([]), 6000))]);
+    const lots = await Promise.race([lotsP, new Promise(r => setTimeout(() => r(null), 6000))]);
+    const lotsSlow = lots === null;
     const reach = cands[0] ? cands[0].at.distanceTo(dest) : Infinity;
-    for (const c of lots.filter(c => c.at.distanceTo(dest) < reach + 1500).slice(0, 3)) {
+    for (const c of (lots || []).filter(c => c.at.distanceTo(dest) < reach + 1500).slice(0, 3)) {
       const car = await tryLeg('car', [start, c.at]); if (!car) continue;
       cands.push({ kind: 'park', at: c.at, car, tags: c.tags, pid: c.id, foot: await tryLeg('foot', [c.at, ...walkPts]) });
     }
@@ -610,12 +639,11 @@
     ok.sort((a, b) => a.foot.dist - b.foot.dist || a.car.dist - b.car.dist);
     // Prefer a mapped parking area if its walk is within 300 m of the shortest possible walk.
     const best = ok.find(c => c.kind === 'park' && c.foot.dist <= ok[0].foot.dist + 300) || ok[0];
-    const walkKm = (best.foot.dist / 1000).toFixed(1);
     return { legs: [{ mode: 'road', r: best.car }, { mode: 'foot', r: best.foot }],
       marks: [{ kind: best.kind, at: best.at, tags: best.tags, pid: best.pid }],
       note: best.kind === 'park'
-        ? `Drive to the mapped parking area with the shortest walk (${walkKm} km on foot one way).`
-        : `Drive ends where the road network comes closest to the destination (${walkKm} km on foot one way).${lots.length ? '' : ' No public parking is mapped within 10 km.'}` };
+        ? 'Drive to the mapped parking area with the shortest walk.'
+        : `Drive ends where the road network comes closest to the destination.${lotsSlow ? ' The parking lookup (OpenStreetMap) did not answer in time; parking near the route is added below if it answers.' : lots.length ? '' : ' No public parking is mapped within 10 km.'}` };
   }
   function drawRoute(runs, marks) {
     routeLayer.clearLayers();
@@ -676,12 +704,16 @@
       if (!live()) return;
       const dur = legs.reduce((a, l) => a + (l.r.dur || 0), 0);
       // 1. Show the routed line straight away (road vs foot from the routing profile).
-      const quick = legs.map(l => ({ cls: l.mode === 'foot' ? 'foot' : 'unknown', pts: l.r.path }));
+      const quick = legs.map(l => ({ cls: l.mode === 'foot' ? 'foot' : 'unchecked', pts: l.r.path }));
       this.show(quick, marks, dur, note + ' <span class="hint">Checking road surfaces and parking…</span>');
       // 2. Then add surfaces, on-foot points and nearby parking from OpenStreetMap (skipped if that is slow or offline).
       try {
         const runs = await classifyLegs(legs);
         if (!live()) return;
+        if (mode === 'drivehike') {
+          const ext = extendDrive(runs, marks);
+          if (ext) note += ` The drive continues ${(ext / 1000).toFixed(1)} km past where the car router stops, on a road OpenStreetMap shows as open to vehicles (check conditions; may need high clearance).`;
+        }
         marks = marks.concat(transitions(runs).filter(t => !marks.some(m => m.at.distanceTo(t.at) < 300)));
         this.show(runs, marks, dur, note);
         const more = await parkingNear(marks.map(m => m.at).concat([runs[0].pts[0], runs[runs.length - 1].pts.slice(-1)[0]]), marks);
