@@ -674,11 +674,20 @@
   const AB_CLASS = { 3: 'paved', 6: 'paved', 7: 'paved', 8: 'paved', 9: 'paved', 4: 'gravel', 5: 'gravel', 14: 'dryweather', 12: 'winter', 2: 'ford', 10: 'gravel' };
   const AB_TYPE = { 1: 'Ferry crossing', 2: 'Ford/winter crossing', 3: 'Interchange ramp', 4: 'One-lane gravel road', 5: 'Two-lane gravel road', 6: 'Divided paved road', 7: 'One-lane paved road', 8: 'Two-lane paved road', 9: 'Four-lane paved road', 10: 'Driveway', 12: 'Winter road', 14: 'Dry-weather road' };
   async function abRoads(path) {
-    // Thin the line to a vertex every ~150 m (enough to stay within the 40 m search buffer), max ~1500 vertices.
-    let step = 150; const tot = path.reduce((a, p, k) => k ? a + path[k - 1].distanceTo(p) : 0, 0);
-    if (tot / step > 1500) step = tot / 1500;
-    const v = [path[0]]; let acc = 0;
-    for (let k = 1; k < path.length; k++) { acc += path[k - 1].distanceTo(path[k]); if (acc >= step || k === path.length - 1) { v.push(path[k]); acc = 0; } }
+    // Query in ~15 km pieces (each answer is capped at 2000 roads; city streets crossing the route add up fast).
+    const pieces = [[path[0]]]; let acc = 0;
+    for (let k = 1; k < path.length; k++) { acc += path[k - 1].distanceTo(path[k]); pieces[pieces.length - 1].push(path[k]); if (acc > 15000 && k < path.length - 1) { pieces.push([path[k]]); acc = 0; } }
+    const cells = new Map(), C = 0.005; let n = 0, failed = 0;
+    for (let k = 0; k < pieces.length; k += 3) {
+      const res = await Promise.all(pieces.slice(k, k + 3).map(pc => abQuery(pc).catch(e => { console.warn('Alberta roads', e); failed++; return []; })));
+      for (const feats of res) { n += feats.length; indexAB(feats, cells, C); }
+    }
+    if (!n && failed) throw new Error('Alberta road data did not answer');
+    return { cells, C, n };
+  }
+  async function abQuery(path) {
+    const v = [path[0]]; let acc = 0;  // a vertex every ~150 m stays within the 40 m search buffer
+    for (let k = 1; k < path.length; k++) { acc += path[k - 1].distanceTo(path[k]); if (acc >= 150 || k === path.length - 1) { v.push(path[k]); acc = 0; } }
     const body = new URLSearchParams({
       geometry: JSON.stringify({ paths: [v.map(p => [+p.lng.toFixed(5), +p.lat.toFixed(5)])], spatialReference: { wkid: 4326 } }),
       geometryType: 'esriGeometryPolyline', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', distance: '40', units: 'esriSRUnit_Meter',
@@ -687,9 +696,10 @@
     if (!r.ok) throw new Error('Alberta roads ' + r.status);
     const j = await r.json();
     if (j.error) throw new Error('Alberta roads: ' + (j.error.message || 'error'));
-    // Index every road segment in ~500 m cells.
-    const cells = new Map(), C = 0.005;
-    for (const f of j.features || []) {
+    return j.features || [];
+  }
+  function indexAB(features, cells, C) {
+    for (const f of features) {
       const ft = (f.properties || {}).FEATURE_TYPE, g = f.geometry; if (!g || AB_CLASS[ft] === undefined) continue;
       const lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
       for (const ln of lines) for (let k = 1; k < ln.length; k++) {
@@ -698,7 +708,6 @@
         for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) { const key = x + ':' + y; (cells.get(key) || cells.set(key, []).get(key)).push(sg); }
       }
     }
-    return { cells, C, n: (j.features || []).length };
   }
   // Nearest Alberta road segment to a point (within 25 m), or null.
   function abAt(ab, lat, lon) {
