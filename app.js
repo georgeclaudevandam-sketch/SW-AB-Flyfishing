@@ -109,6 +109,16 @@
     L.DomEvent.on(a, 'click', e => { L.DomEvent.preventDefault(e); const lyr = bases[baseName]; map.setZoom(Math.min((lyr && lyr.options.maxZoom) || 18, map.getMaxZoom() || 18)); });
     return d; } });
   new MaxZoom().addTo(map);
+  // Map tools: locate me, and a hand (pan) tool that leaves route drawing so taps only move the map.
+  const Tools = L.Control.extend({ options: { position: 'topleft' }, onAdd() {
+    const d = L.DomUtil.create('div', 'leaflet-bar map-tools');
+    const me = L.DomUtil.create('a', 'mt-btn', d); me.href = '#'; me.title = 'Show my location'; me.setAttribute('role', 'button'); me.innerHTML = '<span aria-hidden="true">◎</span>';
+    const hand = L.DomUtil.create('a', 'mt-btn mt-hand on', d); hand.href = '#'; hand.title = 'Hand tool: drag to move the map (stops route drawing)'; hand.setAttribute('role', 'button'); hand.innerHTML = '<span aria-hidden="true">✋</span>';
+    L.DomEvent.disableClickPropagation(d);
+    L.DomEvent.on(me, 'click', e => { L.DomEvent.preventDefault(e); document.getElementById('btnLocate').click(); });
+    L.DomEvent.on(hand, 'click', e => { L.DomEvent.preventDefault(e); if (typeof route !== 'undefined' && route.drawing) route.setDrawing(false); });
+    return d; } });
+  new Tools().addTo(map);
   map.on('baselayerchange', e => { baseName = e.name; store.set('base', e.name); applyFade(); });
   document.getElementById('fade').value = fade;
   document.getElementById('fade').addEventListener('input', e => { fade = +e.target.value; store.set('fade', fade); applyFade(); });
@@ -933,6 +943,7 @@
     },
     setDrawing(on) {
       this.drawing = on; document.body.classList.toggle('drawing', on);
+      const h = document.querySelector('.mt-hand'); if (h) h.classList.toggle('on', !on);
       $('#rDraw').textContent = on ? 'Stop drawing' : 'Start drawing';
       $('#btnRoute').classList.toggle('on', on);
       if (on) { toast('Tap the map to add points'); if (isMobile()) closePanels(); }

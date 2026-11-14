@@ -155,3 +155,7 @@ dialog.wide{max-width:min(980px,calc(100vw - 32px));width:100%}
 .leaflet-tooltip.road-lbl::before{display:none}
 .leaflet-tooltip.fmz-lbl{background:rgba(255,255,255,.85);border:2px solid #6a1b9a;color:#4a148c;font:900 15px/1.2 system-ui,sans-serif;padding:2px 8px;border-radius:6px;box-shadow:none}
 .leaflet-tooltip.fmz-lbl::before{display:none}
+.leaflet-bar a.mt-btn{font-size:17px;line-height:30px;width:30px;text-align:center}
+.leaflet-bar a.mt-hand.on{background:#1d3b2a;color:#fff}
+body:not(.drawing) .leaflet-container{cursor:grab}
+body:not(.drawing) .leaflet-container.leaflet-drag-target,body:not(.drawing) .leaflet-dragging .leaflet-container{cursor:grabbing}
