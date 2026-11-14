@@ -206,7 +206,7 @@
    "title": "OpenStreetMap trails, route relations, peaks, passes, places and campsites",
    "url": "https://www.openstreetmap.org",
    "licence": "ODbL 1.0",
-   "note": "Trail lines and names, official/operator tags and hiking route names; peak, pass, place, campsite, hut and trailhead names. Loaded live as you zoom in."
+   "note": "Trail lines and names, official/operator tags and hiking route names; names of towns, villages, hamlets, localities, peaks, hills, passes, ridges, glaciers, waterfalls, campsites, huts, trailheads, viewpoints and historic sites. Loaded live as you zoom in."
   },
   {
    "id": "R24",
@@ -391,11 +391,11 @@
    "how": "Paths, footways, tracks and bridleways that have a name, an operator, or belong to a hiking route in OpenStreetMap. A trail with no name of its own takes its hiking route's name, or '<operator> trail'. Trails with an operator, route or ref are drawn darker as official. Nothing is labelled that OSM does not name."
   },
   {
-   "feature": "Peaks, passes, towns, localities, campsites, huts and trailheads (zoom 10+)",
+   "feature": "Towns, villages, hamlets (zoom 8+), peaks, hills, passes, ridges, glaciers, waterfalls, campsites, huts, trailheads, viewpoints and historic sites (zoom 10+)",
    "refs": [
     "R23"
    ],
-   "how": "Named OSM nodes only, with elevation where OSM gives it."
+   "how": "Named OSM nodes only, with elevation where OSM gives it. Settlements and higher summits are labelled first when space is short."
   },
   {
    "feature": "Place-name overlay",

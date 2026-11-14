@@ -82,7 +82,7 @@
   map.createPane('trails').style.zIndex = 390;
   const trailCanvas = L.canvas({ pane: 'trails', padding: 0.3, tolerance: 6 });
   const trailLayer = L.layerGroup().addTo(map), nameLayer = L.layerGroup().addTo(map);
-  const TRAIL_ZOOM = 13, PLACE_ZOOM = 10, OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+  const TRAIL_ZOOM = 13, PLACE_ZOOM = 10, TOWN_ZOOM = 8, OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
   const osm = { trails: [], places: [], boxes: [], busy: false };  // boxes: [kind, south, west, north, east]
   const covered = (kind, v) => osm.boxes.some(x => x[0] === kind && x[1] <= v.getSouth() && x[2] <= v.getWest() && x[3] >= v.getNorth() && x[4] >= v.getEast());
   async function overpass(q) {
@@ -101,12 +101,13 @@
     if (!osmReady || osm.busy || (!F.trailNames && !F.placeNames)) return;
     const want = [];
     if (F.trailNames && z >= TRAIL_ZOOM && !covered('t', v)) want.push('t');
+    if (F.placeNames && z >= TOWN_ZOOM && !covered('P', v)) want.push('P');
     if (F.placeNames && z >= PLACE_ZOOM && !covered('p', v)) want.push('p');
     if (!want.length) return drawOsm();
     osm.busy = true;
     try {
       for (const kind of want) {
-        const p = v.pad(kind === 't' ? 0.5 : 0.3), bb = `${p.getSouth().toFixed(4)},${p.getWest().toFixed(4)},${p.getNorth().toFixed(4)},${p.getEast().toFixed(4)}`;
+        const p = v.pad(kind === 't' ? 0.5 : kind === 'P' ? 0.6 : 0.3), bb = `${p.getSouth().toFixed(4)},${p.getWest().toFixed(4)},${p.getNorth().toFixed(4)},${p.getEast().toFixed(4)}`;
         if (kind === 't') {
           // Named or officially operated trails, plus every way in a hiking route relation (takes the route's name).
           const j = await overpass(`[out:json][timeout:25];relation["route"~"^(hiking|foot)$"](${bb})->.r;.r out tags;(way(r.r)(${bb});way["highway"~"^(path|footway|track|bridleway|steps)$"]["name"](${bb});way["highway"~"^(path|footway|track|bridleway)$"]["operator"](${bb}););out tags geom;`);
@@ -129,9 +130,11 @@
               official: !!(t.operator || route || t.ref), route: route && route.name || '', sac: t.sac_scale || '' });
           }
         } else {
-          const j = await overpass(`[out:json][timeout:25];(node["place"~"^(city|town|village|hamlet|locality|isolated_dwelling)$"]["name"](${bb});node["natural"~"^(peak|saddle|ridge)$"]["name"](${bb});node["mountain_pass"="yes"]["name"](${bb});node["tourism"~"^(camp_site|alpine_hut|wilderness_hut)$"]["name"](${bb});node["highway"="trailhead"]["name"](${bb}););out body;`);
+          const j = await overpass(kind === 'P'
+            ? `[out:json][timeout:25];node["place"~"^(city|town|village|hamlet)$"]["name"](${bb});out body;`
+            : `[out:json][timeout:25];(node["place"~"^(locality|isolated_dwelling|neighbourhood)$"]["name"](${bb});node["natural"~"^(peak|hill|volcano|saddle|ridge|waterfall|glacier|spring|cave_entrance|arete)$"]["name"](${bb});node["waterway"="waterfall"]["name"](${bb});node["mountain_pass"="yes"]["name"](${bb});node["tourism"~"^(camp_site|alpine_hut|wilderness_hut|viewpoint)$"]["name"](${bb});node["highway"="trailhead"]["name"](${bb});node["historic"]["name"](${bb});node["man_made"~"^(tower|dam)$"]["name"](${bb});node["leisure"="slipway"]["name"](${bb}););out body;`);
           const seen = new Set(osm.places.map(t => t.id));
-          for (const e of j.elements || []) if (!seen.has(e.id) && e.tags && e.tags.name) osm.places.push({ id: e.id, name: e.tags.name, lat: e.lat, lon: e.lon, kind: e.tags.place || e.tags.natural || e.tags.tourism || (e.tags.highway === 'trailhead' ? 'trailhead' : 'pass'), ele: e.tags.ele || '' });
+          for (const e of j.elements || []) if (!seen.has(e.id) && e.tags && e.tags.name) osm.places.push({ id: e.id, name: e.tags.name, lat: e.lat, lon: e.lon, kind: e.tags.place || (e.tags.waterway === 'waterfall' ? 'waterfall' : '') || e.tags.natural || e.tags.tourism || (e.tags.highway === 'trailhead' ? 'trailhead' : '') || (e.tags.mountain_pass ? 'pass' : '') || (e.tags.historic ? 'historic' : '') || e.tags.man_made || (e.tags.leisure === 'slipway' ? 'boat_launch' : 'landmark'), ele: e.tags.ele || '' });
         }
         osm.boxes.push([kind, p.getSouth(), p.getWest(), p.getNorth(), p.getEast()]);
       }
@@ -139,8 +142,13 @@
     osm.busy = false;
     drawOsm();
   }
-  const PLACE_MIN_Z = { city: 7, town: 9, village: 10, hamlet: 11, locality: 12, isolated_dwelling: 13, peak: 11, saddle: 12, ridge: 12, pass: 11, camp_site: 13, alpine_hut: 12, wilderness_hut: 12, trailhead: 13 };
-  const PLACE_ICON = { peak: '▲ ', saddle: '⌒ ', ridge: '⌒ ', pass: '⌒ ', camp_site: '⛺ ', alpine_hut: '⌂ ', wilderness_hut: '⌂ ', trailhead: '⬤ ' };
+  const PLACE_MIN_Z = { city: 7, town: 8, village: 9, hamlet: 10, locality: 11, neighbourhood: 13, isolated_dwelling: 13, peak: 10, volcano: 10, hill: 11, ridge: 11, arete: 12, saddle: 12, pass: 10, glacier: 11,
+    waterfall: 12, spring: 13, cave_entrance: 13, camp_site: 12, alpine_hut: 11, wilderness_hut: 11, viewpoint: 13, trailhead: 12, historic: 13, tower: 13, dam: 12, boat_launch: 13, landmark: 13 };
+  const PLACE_ICON = { peak: '▲ ', volcano: '▲ ', hill: '△ ', saddle: '⌒ ', ridge: '⌒ ', arete: '⌒ ', pass: '⌒ ', glacier: '❄ ', waterfall: '≋ ', spring: '◌ ', cave_entrance: '◖ ', camp_site: '⛺ ', alpine_hut: '⌂ ', wilderness_hut: '⌂ ',
+    viewpoint: '◉ ', trailhead: '⬤ ', historic: '✦ ', tower: '♜ ', dam: '▬ ', boat_launch: '⚓ ' };
+  // When labels compete, settlements first, then higher summits.
+  const PLACE_RANK = { city: 0, town: 1, village: 2, hamlet: 3, peak: 4, volcano: 4, pass: 5, hill: 6, locality: 7 };
+  const eleOf = p => parseFloat(String(p.ele).replace(',', '.')) || 0;
   let osmReady = false;
   function drawOsm() {
     if (!osmReady) return;
@@ -164,10 +172,11 @@
         L.tooltip({ permanent: true, direction: 'center', className: 'trail-lbl' + (t.official ? ' off' : ''), interactive: false }).setLatLng(at).setContent(esc(t.name)).addTo(nameLayer);
       });
     }
-    if (F.placeNames && z >= PLACE_ZOOM) {
-      osm.places.filter(p => z >= (PLACE_MIN_Z[p.kind] || 12) && v.contains([p.lat, p.lon])).slice(0, 250).forEach(p =>
+    if (F.placeNames && z >= TOWN_ZOOM) {
+      osm.places.filter(p => z >= (PLACE_MIN_Z[p.kind] || 13) && v.contains([p.lat, p.lon]))
+        .sort((a, c) => (PLACE_RANK[a.kind] ?? 9) - (PLACE_RANK[c.kind] ?? 9) || eleOf(c) - eleOf(a)).slice(0, 300).forEach(p =>
         L.tooltip({ permanent: true, direction: 'top', className: 'place-lbl k-' + p.kind, interactive: false }).setLatLng([p.lat, p.lon])
-          .setContent((PLACE_ICON[p.kind] || '') + esc(p.name) + (p.ele && /peak|pass|saddle/.test(p.kind) ? ` <small>${esc(String(p.ele).replace(/\s*m$/, ''))} m</small>` : '')).addTo(nameLayer));
+          .setContent((PLACE_ICON[p.kind] || '') + esc(p.name) + (p.ele && /peak|volcano|hill|pass|saddle/.test(p.kind) ? ` <small>${esc(String(p.ele).replace(/\s*m$/, ''))} m</small>` : '')).addTo(nameLayer));
     }
   }
   let osmTimer = 0;
