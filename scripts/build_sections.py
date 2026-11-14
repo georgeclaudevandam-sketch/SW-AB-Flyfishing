@@ -521,9 +521,10 @@ def main():
         LOG[key] = log
         print(key, "ok" if ok else "not split", flush=True, file=sys.stderr)
         if not ok:
-            log["result"] = "not split: a break could not be located"
-            # Single-section tributary inheritance doesn't need breaks; multi-section rivers stay unsplit.
-            continue
+            # Sections whose ends were both located are still applied; stretches they don't reach show the whole listing.
+            log["result"] = "partly split: some breaks could not be located"
+            if not any(iv):
+                continue
 
         def cover(d, want):
             hits = [(si, t) for si, t in enumerate(iv) if t and t[2].get(want) and t[0] <= d <= t[1]]
