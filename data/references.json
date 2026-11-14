@@ -1,0 +1,360 @@
+{
+ "updated": "2026-11-14",
+ "references": [
+  {
+   "id": "R1",
+   "type": "Fish data",
+   "author": "Government of Alberta, Environment and Protected Areas",
+   "title": "Fish and Wildlife Internet Mapping Tool (FWIMT_PUB) - Fish Survey, layer 30",
+   "url": "https://geospatial.alberta.ca/titan/rest/services/biota/fwimt_pub_species_inventory/MapServer/30",
+   "licence": "Government of Alberta FWIMT terms of use (https://geospatial.alberta.ca/FWIMT_PUB)",
+   "note": "One record per species caught per survey, with latitude, longitude, date and survey method. Downloaded monthly by scripts/build_fwmis.py."
+  },
+  {
+   "id": "R2",
+   "type": "Fish data",
+   "author": "Government of Alberta, Environment and Protected Areas",
+   "title": "FWIMT_PUB - FWMIS River and Stream, layer 34",
+   "url": "https://geospatial.alberta.ca/titan/rest/services/biota/fwimt_pub_species_inventory/MapServer/34",
+   "licence": "Government of Alberta FWIMT terms of use",
+   "note": "Stream lines, names, Strahler order, HUC 8 watershed, waterbody ID and SPECIES_PRES (historic species list for the whole waterbody)."
+  },
+  {
+   "id": "R3",
+   "type": "Fish data",
+   "author": "Government of Alberta, Environment and Protected Areas",
+   "title": "FWIMT_PUB - FWMIS Lakes/Ponds/Reservoirs, layer 33",
+   "url": "https://geospatial.alberta.ca/titan/rest/services/biota/fwimt_pub_species_inventory/MapServer/33",
+   "licence": "Government of Alberta FWIMT terms of use",
+   "note": "Lake outlines, names, HUC 8 watershed, waterbody ID and SPECIES_PRES."
+  },
+  {
+   "id": "R4",
+   "type": "Fish data",
+   "author": "Government of Alberta, Environment and Protected Areas",
+   "title": "FWIMT_PUB - Fish Culture Stocking, layer 32",
+   "url": "https://geospatial.alberta.ca/titan/rest/services/biota/fwimt_pub_species_inventory/MapServer/32",
+   "licence": "Government of Alberta FWIMT terms of use",
+   "note": "Stocking records (waterbody ID, species, date)."
+  },
+  {
+   "id": "R5",
+   "type": "Fish data",
+   "author": "Government of Alberta",
+   "title": "FWIMT_PUB Metadata Guide (December 2018)",
+   "url": "https://open.alberta.ca/dataset/06fc95bc-83c3-4978-8c00-5a4933776a7c/resource/1022f12e-0a03-40b3-9d05-73ef9f6ac279/download/fwmit-metadataguide-dec2018.pdf",
+   "licence": "Open Government Licence - Alberta",
+   "note": "Field definitions for the FWIMT layers (e.g. SPECIES_PRES, Species Code)."
+  },
+  {
+   "id": "R6",
+   "type": "Fish data",
+   "author": "Parks Canada Agency",
+   "title": "Aquatic fish inventory - Jasper (1983-2017)",
+   "url": "https://open.canada.ca/data/en/dataset/27fa5915-2e9a-4942-b986-953119c6fae2",
+   "licence": "Open Government Licence - Canada",
+   "note": "Survey rows with waterbody, date, method, species code and UTM zone 11 coordinates."
+  },
+  {
+   "id": "R7",
+   "type": "Fish data",
+   "author": "Parks Canada Agency",
+   "title": "Lake Fish Index - Waterton Lakes - Freshwater (2016)",
+   "url": "https://open.canada.ca/data/en/dataset/aea61195-065b-4848-aba3-fab32c33e54c",
+   "licence": "Open Government Licence - Canada",
+   "note": "Species present (2011) per lake, by lake name; no coordinates. Data dictionary used for code meanings."
+  },
+  {
+   "id": "R8",
+   "type": "Fish data",
+   "author": "Parks Canada Agency",
+   "title": "Stream Fish Occupancy - Waterton Lakes - Freshwater (2016)",
+   "url": "https://open.canada.ca/data/en/dataset/3732ac14-e30c-4128-b8f0-5b9281c6b719",
+   "licence": "Open Government Licence - Canada",
+   "note": "Electrofishing sites with UTM coordinates and counts per species. Data dictionary used for code meanings (e.g. CTTR/RBTR hybrid, BUBT)."
+  },
+  {
+   "id": "R9",
+   "type": "Fish data",
+   "author": "Parks Canada Agency",
+   "title": "Stream Fish Occupancy - Banff (2015-2017)",
+   "url": "https://open.canada.ca/data/en/dataset/07c1c8d0-ad43-4411-bb79-278f9f50fb96",
+   "licence": "Open Government Licence - Canada",
+   "note": "Proportion of sites occupied per species for the Cascade, Panther and Spray watersheds only (no site locations)."
+  },
+  {
+   "id": "R10",
+   "type": "Fish data",
+   "author": "Parks Canada Agency",
+   "title": "Lake Fish Index - Banff",
+   "url": "https://donnees.iriu.ca/dataset/20b1a0ec-6415-46f7-80bb-a503c2669379",
+   "licence": "Open Government Licence - Canada",
+   "note": "Requested by the build, but no English CSV was retrieved, so nothing from it is on the map."
+  },
+  {
+   "id": "R11",
+   "type": "Data access",
+   "author": "Government of Canada",
+   "title": "Open Government Portal CKAN API (package_show)",
+   "url": "https://open.canada.ca/data/api/3/action/package_show",
+   "licence": "Open Government Licence - Canada",
+   "note": "Used to find the Parks Canada CSV download links."
+  },
+  {
+   "id": "R12",
+   "type": "Basemap",
+   "author": "OpenTopoMap (CC-BY-SA); data OpenStreetMap contributors, SRTM",
+   "title": "OpenTopoMap tiles",
+   "url": "https://opentopomap.org",
+   "licence": "CC-BY-SA 3.0; map data ODbL",
+   "note": "Basemap 'Topo (OpenTopoMap)'."
+  },
+  {
+   "id": "R13",
+   "type": "Basemap",
+   "author": "Natural Resources Canada",
+   "title": "Toporama WMS",
+   "url": "https://maps.geogratis.gc.ca/wms/toporama_en",
+   "licence": "Open Government Licence - Canada",
+   "note": "Basemap 'Canada Topo (NRCan Toporama)'."
+  },
+  {
+   "id": "R14",
+   "type": "Basemap",
+   "author": "CyclOSM; data OpenStreetMap contributors",
+   "title": "CyclOSM tiles",
+   "url": "https://www.cyclosm.org",
+   "licence": "Map data ODbL",
+   "note": "Basemap 'Tracks & cutlines (CyclOSM)': tracks, cutlines and OHV trails as mapped in OpenStreetMap."
+  },
+  {
+   "id": "R15",
+   "type": "Basemap",
+   "author": "OpenStreetMap contributors",
+   "title": "OpenStreetMap standard tiles",
+   "url": "https://www.openstreetmap.org/copyright",
+   "licence": "ODbL",
+   "note": "Basemap 'Roads (OpenStreetMap)'."
+  },
+  {
+   "id": "R16",
+   "type": "Basemap",
+   "author": "Esri",
+   "title": "World Topographic Map, World Imagery, World Transportation, World Hillshade",
+   "url": "https://server.arcgisonline.com/ArcGIS/rest/services",
+   "licence": "Esri terms of use",
+   "note": "Basemaps 'Esri World Topo' and 'Satellite (Esri)'; overlays 'Roads & place names' and 'Hillshade'."
+  },
+  {
+   "id": "R17",
+   "type": "Overlay",
+   "author": "Waymarked Trails; data OpenStreetMap contributors",
+   "title": "Waymarked Trails - Hiking",
+   "url": "https://hiking.waymarkedtrails.org",
+   "licence": "CC-BY-SA 3.0; map data ODbL",
+   "note": "Overlay 'Hiking trails (Waymarked)'."
+  },
+  {
+   "id": "R18",
+   "type": "Routing",
+   "author": "FOSSGIS e.V. (OSRM); data OpenStreetMap contributors",
+   "title": "routing.openstreetmap.de car, bike and foot routing (OSRM)",
+   "url": "https://routing.openstreetmap.de",
+   "licence": "Map data ODbL",
+   "note": "Route planner auto-routing and \"Route here from me\" (online only)."
+  },
+  {
+   "id": "R19",
+   "type": "Software",
+   "author": "Volodymyr Agafonkin and contributors",
+   "title": "Leaflet 1.9.4",
+   "url": "https://leafletjs.com",
+   "licence": "BSD-2-Clause",
+   "note": "Map library."
+  },
+  {
+   "id": "R20",
+   "type": "Regulations (link only)",
+   "author": "Government of Alberta",
+   "title": "Alberta Guide to Sportfishing Regulations",
+   "url": "https://albertaregulations.ca/fishingregs/",
+   "licence": "",
+   "note": "Linked for seasons, limits and closures. No regulation data is shown on the map."
+  },
+  {
+   "id": "R21",
+   "type": "Regulations (link only)",
+   "author": "Government of Alberta",
+   "title": "My Wild Alberta - Fishing",
+   "url": "https://mywildalberta.ca/fishing/",
+   "licence": "",
+   "note": "Linked only."
+  },
+  {
+   "id": "R22",
+   "type": "Regulations (link only)",
+   "author": "Parks Canada Agency",
+   "title": "Fishing in national parks",
+   "url": "https://parks.canada.ca/voyage-travel/experience/peche-fishing",
+   "licence": "",
+   "note": "Linked only."
+  }
+ ],
+ "features": [
+  {
+   "feature": "Stream lines (every river, creek and stream)",
+   "refs": [
+    "R2"
+   ],
+   "how": "Geometry, names and stream order as published; simplified to about 20 m."
+  },
+  {
+   "feature": "Stream names and 'also called' names",
+   "refs": [
+    "R2"
+   ],
+   "how": "OFFICIAL_NM and COMMON_NM."
+  },
+  {
+   "feature": "Stream size filter (Strahler order)",
+   "refs": [
+    "R2"
+   ],
+   "how": "STR_ORDER."
+  },
+  {
+   "feature": "Watershed (HUC) and FWMIS ID in details",
+   "refs": [
+    "R2",
+    "R3"
+   ],
+   "how": "HUC_8 and WB_ID."
+  },
+  {
+   "feature": "Species on each stretch of stream (colour and code labels)",
+   "refs": [
+    "R1",
+    "R6",
+    "R8"
+   ],
+   "how": "Survey records whose location is within 0.5 km of that stream reach, on the same waterbody ID (FWMIS) or same name inside the park (Parks Canada)."
+  },
+  {
+   "feature": "Survey site dots and their species, years and methods",
+   "refs": [
+    "R1",
+    "R6",
+    "R8"
+   ],
+   "how": "Record locations as published; sites that do not lie on a mapped water are shown on their own."
+  },
+  {
+   "feature": "Species years (e.g. 1985-2020) and the 'Records from' filter",
+   "refs": [
+    "R1",
+    "R6",
+    "R7",
+    "R8"
+   ],
+   "how": "Survey dates (Waterton lakes: 2011 'present' column)."
+  },
+  {
+   "feature": "'FWMIS list for the whole river system' in stream details",
+   "refs": [
+    "R2"
+   ],
+   "how": "SPECIES_PRES, shown for reference only; not used to colour streams."
+  },
+  {
+   "feature": "Lake outlines and names",
+   "refs": [
+    "R3"
+   ],
+   "how": "Geometry and names as published."
+  },
+  {
+   "feature": "Species recorded in each lake",
+   "refs": [
+    "R3",
+    "R1",
+    "R7"
+   ],
+   "how": "Lake SPECIES_PRES plus survey records in the lake; Waterton lakes matched by name inside the park."
+  },
+  {
+   "feature": "Stocking records and 'stocked' badge",
+   "refs": [
+    "R4"
+   ],
+   "how": "Stocking species and years joined by waterbody ID."
+  },
+  {
+   "feature": "Species names for the four-letter codes",
+   "refs": [
+    "R1",
+    "R7",
+    "R8"
+   ],
+   "how": "SPEC_CODE / SPEC_NAME pairs from the FWMIS survey layer; Parks Canada codes mapped with their data dictionaries (RBTR = RNTR, BRTR = BNTR, BUBT = BURB, PYWH = PGWH, CTTR/RBTR hybrid = CRTR)."
+  },
+  {
+   "feature": "Banff watershed note (Cascade, Panther, Spray)",
+   "refs": [
+    "R9"
+   ],
+   "how": "Species with sites occupied in either replicate."
+  },
+  {
+   "feature": "Park records with no map location",
+   "refs": [
+    "R6",
+    "R7",
+    "R8"
+   ],
+   "how": "Records that could not be matched to a mapped water by name and location."
+  },
+  {
+   "feature": "Species colours, rarity order for colouring, legend layout",
+   "refs": [],
+   "how": "Display choices made for this map; not data."
+  },
+  {
+   "feature": "Basemaps and overlays",
+   "refs": [
+    "R12",
+    "R13",
+    "R14",
+    "R15",
+    "R16",
+    "R17"
+   ],
+   "how": "Map tiles loaded from each provider."
+  },
+  {
+   "feature": "Route planner auto-routing and \"Route here from me\"",
+   "refs": [
+    "R18"
+   ],
+   "how": "OSRM car, bike or foot profile; straight lines when offline. Start point from your device location."
+  },
+  {
+   "feature": "Route distance and time",
+   "refs": [],
+   "how": "Distance calculated in the app from the route line; travel time is the routing service estimate."
+  },
+  {
+   "feature": "My location",
+   "refs": [],
+   "how": "Your device's GPS through the browser."
+  },
+  {
+   "feature": "Regulation links",
+   "refs": [
+    "R20",
+    "R21",
+    "R22"
+   ],
+   "how": "Links only."
+  }
+ ]
+}

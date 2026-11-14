@@ -21,6 +21,7 @@
     <button class="tb-btn" id="btnRoute" title="Plan a route">⟿ Route</button>
     <button class="tb-btn" id="btnLocate" title="Show my location">◎ Me</button>
     <button class="tb-btn" id="btnTools" title="Export and offline tools">⇩ Tools</button>
+    <button class="tb-btn" id="btnSources" title="Data sources and references">ⓘ Sources</button>
     <button class="tb-btn only-mobile" id="btnList" aria-label="Site list">≡ List</button>
   </div>
 </header>
@@ -65,6 +66,8 @@
     <section>
       <h2>Map</h2>
       <label class="chk"><input type="checkbox" id="labels" checked> Species code labels</label>
+      <label class="range">Background map fade: <b id="fadeOut"></b>
+        <input type="range" id="fade" min="0" max="80" step="5" value="45"></label>
       <p class="hint">Change the basemap or add trails with the layer button on the map.</p>
     </section>
 
@@ -110,7 +113,9 @@
         <button id="rUndo">Undo</button>
         <button id="rClear">Clear</button>
       </div>
-      <label class="chk"><input type="checkbox" id="rSnap"> Snap to trails and roads (needs internet)</label>
+      <label class="chk"><input type="checkbox" id="rSnap" checked> Auto-route along roads and trails (needs signal)</label>
+      <label class="sel">Travel by
+        <select id="rMode"><option value="foot">Foot (trails and roads)</option><option value="car">Car (roads)</option><option value="bike">Bike</option></select></label>
       <label class="chk"><input type="checkbox" id="rReturn" checked> Count return trip (out and back)</label>
       <div class="route-stats" id="rStats">No route yet.</div>
       <label class="sel">Route name <input id="rName" value="My route"></label>
@@ -146,6 +151,21 @@
     <div id="oStatus" class="hint"></div>
     <h3>Install</h3>
     <p class="hint">On a phone, use "Add to Home Screen" (iPhone: Share menu; Android: browser menu). The app and site data then work without signal.</p>
+    <div class="route-btns"><button value="close">Close</button></div>
+  </form>
+</dialog>
+
+<dialog id="sources" class="wide">
+  <form method="dialog">
+    <h2>Sources and references</h2>
+    <p class="hint">Every reference used by this map, and which features come from which reference.</p>
+    <div class="route-btns">
+      <button type="button" id="sDocx" class="primary">Download full list (HTML document)</button>
+      <button type="button" id="sCsvR">References (CSV)</button>
+      <button type="button" id="sCsvF">Features by source (CSV)</button>
+      <button type="button" id="sPrint">Print / save as PDF</button>
+    </div>
+    <div id="sourcesBody"></div>
     <div class="route-btns"><button value="close">Close</button></div>
   </form>
 </dialog>

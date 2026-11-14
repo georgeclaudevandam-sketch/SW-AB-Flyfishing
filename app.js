@@ -22,7 +22,9 @@
   const chunkLoading = {};
   const sort = store.get('sort2', { key: 'name', desc: false });
   const dispName = it => it.n || it.a || 'Unnamed ' + (it.k === 'l' ? 'lake' : 'stream');
-  const spName = c => (SP[c] ? SP[c].name : c);
+  let NAMES = {};
+  const cap = t => t.toLowerCase().replace(/(^|[ (-])([a-z])/g, (m, p, l) => p + l.toUpperCase());
+  const spName = c => (SP[c] ? SP[c].name : NAMES[c] ? cap(NAMES[c]) : c);
   const spColor = c => (SP[c] ? SP[c].color : '#666');
 
   /* ---------------- Map and layers ---------------- */
@@ -45,12 +47,18 @@
   let baseName = store.get('base', 'Topo (OpenTopoMap)');
   if (!bases[baseName]) baseName = 'Topo (OpenTopoMap)';
   bases[baseName].addTo(map);
+  let fade = store.get('fade', 45);
+  const applyFade = () => { Object.values(bases).forEach(l => l.setOpacity(1 - fade / 100)); const o = document.getElementById('fadeOut'); if (o) o.textContent = fade + '%'; };
+  applyFade();
   store.get('overlays', []).forEach(n => overlays[n] && overlays[n].addTo(map));
   L.control.layers(bases, overlays, { position: 'topright', collapsed: true }).addTo(map);
   L.control.scale({ imperial: false }).addTo(map);
-  map.on('baselayerchange', e => { baseName = e.name; store.set('base', e.name); });
+  map.on('baselayerchange', e => { baseName = e.name; store.set('base', e.name); applyFade(); });
+  document.getElementById('fade').value = fade;
+  document.getElementById('fade').addEventListener('input', e => { fade = +e.target.value; store.set('fade', fade); applyFade(); });
   map.on('overlayadd overlayremove', () => store.set('overlays', Object.keys(overlays).filter(n => map.hasLayer(overlays[n]))));
   const waterLayer = L.layerGroup().addTo(map);
+  const siteHi = L.layerGroup().addTo(map);
   const labelLayer = L.layerGroup().addTo(map);
   let hiLayer = null;
 
@@ -125,7 +133,7 @@
     const z = map.getZoom();
     const keys = chunksInView();
     if (keys.length > 40 && z < 9) {
-      waterLayer.clearLayers(); labelLayer.clearLayers();
+      waterLayer.clearLayers(); siteHi.clearLayers(); labelLayer.clearLayers();
       const b = map.getBounds();
       ITEMS.forEach(it => {
         if (!passing.has(it.id) || !b.contains([it.c[1], it.c[0]])) return;
@@ -138,7 +146,7 @@
     }
     await Promise.all(keys.map(loadChunk));
     if (token !== drawToken) return;
-    waterLayer.clearLayers(); labelLayer.clearLayers();
+    waterLayer.clearLayers(); siteHi.clearLayers(); labelLayer.clearLayers();
     const b = map.getBounds().pad(0.1);
     const labels = [];
     if (F.noRecord && z >= 10) {
@@ -156,7 +164,8 @@
       if (!f) continue;
       if (it.k === 'l') {
         const col = colorOf(it);
-        L.polygon(swap(f.g), { renderer: canvas, color: colorOfSp(selOnly(allSp(it))), weight: 2, fillColor: colorOfSp(selOnly(allSp(it))), fillOpacity: 0.35 }).on('click', () => select(it.id, false)).addTo(waterLayer);
+        L.polygon(swap(f.g), { renderer: canvas, color: '#ffffff', weight: 6, fill: false, opacity: 0.9, interactive: false }).addTo(waterLayer);
+        L.polygon(swap(f.g), { renderer: canvas, color: colorOfSp(selOnly(allSp(it))), weight: 3, fillColor: colorOfSp(selOnly(allSp(it))), fillOpacity: 0.5 }).on('click', () => select(it.id, false)).addTo(waterLayer);
         labels.push([it.c[1], it.c[0], selOnly(allSp(it)), 1000]);
         continue;
       }
@@ -164,8 +173,9 @@
       for (const r of f.r || []) {
         const sp = spIn(r.y);
         const w = Math.min(1 + (r.o || it.o || 1) * 0.7, 6);
+        if (selMatch(sp)) L.polyline(swap(r.g), { renderer: canvas, color: '#ffffff', weight: w + 4, opacity: 0.9, interactive: false }).addTo(waterLayer);
         const lyr = selMatch(sp)
-          ? L.polyline(swap(r.g), { renderer: canvas, color: colorOfSp(selOnly(sp)), weight: w, opacity: 0.95 })
+          ? L.polyline(swap(r.g), { renderer: canvas, color: colorOfSp(selOnly(sp)), weight: w + 1, opacity: 1 })
           : L.polyline(swap(r.g), { renderer: canvas, color: '#6f8f9a', weight: Math.max(1, w - 2), opacity: 0.55, dashArray: '4 5' });
         lyr.on('click', () => select(it.id, false, r)).addTo(waterLayer);
         if (selOnly(sp).length) { const m = mid(r.g); labels.push([m[1], m[0], selOnly(sp), r.o || 1]); }
@@ -180,8 +190,17 @@
     if (!sp.length) return;
     const src = s[4] && s[4].startsWith('pc:') ? `Parks Canada (${s[4].slice(3)})` : 'FWMIS survey';
     const tip = `<b>${esc(name || 'Survey site')}</b><br>${sp.map(c => `<span class="code">${c}</span> ${esc(spName(c))}${s[2][c] ? ' (' + s[2][c] + ')' : ''}`).join('<br>')}<br><span class="hint">${src}${s[5] && s[5].length ? ' · ' + esc(s[5].join(', ')) : ''} · ${s[3]} record${s[3] > 1 ? 's' : ''}</span>`;
-    L.circleMarker([s[1], s[0]], { renderer: canvas, radius: 4, weight: 1.5, color: '#fff', fillColor: selMatch(sp) ? colorOfSp(sp) : '#777', fillOpacity: 1 })
-      .bindTooltip(tip, { direction: 'top' }).addTo(waterLayer);
+    const hit = selMatch(sp), z = map.getZoom(), r = hit ? Math.min(9, 4 + (z - 11)) : 3;
+    if (hit) {  // white halo + dark ring so the selected fish stand out on any basemap
+      L.circleMarker([s[1], s[0]], { renderer: canvas, radius: r + 3, weight: 0, fillColor: '#fff', fillOpacity: 0.9, interactive: false }).addTo(siteHi);
+      L.circleMarker([s[1], s[0]], { renderer: canvas, radius: r, weight: 2, color: '#111', fillColor: colorOfSp(sp), fillOpacity: 1 })
+        .bindTooltip(tip, { direction: 'top' }).addTo(siteHi);
+      if (F.labels && z >= 15) L.tooltip({ permanent: true, direction: 'right', className: 'codes-lbl', offset: [r + 2, 0], interactive: false })
+        .setLatLng([s[1], s[0]]).setContent(sp.map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ')).addTo(labelLayer);
+    } else {
+      L.circleMarker([s[1], s[0]], { renderer: canvas, radius: r, weight: 1, color: '#fff', fillColor: '#888', fillOpacity: 0.7 })
+        .bindTooltip(tip, { direction: 'top' }).addTo(waterLayer);
+    }
   }
   function drawSites(keys, items) {
     const b = map.getBounds();
@@ -193,7 +212,7 @@
     const b = map.getBounds();
     labels.filter(l => l[2].length && b.contains([l[0], l[1]])).sort((a, c) => c[3] - a[3]).slice(0, MAX_LABELS).forEach(l =>
       L.tooltip({ permanent: true, direction: 'right', className: 'codes-lbl', offset: [4, 0], interactive: false })
-        .setLatLng([l[0], l[1]]).setContent(l[2].join(' ')).addTo(labelLayer));
+        .setLatLng([l[0], l[1]]).setContent(l[2].map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ')).addTo(labelLayer));
   }
   map.on('moveend', () => { draw(); });
 
@@ -263,13 +282,14 @@
       </dl>
       <div class="route-btns">
         <button id="dRoute" class="primary">Add to route</button>
-        <a href="https://www.google.com/maps/dir/?api=1&destination=${it.c[1]},${it.c[0]}" target="_blank" rel="noopener"><button>Directions</button></a>
+        <button id="dHere">Route here from me</button>
         <button id="dCopy">Copy coordinates</button>
       </div>
       <p class="hint">Sources: Alberta FWMIS fish survey records${it.pk ? ' and Parks Canada open data (' + Object.entries(it.pk).map(([p, u]) => `<a href="${u}" target="_blank" rel="noopener">${esc(p)}</a>`).join(', ') + ')' : ''}. A record means the species was caught there in that year, not that it is there today.
       ${it.pk ? 'National parks need a Parks Canada fishing permit. ' : ''}Check seasons, limits and closures in the <a href="https://albertaregulations.ca/fishingregs/" target="_blank" rel="noopener">Alberta sportfishing regulations</a>.</p>
     </div>`;
     $('#dRoute').onclick = () => { route.add(L.latLng(it.c[1], it.c[0])); showTab('route'); toast('Added to route'); };
+    $('#dHere').onclick = () => route.fromMe(L.latLng(it.c[1], it.c[0]));
     $('#dCopy').onclick = () => { navigator.clipboard && navigator.clipboard.writeText(`${it.c[1]}, ${it.c[0]}`).then(() => toast('Copied')); };
     showTab('detail'); openPanel('side'); renderList();
   }
@@ -301,24 +321,35 @@
         m.on('click', () => { this.pts.splice(i, 1); this.redraw(); });
         return m;
       });
-      this.compute();
+      return this.compute();
+    },
+    async fromMe(dest) {
+      if (!navigator.geolocation) return toast('Location not available');
+      toast('Finding your location…');
+      navigator.geolocation.getCurrentPosition(p => {
+        this.pts = [L.latLng(p.coords.latitude, p.coords.longitude), dest];
+        $('#rSnap').checked = true; showTab('route'); openPanel('side');
+        this.redraw().then(() => this.path.length > 1 && map.fitBounds(L.latLngBounds(this.path).pad(0.15)));
+      }, () => toast('Could not get your location'), { enableHighAccuracy: true, timeout: 15000 });
     },
     async compute() {
-      let path = this.pts.slice();
+      let path = this.pts.slice(); this.dur = null;
       if ($('#rSnap').checked && this.pts.length > 1) {
         try {
           const coords = this.pts.map(p => `${p.lng.toFixed(5)},${p.lat.toFixed(5)}`).join(';');
-          const r = await fetch(`https://routing.openstreetmap.de/routed-foot/route/v1/foot/${coords}?overview=full&geometries=geojson`);
+          const mode = $('#rMode').value;
+          const r = await fetch(`https://routing.openstreetmap.de/routed-${mode}/route/v1/driving/${coords}?overview=full&geometries=geojson`);
           const j = await r.json();
-          if (j.routes && j.routes[0]) path = j.routes[0].geometry.coordinates.map(c => L.latLng(c[1], c[0]));
-        } catch (e) { toast('Could not snap to trails (offline?). Using straight lines.'); }
+          if (j.routes && j.routes[0]) { path = j.routes[0].geometry.coordinates.map(c => L.latLng(c[1], c[0])); this.dur = j.routes[0].duration; }
+          else toast('No route found along roads or trails. Using straight lines.');
+        } catch (e) { toast('Auto-routing needs signal. Using straight lines.'); }
       }
       this.path = path;
       this.line.setLatLngs(path);
       let d = 0; for (let i = 1; i < path.length; i++) d += path[i - 1].distanceTo(path[i]);
       const km = d / 1000, rt = $('#rReturn').checked ? km * 2 : km;
       $('#rStats').innerHTML = this.pts.length < 2 ? (this.pts.length ? '1 point. Add another.' : 'No route yet.') :
-        `<b>${km.toFixed(1)} km</b> one way · <b>${rt.toFixed(1)} km</b> ${$('#rReturn').checked ? 'round trip' : 'total'}${rt > 40 ? '<br><b>Over 40 km: plan an overnight.</b>' : ''}`;
+        `<b>${km.toFixed(1)} km</b> one way · <b>${rt.toFixed(1)} km</b> ${$('#rReturn').checked ? 'round trip' : 'total'}${this.dur ? `<br>About ${Math.round(this.dur / 60) >= 60 ? (this.dur / 3600).toFixed(1) + ' h' : Math.round(this.dur / 60) + ' min'} one way by ${$('#rMode').value} (routing estimate)` : ''}${rt > 40 ? '<br><b>Over 40 km: plan an overnight.</b>' : ''}`;
       store.set('routeDraft', this.pts.map(p => [p.lat, p.lng]));
     },
     setDrawing(on) {
@@ -334,6 +365,7 @@
   $('#rUndo').onclick = () => { route.pts.pop(); route.redraw(); };
   $('#rClear').onclick = () => { route.pts = []; route.redraw(); };
   $('#rSnap').onchange = () => route.compute();
+  $('#rMode').onchange = () => route.compute();
   $('#rReturn').onchange = () => route.compute();
   $('#rGpx').onclick = () => {
     if (route.path.length < 2) return toast('Draw a route first');
@@ -385,6 +417,34 @@
   $('#xJson').onclick = () => download('eastern-slopes-waters.geojson', JSON.stringify({ type: 'FeatureCollection', features: exportRows().map(it => ({ type: 'Feature', geometry: { type: 'Point', coordinates: it.c }, properties: { name: dispName(it), kind: it.k === 'l' ? 'lake' : 'stream', species: allSp(it), fwmis_id: it.id.slice(1) } })) }), 'application/geo+json');
   $('#btnTools').onclick = () => $('#tools').showModal();
 
+  /* ---------------- Sources and references ---------------- */
+  let REFS = null;
+  const csvCell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  function refsHtml(full) {
+    const R = {}; REFS.references.forEach(r => R[r.id] = r);
+    const built = META ? `Water data downloaded ${META.built}. ` : '';
+    return `${full ? `<h1>Eastern Slopes Trout Map: sources and references</h1><p>${built}Reference list updated ${REFS.updated}. Map: ${esc(location.href.split('#')[0])}</p>` : `<p class="hint">${built}</p>`}
+      <h3>Which features come from which source</h3>
+      <table class="reftable"><thead><tr><th>Feature</th><th>Source</th><th>How it is used</th></tr></thead><tbody>
+      ${REFS.features.map(f => `<tr><td>${esc(f.feature)}</td><td>${f.refs.length ? f.refs.map(id => `${id} ${esc(R[id].title)}`).join('<br>') : '<i>Not from a data source</i>'}</td><td>${esc(f.how)}</td></tr>`).join('')}
+      </tbody></table>
+      <h3>References</h3>
+      <table class="reftable"><thead><tr><th>ID</th><th>Reference</th><th>Type</th><th>Licence</th><th>Notes</th></tr></thead><tbody>
+      ${REFS.references.map(r => `<tr><td>${r.id}</td><td>${esc(r.author)}. <b>${esc(r.title)}</b>. <a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.url)}</a></td><td>${esc(r.type)}</td><td>${esc(r.licence)}</td><td>${esc(r.note)}</td></tr>`).join('')}
+      </tbody></table>`;
+  }
+  async function openSources() {
+    if (!REFS) { try { REFS = await (await fetch('data/references.json')).json(); } catch (e) { return toast('Could not load the reference list.'); } }
+    $('#sourcesBody').innerHTML = refsHtml(false);
+    $('#sources').showModal();
+  }
+  $('#btnSources').onclick = openSources;
+  $('#sCsvR').onclick = () => download('eastern-slopes-references.csv', '\ufeff' + [['ID', 'Type', 'Author', 'Title', 'URL', 'Licence', 'Notes']].concat(REFS.references.map(r => [r.id, r.type, r.author, r.title, r.url, r.licence, r.note])).map(row => row.map(csvCell).join(',')).join('\r\n'), 'text/csv');
+  $('#sCsvF').onclick = () => { const R = {}; REFS.references.forEach(r => R[r.id] = r);
+    download('eastern-slopes-features-by-source.csv', '\ufeff' + [['Feature', 'Reference IDs', 'Reference titles', 'How it is used']].concat(REFS.features.map(f => [f.feature, f.refs.join('; '), f.refs.map(id => R[id].title).join('; '), f.how])).map(row => row.map(csvCell).join(',')).join('\r\n'), 'text/csv'); };
+  $('#sDocx').onclick = () => download('eastern-slopes-sources-and-references.html', `<!doctype html><html><head><meta charset="utf-8"><title>Eastern Slopes Trout Map - sources and references</title><style>body{font:14px/1.45 system-ui,sans-serif;max-width:1000px;margin:24px auto;padding:0 16px;color:#1e2a22}table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 20px}th,td{text-align:left;vertical-align:top;padding:6px;border-bottom:1px solid #ddd}th{color:#555}a{word-break:break-all}</style></head><body>${refsHtml(true)}</body></html>`, 'text/html');
+  $('#sPrint').onclick = () => window.print();
+
   /* ---------------- Offline ---------------- */
   $('#oData').onclick = async () => {
     if (!META) return;
@@ -427,8 +487,8 @@
   $('#oClear').onclick = async () => { if ('caches' in window) { await caches.delete('tiles-v1'); $('#oStatus').textContent = 'Saved tiles deleted.'; } };
 
   /* ---------------- Boot ---------------- */
-  Promise.all([fetch('data/species.json').then(r => r.json()), fetch('data/water/index.json').then(r => { if (!r.ok) throw new Error('nodata'); return r.json(); })])
-    .then(([sp, idx]) => {
+  Promise.all([fetch('data/species_names.json').then(r => r.json()).then(n => { NAMES = n; }).catch(() => {}), fetch('data/species.json').then(r => r.json()), fetch('data/water/index.json').then(r => { if (!r.ok) throw new Error('nodata'); return r.json(); })])
+    .then(([, sp, idx]) => {
       SPECIES = sp; SPECIES.forEach(s => SP[s.code] = s); RARITY = SPECIES.map(s => s.code);
       META = idx.meta; ITEMS = idx.items;
       const pk = (META.parks || {});
@@ -447,7 +507,7 @@
       $('#speciesList').innerHTML = groups.map(g => `<div class="sp-group"><h3>${esc(g)}</h3>` + SPECIES.filter(s => s.group === g && counts[s.code]).map(s =>
         `<label class="sp"><input type="checkbox" value="${s.code}"><span class="dot" style="background:${s.color}"></span><span class="code">${s.code}</span><span class="n">${esc(s.name)}<span class="c">${counts[s.code]}</span></span></label>`).join('') + '</div>').join('') +
         (extra.length ? `<details class="sp-group"><summary>Other species codes (${extra.length})</summary>` + extra.map(c =>
-          `<label class="sp"><input type="checkbox" value="${c}"><span class="dot" style="background:#666"></span><span class="code">${c}</span><span class="n"><span class="c">${counts[c]}</span></span></label>`).join('') + '</details>' : '');
+          `<label class="sp"><input type="checkbox" value="${c}"><span class="dot" style="background:#666"></span><span class="code">${c}</span><span class="n">${esc(spName(c) !== c ? spName(c) : '')}<span class="c">${counts[c]}</span></span></label>`).join('') + '</details>' : '');
       $('#legend').innerHTML = SPECIES.filter(s => counts[s.code]).map(s => `<div class="row"><span class="dot" style="background:${s.color}"></span><span class="code">${s.code}</span> ${esc(s.name)}</div>`).join('') +
         `<div class="row"><span class="dot" style="background:${NO_REC}"></span> No fish records</div>`;
       $('#dataInfo').textContent = `Data downloaded ${META.built}: ${(META.total || ITEMS.length).toLocaleString()} waters.`;

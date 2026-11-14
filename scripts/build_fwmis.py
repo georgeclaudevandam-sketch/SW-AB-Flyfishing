@@ -255,6 +255,17 @@ def main():
     except SystemExit as e:
         print("stocking skipped:", e, file=sys.stderr)
 
+    # Official species code -> name table, straight from the survey layer.
+    try:
+        j = get(f"{BASE}/30/query", {"where": "SPEC_CODE IS NOT NULL", "outFields": "SPEC_CODE,SPEC_NAME",
+                                     "returnDistinctValues": "true", "returnGeometry": "false", "f": "json"})
+        names = {f["attributes"]["SPEC_CODE"].strip().upper(): (f["attributes"].get("SPEC_NAME") or "").strip()
+                 for f in j.get("features", []) if f["attributes"].get("SPEC_CODE")}
+        with open(os.path.join(OUT, "..", "species_names.json"), "w") as fh:
+            json.dump(dict(sorted((k, v) for k, v in names.items() if v)), fh, indent=0)
+    except SystemExit as e:
+        print("species names skipped:", e, file=sys.stderr)
+
     write(wb, stock, loose)
 
 
