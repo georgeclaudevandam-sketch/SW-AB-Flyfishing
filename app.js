@@ -618,40 +618,79 @@
     } catch (e) { console.warn('parking lookup', e); }
     return out;
   }
-  // Drive as close as roads allow, then walk the shortest way. Candidates: where the road network comes closest to the
-  // destination, and mapped public parking areas within 10 km. Each needs both a drive and a walk that route; the one
-  // with the shortest walk wins (ties go to the shorter drive). A lot that is not connected to the road network is skipped.
+  // Roads near a point from the Alberta road data: the nearest vertex of each distinct road (by name, else by feature).
+  async function abNearRoads(at, radius) {
+    const body = new URLSearchParams({
+      geometry: JSON.stringify({ x: +at.lng.toFixed(5), y: +at.lat.toFixed(5), spatialReference: { wkid: 4326 } }), geometryType: 'esriGeometryPoint', inSR: '4326',
+      spatialRel: 'esriSpatialRelIntersects', distance: String(radius), units: 'esriSRUnit_Meter', where: 'FEATURE_TYPE IN (3,4,5,6,7,8,9,14)',
+      outFields: 'OBJECTID,FEATURE_TYPE,NAME', returnGeometry: 'true', outSR: '4326', f: 'geojson', resultRecordCount: '1500' });
+    const r = await fetch(AB_ROADS, { method: 'POST', body, signal: withTimeout(20000) });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error.message || 'Alberta roads error');
+    const best = new Map();
+    for (const f of j.features || []) {
+      const g = f.geometry; if (!g) continue;
+      const lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+      const key = (f.properties.NAME || '').trim() || 'id' + f.properties.OBJECTID;
+      for (const ln of lines) for (const c of ln) {
+        const ll = L.latLng(c[1], c[0]), d = ll.distanceTo(at);
+        if (!best.has(key) || d < best.get(key).d) best.set(key, { at: ll, d, name: f.properties.NAME || '', ft: f.properties.FEATURE_TYPE });
+      }
+    }
+    return [...best.values()].sort((a, b) => a.d - b.d);
+  }
+  // Drive, then walk the shortest way. Rather than only driving to the road point nearest the water (which may have
+  // no trail), candidate trail access points are tried and the one with the shortest walk wins:
+  //  - where the car router gets closest to the destination,
+  //  - the nearest point of each road within 15 km of the destination (Government of Alberta road data),
+  //  - mapped public parking within 10 km (OpenStreetMap, if it answers in time),
+  //  - and any road the best walk itself crosses or follows (drive there instead of walking to it).
+  // Each candidate needs a drive and a walk that both route. Requests go one at a time (the free routing server
+  // limits how many it accepts at once).
   async function driveThenHike(pts) {
     const start = pts[0], walkPts = pts.slice(1), dest = pts[pts.length - 1];
     const tryLeg = (m, p) => osrm(m, p).catch(() => null);
-    // Look for parking while the drive is routed; give up on it after a few seconds so the route is never held up.
-    const lotsP = findParking(dest, 10000).then(l => l.sort((a, b) => a.at.distanceTo(dest) - b.at.distanceTo(dest)).slice(0, 4)).catch(e => { console.warn('parking', e); return []; });
-    // Requests go one at a time: the free routing server limits how many it accepts at once.
-    const direct = await tryLeg('car', [start, dest]);  // ends where the road network comes closest to the destination
-    const cands = [];
-    if (direct) cands.push({ kind: 'roadend', at: direct.path[direct.path.length - 1], car: direct, tags: {}, foot: await tryLeg('foot', [direct.path[direct.path.length - 1], ...walkPts]) });
-    const lots = await Promise.race([lotsP, new Promise(r => setTimeout(() => r(null), 6000))]);
-    const lotsSlow = lots === null;
-    const reach = cands[0] ? cands[0].at.distanceTo(dest) : Infinity;
-    for (const c of (lots || []).filter(c => c.at.distanceTo(dest) < reach + 1500).slice(0, 3)) {
-      const car = await tryLeg('car', [start, c.at]); if (!car) continue;
-      cands.push({ kind: 'park', at: c.at, car, tags: c.tags, pid: c.id, foot: await tryLeg('foot', [c.at, ...walkPts]) });
+    const lotsP = findParking(dest, 10000).then(l => l.sort((a, b) => a.at.distanceTo(dest) - b.at.distanceTo(dest)).slice(0, 3)).catch(e => { console.warn('parking', e); return []; });
+    const roadsP = abNearRoads(dest, 15000).catch(e => { console.warn('Alberta near roads', e); return []; });
+    const cands = [], tried = [];
+    const consider = async (kind, at, extra = {}) => {
+      if (tried.some(t => t.distanceTo(at) < 150)) return null;
+      tried.push(at);
+      const car = await tryLeg('car', [start, at]); if (!car) return null;
+      const end = car.path[car.path.length - 1];          // where the car router actually stops
+      if (cands.some(c => c.at.distanceTo(end) < 150)) return null;  // same stopping point as one already tried
+      const foot = await tryLeg('foot', [end, ...walkPts]); if (!foot) return null;
+      const c = { kind, at: end, car, foot, tags: {}, ...extra }; cands.push(c); return c;
+    };
+    await consider('roadend', dest);
+    for (const r of (await roadsP).slice(0, 5)) await consider('roadend', r.at, { road: r.name });
+    const lots = await Promise.race([lotsP, new Promise(r => setTimeout(() => r(null), 3000))]);
+    for (const c of lots || []) await consider('park', c.at, { tags: c.tags, pid: c.id });
+    // Refine: if the best walk follows or crosses a drivable road, drive to the last such point and walk from there.
+    for (let round = 0; round < 2 && cands.length; round++) {
+      const best = cands.slice().sort((a, b) => a.foot.dist - b.foot.dist)[0];
+      let ab = null; try { ab = await abRoads(best.foot.path); } catch (e) { break; }
+      const fp = best.foot.path; let cut = -1;
+      for (let k = fp.length - 1; k > 0; k--) {
+        const sg = abAt(ab, fp[k].lat, fp[k].lng);
+        if (sg && /^(paved|gravel|dryweather)$/.test(AB_CLASS[sg.ft])) { cut = k; break; }
+      }
+      if (cut < 1 || fp[cut].distanceTo(fp[0]) < 300) break;
+      const c = await consider('roadend', fp[cut], { road: '' });
+      if (!c || c.foot.dist >= best.foot.dist - 200) break;
     }
-    const ok = cands.filter(c => c.foot);
-    if (!ok.length) {
-      if (direct) return { legs: [{ mode: 'road', r: direct }], marks: [], note: 'No walking route found from the road to the destination, so only the drive is shown.' };
+    if (!cands.length) {
       const walk = await tryLeg('foot', pts);
       if (walk) return { legs: [{ mode: 'foot', r: walk }], marks: [], note: 'No driving route found from the start, so this is a walking route.' };
       throw new Error('No route found along roads or trails.');
     }
-    ok.sort((a, b) => a.foot.dist - b.foot.dist || a.car.dist - b.car.dist);
-    // Prefer a mapped parking area if its walk is within 300 m of the shortest possible walk.
-    const best = ok.find(c => c.kind === 'park' && c.foot.dist <= ok[0].foot.dist + 300) || ok[0];
+    cands.sort((a, b) => a.foot.dist - b.foot.dist || a.car.dist - b.car.dist);
+    // Prefer a mapped parking area if its walk is within 300 m of the shortest walk.
+    const best = cands.find(c => c.kind === 'park' && c.foot.dist <= cands[0].foot.dist + 300) || cands[0];
     return { legs: [{ mode: 'road', r: best.car }, { mode: 'foot', r: best.foot }],
       marks: [{ kind: best.kind, at: best.at, tags: best.tags, pid: best.pid }],
-      note: best.kind === 'park'
-        ? 'Drive to the mapped parking area with the shortest walk.'
-        : `Drive ends where the road network comes closest to the destination.${lotsSlow ? ' The parking lookup (OpenStreetMap) did not answer in time; parking near the route is added below if it answers.' : lots.length ? '' : ' No public parking is mapped within 10 km.'}` };
+      note: (best.kind === 'park' ? 'Drive to the mapped parking area with the shortest walk.' : `Drive to the trail access point with the shortest walk${best.road ? ' (' + esc(cap(best.road)) + ')' : ''}.`) +
+        ` Compared ${cands.length} access point${cands.length > 1 ? 's' : ''}.` + (lots === null ? ' The OpenStreetMap parking lookup did not answer in time.' : '') };
   }
   function drawRoute(runs, marks) {
     routeLayer.eachLayer(l => l.unbindTooltip && l.unbindTooltip());
@@ -666,7 +705,7 @@
           .bindTooltip((m.kind === 'park' ? '<b>Park here</b><br>' : '') + esc(info) + '<br><span class="hint">OpenStreetMap</span>', { permanent: m.kind === 'park' || !!nm, direction: 'right', offset: [10, 0], className: 'rt-lbl' }).addTo(routeLayer);
       } else if (m.kind === 'roadend') {
         L.marker(m.at, { icon: L.divIcon({ className: '', html: '<div class="rt-foot">🥾</div>', iconSize: [24, 24], iconAnchor: [12, 12] }), zIndexOffset: 500 })
-          .bindTooltip('<b>Drive ends here</b><br>Closest point by road; walk from here', { permanent: true, direction: 'right', offset: [12, 0], className: 'rt-lbl' }).addTo(routeLayer);
+          .bindTooltip('<b>Drive ends here</b><br>Walk from here', { permanent: true, direction: 'right', offset: [12, 0], className: 'rt-lbl' }).addTo(routeLayer);
       } else {
         L.marker(m.at, { icon: L.divIcon({ className: '', html: `<div class="rt-foot">${m.kind === 'tofoot' ? '🥾' : '🚗'}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), zIndexOffset: 400 })
           .bindTooltip(m.kind === 'tofoot' ? '<b>On foot from here</b><br>Road ends, trail begins' : '<b>Back on a road</b>', { permanent: m.kind === 'tofoot', direction: 'right', offset: [12, 0], className: 'rt-lbl' }).addTo(routeLayer);
