@@ -94,8 +94,8 @@
   const applyFade = () => { Object.values(bases).forEach(l => l.setOpacity(1 - fade / 100)); const o = document.getElementById('fadeOut'); if (o) o.textContent = fade + '%'; };
   applyFade();
   if (store.get('overlaysV', 0) < 2) { store.set('overlays', [...new Set([...store.get('overlays', []), 'Place names (Esri)'])]); store.set('overlaysV', 2); }
-  if (store.get('overlaysV', 0) < 4) { store.set('overlays', [...new Set([...store.get('overlays', []), 'Hiking trails (Waymarked)', 'Alberta designated trails (Gov. of Alberta)'])]); store.set('overlaysV', 4); }
   if (store.get('overlaysV', 0) < 3) { store.set('overlays', [...new Set([...store.get('overlays', []), 'Fish management zones (ES1, ES2…)'])]); store.set('overlaysV', 3); }
+  if (store.get('overlaysV', 0) < 4) { store.set('overlays', [...new Set([...store.get('overlays', []), 'Hiking trails (Waymarked)', 'Alberta designated trails (Gov. of Alberta)'])]); store.set('overlaysV', 4); }
   store.get('overlays', []).forEach(n => overlays[n] && overlays[n].addTo(map));
   L.control.layers(bases, overlays, { position: 'topright', collapsed: true }).addTo(map);
   L.control.scale({ imperial: false }).addTo(map);
