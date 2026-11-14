@@ -1,0 +1,27 @@
+name: Wall map data (roads, trails, zones)
+on:
+  workflow_dispatch:
+  push:
+    branches: ['claude/project-thread-noryg2']
+    paths: ['print/fetch_print_data.py', '.github/workflows/print-data.yml']
+permissions:
+  contents: write
+concurrency: print-data
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: python3 print/fetch_print_data.py
+      - run: ls -la print/data
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add print/data
+          git diff --cached --quiet && exit 0
+          git commit -m "Wall map data: roads, trails, zones, OSM"
+          git pull --rebase
+          git push
