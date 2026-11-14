@@ -25,6 +25,7 @@ const { chromium } = require('playwright');
       if (!/Finding|Checking/.test(st) && i > 3) break;
     }
     console.log('route labels:', await d.$$eval('.rt-lbl', e => e.map(x => x.innerText.replace(/\n/g, ' / '))));
+    console.log('end marker at:', await d.evaluate(() => { const m = [...document.querySelectorAll('.leaflet-marker-icon .rt-foot, .leaflet-marker-icon .rt-p')]; return m.length; }));
     console.log('drive end:', await d.evaluate(() => { const m = [...document.querySelectorAll('.rt-lbl')].find(x => /Drive ends|Park here/.test(x.innerText)); return m ? m.style.transform : ''; }));
     await d.screenshot({ path: `route-check-${water.replace(/\W+/g, '_')}.png` });
     await d.click('button[data-tab=list]');
