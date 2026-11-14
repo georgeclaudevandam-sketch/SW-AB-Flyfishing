@@ -8,14 +8,14 @@ const { chromium } = require('playwright');
   const d = await ctx.newPage(); const log = [];
   d.on('console', m => log.push(m.type() + ': ' + m.text()));
   d.on('pageerror', e => log.push('pageerror: ' + e.message));
-  d.on('response', r => { if (/routing\.openstreetmap|overpass/.test(r.url())) log.push(`${r.status()} ${r.request().method()} ${r.url().slice(0, 110)}`); });
+  d.on('response', r => { if (/routing\.openstreetmap|overpass|geospatial\.alberta/.test(r.url())) log.push(`${r.status()} ${r.request().method()} ${r.url().slice(0, 110)}`); });
   d.on('requestfailed', r => log.push(`FAILED ${r.url().slice(0, 110)} ${r.failure() && r.failure().errorText}`));
   await d.goto(url); await d.waitForTimeout(4000);
   await d.uncheck('#inView'); await d.fill('#q', 'Bear Pond'); await d.waitForTimeout(500);
   await d.click('#siteRows tr[data-id] >> nth=0'); await d.waitForTimeout(1500);
   await d.click('#dHere');
   const t0 = Date.now(); let last = '';
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 120; i++) {
     await d.waitForTimeout(1000);
     const st = await d.$eval('#rStats', e => e.innerText.replace(/\n/g, ' | '));
     if (st !== last) { console.log(`t+${Math.round((Date.now() - t0) / 1000)}s stats: ${st}`); last = st; }

@@ -225,6 +225,15 @@
    "url": "https://laws-lois.justice.gc.ca/eng/regulations/SOR-98-246/page-3.html",
    "licence": "Open Government Licence - Canada",
    "note": "Which species are listed as game fish; all other codes are grouped as non-game in the species filter."
+  },
+  {
+   "id": "R26",
+   "type": "Map data",
+   "author": "Government of Alberta",
+   "title": "Base Features Access Road (Access and Facility Roads), geospatial.alberta.ca transportation/access_facility_roads MapServer layer 0",
+   "url": "https://geospatial.alberta.ca/titan/rest/services/transportation/access_facility_roads/MapServer/0",
+   "licence": "Open Government Licence - Alberta",
+   "note": "Authoritative provincial road data. FEATURE_TYPE gives paved (divided, 1-, 2-, 4-lane), gravel (1- or 2-lane), dry-weather road, winter road and ford. Queried live along planned routes."
   }
  ],
  "features": [
@@ -413,12 +422,13 @@
    "how": "Codes from FWMIS whose species is on Schedule 1 Part 1 (Arctic grayling, goldeye, lake sturgeon, mooneye, sauger, tullibee/cisco, plus the trout, whitefish, pike, walleye, perch and burbot already listed) are game fish. All other codes go in the Non-game species group; amphibian, mollusc, crayfish and family-level or unknown records are listed separately inside it. Hybrids and kokanee keep the groups in data/species.json."
   },
   {
-   "feature": "Route line types (paved road, gravel or dirt road, road with surface not mapped, on foot)",
+   "feature": "Route line types (paved, gravel, dry-weather road, winter road, ford, surface not mapped, on foot)",
    "refs": [
     "R18",
+    "R26",
     "R23"
    ],
-   "how": "OSRM returns the OpenStreetMap nodes the route passes; each stretch takes the highway, surface and tracktype tags of the OSM way that holds it. Paths, footways, bridleways and steps are 'on foot'. Roads with no surface tag are shown as 'surface not mapped' rather than guessed."
+   "how": "Each stretch of a routed road takes the FEATURE_TYPE of the Government of Alberta Access Road segment within 25 m of it. Where Alberta has no road (e.g. in BC or on minor tracks), the OpenStreetMap surface/tracktype tags of the way OSRM used are used instead; roads with neither are shown as \"surface not mapped\". Paths, footways, bridleways and steps are \"on foot\"."
   },
   {
    "feature": "Parking areas and 'on foot from here' points on routes",

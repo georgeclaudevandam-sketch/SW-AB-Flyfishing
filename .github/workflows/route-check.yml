@@ -12,11 +12,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
       - run: npm i --no-save playwright@1.47.2 && npx playwright install --with-deps chromium
-      - run: |
-          for u in https://overpass-api.de/api/interpreter https://overpass.kumi.systems/api/interpreter https://overpass.private.coffee/api/interpreter https://maps.mail.ru/osm/tools/overpass/api/interpreter; do
-            curl -sS -m 40 -o /tmp/o.txt -D /tmp/h.txt -H 'Origin: https://georgeclaudevandam-sketch.github.io' -A 'Mozilla/5.0 route-check' --data-urlencode 'data=[out:json][timeout:25];nwr["amenity"="parking"](around:10000,50.2183,-114.4301);out center tags;' -w "$u %{http_code} %{time_total}s " "$u" || true
-            grep -i 'access-control-allow-origin' /tmp/h.txt | tr -d '\r'; echo " bytes=$(wc -c < /tmp/o.txt)"; head -c 200 /tmp/o.txt; echo
-          done
+      - run: curl -sS -m 30 -D - -o /tmp/ab.json -H 'Origin: https://georgeclaudevandam-sketch.github.io' 'https://geospatial.alberta.ca/titan/rest/services/transportation/access_facility_roads/MapServer/0/query?where=1%3D1&resultRecordCount=1&outFields=FEATURE_TYPE&f=json' | grep -i 'HTTP/\|access-control' ; head -c 300 /tmp/ab.json; echo
       - run: (python3 -m http.server 8000 >/dev/null 2>&1 &) && sleep 2 && node tests/route-check.js http://localhost:8000/
       - uses: actions/upload-artifact@v4
         if: always()

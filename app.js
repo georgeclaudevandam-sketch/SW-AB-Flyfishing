@@ -501,6 +501,9 @@
     gravel: { label: 'Gravel or dirt road', line: { color: '#d84315', weight: 5, dashArray: '12 7', opacity: 1 }, casing: true },
     unknown: { label: 'Road, surface not mapped', line: { color: '#d84315', weight: 4, dashArray: '2 6 10 6', opacity: 0.85 }, casing: true },
     foot: { label: 'On foot (trail or path)', line: { color: '#1b5e20', weight: 5, dashArray: '1 9', lineCap: 'round', opacity: 1 }, casing: true },
+    dryweather: { label: 'Dry-weather road (unpaved, impassable when wet)', line: { color: '#6d4c41', weight: 5, dashArray: '6 5', opacity: 1 }, casing: true },
+    winter: { label: 'Winter road', line: { color: '#5c6bc0', weight: 5, dashArray: '6 5', opacity: 1 }, casing: true },
+    ford: { label: 'Ford or winter crossing', line: { color: '#0277bd', weight: 6, opacity: 1 }, casing: true },
     unchecked: { label: 'Road (surface not checked)', line: { color: '#d84315', weight: 5, opacity: 0.75 }, casing: true },
     straight: { label: 'Straight line (not routed)', line: { color: '#ff5722', weight: 3, dashArray: '4 4', opacity: 0.9 } },
   };
@@ -646,6 +649,7 @@
         : `Drive ends where the road network comes closest to the destination.${lotsSlow ? ' The parking lookup (OpenStreetMap) did not answer in time; parking near the route is added below if it answers.' : lots.length ? '' : ' No public parking is mapped within 10 km.'}` };
   }
   function drawRoute(runs, marks) {
+    routeLayer.eachLayer(l => l.unbindTooltip && l.unbindTooltip());
     routeLayer.clearLayers();
     for (const r of runs) { const st = RT_STYLE[r.cls]; if (st.casing) L.polyline(r.pts, { color: '#fff', weight: st.line.weight + 4, opacity: 0.95, interactive: false }).addTo(routeLayer); }
     for (const r of runs) L.polyline(r.pts, RT_STYLE[r.cls].line).bindTooltip(RT_STYLE[r.cls].label, { sticky: true }).addTo(routeLayer);
@@ -663,6 +667,67 @@
           .bindTooltip(m.kind === 'tofoot' ? '<b>On foot from here</b><br>Road ends, trail begins' : '<b>Back on a road</b>', { permanent: m.kind === 'tofoot', direction: 'right', offset: [12, 0], className: 'rt-lbl' }).addTo(routeLayer);
       }
     }
+  }
+
+  /* Road surface from the Government of Alberta Access Road layer (authoritative provincial road data). */
+  const AB_ROADS = 'https://geospatial.alberta.ca/titan/rest/services/transportation/access_facility_roads/MapServer/0/query';
+  const AB_CLASS = { 3: 'paved', 6: 'paved', 7: 'paved', 8: 'paved', 9: 'paved', 4: 'gravel', 5: 'gravel', 14: 'dryweather', 12: 'winter', 2: 'ford', 10: 'gravel' };
+  const AB_TYPE = { 1: 'Ferry crossing', 2: 'Ford/winter crossing', 3: 'Interchange ramp', 4: 'One-lane gravel road', 5: 'Two-lane gravel road', 6: 'Divided paved road', 7: 'One-lane paved road', 8: 'Two-lane paved road', 9: 'Four-lane paved road', 10: 'Driveway', 12: 'Winter road', 14: 'Dry-weather road' };
+  async function abRoads(path) {
+    // Thin the line to a vertex every ~150 m (enough to stay within the 40 m search buffer), max ~1500 vertices.
+    let step = 150; const tot = path.reduce((a, p, k) => k ? a + path[k - 1].distanceTo(p) : 0, 0);
+    if (tot / step > 1500) step = tot / 1500;
+    const v = [path[0]]; let acc = 0;
+    for (let k = 1; k < path.length; k++) { acc += path[k - 1].distanceTo(path[k]); if (acc >= step || k === path.length - 1) { v.push(path[k]); acc = 0; } }
+    const body = new URLSearchParams({
+      geometry: JSON.stringify({ paths: [v.map(p => [+p.lng.toFixed(5), +p.lat.toFixed(5)])], spatialReference: { wkid: 4326 } }),
+      geometryType: 'esriGeometryPolyline', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', distance: '40', units: 'esriSRUnit_Meter',
+      outFields: 'FEATURE_TYPE,NAME,HWY_NUMBER', returnGeometry: 'true', outSR: '4326', f: 'geojson', resultRecordCount: '2000' });
+    const r = await fetch(AB_ROADS, { method: 'POST', body, signal: withTimeout(25000) });
+    if (!r.ok) throw new Error('Alberta roads ' + r.status);
+    const j = await r.json();
+    if (j.error) throw new Error('Alberta roads: ' + (j.error.message || 'error'));
+    // Index every road segment in ~500 m cells.
+    const cells = new Map(), C = 0.005;
+    for (const f of j.features || []) {
+      const ft = (f.properties || {}).FEATURE_TYPE, g = f.geometry; if (!g || AB_CLASS[ft] === undefined) continue;
+      const lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : [];
+      for (const ln of lines) for (let k = 1; k < ln.length; k++) {
+        const sg = { a: ln[k - 1], b: ln[k], ft, name: f.properties.NAME || '' };
+        const x0 = Math.floor(Math.min(sg.a[0], sg.b[0]) / C), x1 = Math.floor(Math.max(sg.a[0], sg.b[0]) / C), y0 = Math.floor(Math.min(sg.a[1], sg.b[1]) / C), y1 = Math.floor(Math.max(sg.a[1], sg.b[1]) / C);
+        for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) { const key = x + ':' + y; (cells.get(key) || cells.set(key, []).get(key)).push(sg); }
+      }
+    }
+    return { cells, C, n: (j.features || []).length };
+  }
+  // Nearest Alberta road segment to a point (within 25 m), or null.
+  function abAt(ab, lat, lon) {
+    const kx = 111320 * Math.cos(lat * Math.PI / 180), ky = 110540; let best = null, bd = 25;
+    const cx = Math.floor(lon / ab.C), cy = Math.floor(lat / ab.C);
+    for (let x = cx - 1; x <= cx + 1; x++) for (let y = cy - 1; y <= cy + 1; y++) for (const sg of ab.cells.get(x + ':' + y) || []) {
+      const ax = (sg.a[0] - lon) * kx, ay = (sg.a[1] - lat) * ky, bx = (sg.b[0] - lon) * kx, by = (sg.b[1] - lat) * ky;
+      const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy, t = L2 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / L2)) : 0;
+      const d = Math.hypot(ax + t * dx, ay + t * dy); if (d < bd) { bd = d; best = sg; }
+    }
+    return best;
+  }
+  // Re-class every road (non-foot) stretch from the Alberta data where a provincial road lies under it.
+  function applyAB(runs, ab) {
+    if (!ab) return runs;
+    const out = [];
+    const push = (r, cls, a, b, src) => { const l = out[out.length - 1]; if (l && l.cls === cls && l.leg === r.leg && l.drv === r.drv && l.src === src) l.pts.push(b); else out.push({ cls, pts: [a, b], leg: r.leg, drv: r.drv, src }); };
+    for (const r of runs) {
+      for (let k = 1; k < r.pts.length; k++) {
+        const a = r.pts[k - 1], b = r.pts[k];
+        let cls = r.cls, src = r.src;
+        if (r.cls !== 'foot' || r.drv) {
+          const sg = abAt(ab, (a.lat + b.lat) / 2, (a.lng + b.lng) / 2);
+          if (sg) { cls = AB_CLASS[sg.ft]; src = 'ab'; }
+        }
+        push(r, cls, a, b, src);
+      }
+    }
+    return out;
   }
   const route = {
     drawing: false, pts: [], markers: [], path: [], runs: [], marks: [],
@@ -683,7 +748,7 @@
       navigator.geolocation.getCurrentPosition(p => {
         this.pts = [L.latLng(p.coords.latitude, p.coords.longitude), dest];
         $('#rSnap').checked = true; $('#rMode').value = 'drivehike'; showTab('route'); openPanel('side');
-        this.redraw().then(() => this.path.length > 1 && map.fitBounds(L.latLngBounds(this.path).pad(0.15)));
+        this.fitNext = true; this.redraw();
       }, () => toast('Could not get your location'), { enableHighAccuracy: true, timeout: 15000 });
     },
     async compute() {
@@ -707,8 +772,12 @@
       const quick = legs.map(l => ({ cls: l.mode === 'foot' ? 'foot' : 'unchecked', pts: l.r.path }));
       this.show(quick, marks, dur, note + ' <span class="hint">Checking road surfaces and parking…</span>');
       // 2. Then add surfaces, on-foot points and nearby parking from OpenStreetMap (skipped if that is slow or offline).
+      const abP = abRoads(legs.flatMap(l => l.r.path)).catch(e => { console.warn('Alberta road surfaces', e); return null; });
+      abP.then(ab => { if (ab && live() && !this.runs.some(r => r.src)) { const q = applyAB(quick.map((r, k) => ({ ...r, leg: k, drv: r.cls !== 'foot' })), ab); this.show(q, marks, dur, note + ' <span class="hint">Checking parking and trails…</span>'); } });
       try {
-        const runs = await classifyLegs(legs);
+        let runs = await classifyLegs(legs);
+        if (!live()) return;
+        runs = applyAB(runs, await abP);
         if (!live()) return;
         if (mode === 'drivehike') {
           const ext = extendDrive(runs, marks);
@@ -725,15 +794,18 @@
       this.runs = runs; this.marks = marks; this.dur = dur;
       this.path = runs.flatMap((r, k) => k ? r.pts.slice(1) : r.pts);
       drawRoute(runs, marks);
+      if (this.fitNext && this.path.length > 1) { this.fitNext = false; map.fitBounds(L.latLngBounds(this.path).pad(0.15)); }
       const len = pts => { let d = 0; for (let k = 1; k < pts.length; k++) d += pts[k - 1].distanceTo(pts[k]); return d; };
       const by = {}; runs.forEach(r => { by[r.cls] = (by[r.cls] || 0) + len(r.pts); });
       const km = Object.values(by).reduce((a, b) => a + b, 0) / 1000, rt = $('#rReturn').checked ? km * 2 : km;
       const hrs = d => Math.round(d / 60) >= 60 ? (d / 3600).toFixed(1) + ' h' : Math.round(d / 60) + ' min';
+      const footKm = (by.foot || 0) / 1000 * ($('#rReturn').checked ? 2 : 1);
       $('#rStats').innerHTML = this.pts.length < 2 ? (this.pts.length ? '1 point. Add another.' : 'No route yet.') :
         `<b>${km.toFixed(1)} km</b> one way · <b>${rt.toFixed(1)} km</b> ${$('#rReturn').checked ? 'round trip' : 'total'}` +
         (dur ? `<br>About ${hrs(dur)} one way (routing estimate)` : '') +
-        (rt > 40 ? '<br><b>Over 40 km: plan an overnight.</b>' : '') +
+        (footKm > 30 ? `<br><b>${footKm.toFixed(1)} km on foot${$('#rReturn').checked ? ' round trip' : ''}: plan an overnight.</b>` : '') +
         `<div class="rt-legend">${Object.keys(RT_STYLE).filter(c => by[c]).map(c => `<div>${rtSwatch(c)} ${RT_STYLE[c].label} <b>${(by[c] / 1000).toFixed(1)} km</b></div>`).join('')}` +
+        (runs.some(r => r.src === 'ab') ? `<div class="hint">Road surface: Government of Alberta Access Road data, then OpenStreetMap where Alberta has no road.</div>` : '') +
         (marks.some(m => m.kind === 'parking' || m.kind === 'park') ? `<div><span class="rt-p">P</span> Parking (OpenStreetMap)</div>` : '') +
         (marks.some(m => m.kind === 'tofoot') ? `<div><span class="rt-foot">🥾</span> Road ends, continue on foot</div>` : '') + '</div>' +
         (note ? `<p class="hint">${note}</p>` : '');
