@@ -551,8 +551,8 @@
     return out;
   }
   async function findParking(at, radius) {
-    const j = await overpass(`[out:json][timeout:25];nwr["amenity"="parking"]["access"!~"^(private|no|customers)$"](around:${radius},${at.lat.toFixed(5)},${at.lng.toFixed(5)});out center tags;`);
-    return (j.elements || []).map(e => ({ at: L.latLng(e.lat || e.center.lat, e.lon || e.center.lon), tags: e.tags || {}, id: e.type + e.id }));
+    const j = await overpass(`[out:json][timeout:20];nwr["amenity"="parking"](around:${radius},${at.lat.toFixed(5)},${at.lng.toFixed(5)});out center tags;`);
+    return (j.elements || []).filter(e => !/^(private|no|customers)$/.test((e.tags || {}).access || '') && (e.lat || e.center)).map(e => ({ at: L.latLng(e.lat || e.center.lat, e.lon || e.center.lon), tags: e.tags || {}, id: e.type + e.id }));
   }
   async function parkingNear(points, have) {
     const seen = new Set(have.filter(m => m.pid).map(m => m.pid)), out = [];
@@ -562,24 +562,36 @@
     } catch (e) { console.warn('parking lookup', e); }
     return out;
   }
-  // Drive from the first point to the mapped parking lot nearest the last point that gives the shortest walk, then walk.
+  // Drive as close as roads allow, then walk the shortest way. Candidates: where the road network comes closest to the
+  // destination, and mapped public parking areas within 10 km. Each needs both a drive and a walk that route; the one
+  // with the shortest walk wins (ties go to the shorter drive). A lot that is not connected to the road network is skipped.
   async function driveThenHike(pts) {
     const start = pts[0], walkPts = pts.slice(1), dest = pts[pts.length - 1];
-    let cands = [];
-    try { cands = (await findParking(dest, 10000)).sort((a, b) => a.at.distanceTo(dest) - b.at.distanceTo(dest)).slice(0, 3); } catch (e) { console.warn('parking', e); }
-    let best = null;
-    for (const c of cands) {
-      try { const f = await osrm('foot', [c.at, ...walkPts]); if (!best || f.dist < best.foot.dist) best = { c, foot: f }; } catch (e) { /* no foot route from this lot */ }
+    const tryLeg = (m, p) => osrm(m, p).catch(() => null);
+    let lots = [];
+    try { lots = (await findParking(dest, 10000)).sort((a, b) => a.at.distanceTo(dest) - b.at.distanceTo(dest)).slice(0, 4); } catch (e) { console.warn('parking', e); }
+    const direct = await tryLeg('car', [start, dest]);  // ends where the road network comes closest to the destination
+    const cands = [];
+    if (direct) cands.push({ kind: 'roadend', at: direct.path[direct.path.length - 1], car: direct, tags: {} });
+    const lotRoutes = await Promise.all(lots.map(async c => ({ c, car: await tryLeg('car', [start, c.at]) })));
+    lotRoutes.forEach(({ c, car }) => { if (car) cands.push({ kind: 'park', at: c.at, car, tags: c.tags, pid: c.id }); });
+    const feet = await Promise.all(cands.map(c => tryLeg('foot', [c.at, ...walkPts])));
+    const ok = cands.map((c, k) => ({ ...c, foot: feet[k] })).filter(c => c.foot);
+    if (!ok.length) {
+      if (direct) return { legs: [{ mode: 'road', r: direct }], marks: [], note: 'No walking route found from the road to the destination, so only the drive is shown.' };
+      const walk = await tryLeg('foot', pts);
+      if (walk) return { legs: [{ mode: 'foot', r: walk }], marks: [], note: 'No driving route found from the start, so this is a walking route.' };
+      throw new Error('No route found along roads or trails.');
     }
-    if (best) {
-      const car = await osrm('car', [start, best.c.at]);
-      return { legs: [{ mode: 'road', r: car }, { mode: 'foot', r: best.foot }], marks: [{ kind: 'park', at: best.c.at, tags: best.c.tags, pid: best.c.id }],
-        note: `Parking chosen: the mapped OpenStreetMap parking area (within 10 km of the destination) with the shortest walk.` };
-    }
-    const car = await osrm('car', [start, dest]);
-    const end = car.path[car.path.length - 1], foot = await osrm('foot', [end, ...walkPts]);
-    return { legs: [{ mode: 'road', r: car }, { mode: 'foot', r: foot }], marks: [{ kind: 'roadend', at: end, tags: {} }],
-      note: 'No public parking area is mapped in OpenStreetMap within 10 km of the destination, so the drive ends where the road comes closest.' };
+    ok.sort((a, b) => a.foot.dist - b.foot.dist || a.car.dist - b.car.dist);
+    // Prefer a mapped parking area if its walk is within 300 m of the shortest possible walk.
+    const best = ok.find(c => c.kind === 'park' && c.foot.dist <= ok[0].foot.dist + 300) || ok[0];
+    const walkKm = (best.foot.dist / 1000).toFixed(1);
+    return { legs: [{ mode: 'road', r: best.car }, { mode: 'foot', r: best.foot }],
+      marks: [{ kind: best.kind, at: best.at, tags: best.tags, pid: best.pid }],
+      note: best.kind === 'park'
+        ? `Drive to the mapped parking area with the shortest walk (${walkKm} km on foot one way).`
+        : `Drive ends where the road network comes closest to the destination (${walkKm} km on foot one way).${lots.length ? '' : ' No public parking is mapped within 10 km.'}` };
   }
   function drawRoute(runs, marks) {
     routeLayer.clearLayers();
@@ -593,7 +605,7 @@
           .bindTooltip((m.kind === 'park' ? '<b>Park here</b><br>' : '') + esc(info) + '<br><span class="hint">OpenStreetMap</span>', { permanent: m.kind === 'park' || !!nm, direction: 'right', offset: [10, 0], className: 'rt-lbl' }).addTo(routeLayer);
       } else if (m.kind === 'roadend') {
         L.marker(m.at, { icon: L.divIcon({ className: '', html: '<div class="rt-foot">🥾</div>', iconSize: [24, 24], iconAnchor: [12, 12] }), zIndexOffset: 500 })
-          .bindTooltip('<b>Drive ends here</b><br>No mapped parking; walk from here', { permanent: true, direction: 'right', offset: [12, 0], className: 'rt-lbl' }).addTo(routeLayer);
+          .bindTooltip('<b>Drive ends here</b><br>Closest point by road; walk from here', { permanent: true, direction: 'right', offset: [12, 0], className: 'rt-lbl' }).addTo(routeLayer);
       } else {
         L.marker(m.at, { icon: L.divIcon({ className: '', html: `<div class="rt-foot">${m.kind === 'tofoot' ? '🥾' : '🚗'}</div>`, iconSize: [24, 24], iconAnchor: [12, 12] }), zIndexOffset: 400 })
           .bindTooltip(m.kind === 'tofoot' ? '<b>On foot from here</b><br>Road ends, trail begins' : '<b>Back on a road</b>', { permanent: m.kind === 'tofoot', direction: 'right', offset: [12, 0], className: 'rt-lbl' }).addTo(routeLayer);
@@ -643,7 +655,7 @@
           marks = marks.concat(await parkingNear(marks.map(m => m.at).concat([runs[0].pts[0], runs[runs.length - 1].pts.slice(-1)[0]]), marks));
         } catch (e) {
           console.warn('route', e);
-          toast(e.message && e.message.startsWith('No ') ? e.message + ' Using straight lines.' : 'Auto-routing needs signal. Using straight lines.');
+          toast(e.message && e.message.startsWith('No ') ? e.message + ' Using straight lines.' : navigator.onLine === false ? 'Auto-routing needs signal. Using straight lines.' : 'Routing service did not answer (' + (e.message || 'error') + '). Using straight lines.');
           runs = null;
         }
       }
