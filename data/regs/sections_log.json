@@ -113,7 +113,12 @@
     "downD": -1
    }
   ],
-  "result": "not split: a break could not be located"
+  "result": "partly split: some breaks could not be located",
+  "mainstem": {
+   "reaches": 72,
+   "assigned": 0
+  },
+  "tributary_reaches": 4970
  },
  "ES1|Elbow River": {
   "water": "s2035",
@@ -236,7 +241,11 @@
     "downD": -1
    }
   ],
-  "result": "not split: a break could not be located"
+  "result": "partly split: some breaks could not be located",
+  "mainstem": {
+   "reaches": 134,
+   "assigned": 1
+  }
  },
  "ES1|Jumpingpound Creek": {
   "water": "s877",
@@ -366,7 +375,12 @@
     "downD": null
    }
   ],
-  "result": "not split: a break could not be located"
+  "result": "partly split: some breaks could not be located",
+  "mainstem": {
+   "reaches": 213,
+   "assigned": 141
+  },
+  "tributary_reaches": 10982
  },
  "ES1|Pincher Creek": {
   "water": "s1335",
@@ -425,9 +439,9 @@
    {
     "d": "Includes tributaries; Headwater downstream to the bridge at Indian Oils Day-use Site",
     "up": "uppermost mapped stretch in the zone",
-    "down": "Indian Oils: OpenStreetMap did not answer",
+    "down": "road crossing nearest Indian Oils (OpenStreetMap) at 50.61953, -114.69791 (265 m away)",
     "upD": 105365,
-    "downD": null
+    "downD": 87180
    },
    {
     "d": "Bridge at Indian Oils Day-use Site downstream to Gorge Creek and tributaries (except Gorge Creek)",
@@ -444,7 +458,11 @@
     "downD": -1
    }
   ],
-  "result": "not split: a break could not be located"
+  "mainstem": {
+   "reaches": 109,
+   "assigned": 109
+  },
+  "tributary_reaches": 3424
  },
  "ES1|Silvester Creek": {
   "water": "s1582",
@@ -591,7 +609,7 @@
     "downD": -1
    }
   ],
-  "result": "not split: a break could not be located"
+  "result": "partly split: some breaks could not be located"
  },
  "ES2|Alford Creek": {
   "water": "s14",
@@ -958,7 +976,12 @@
     "downD": null
    }
   ],
-  "result": "not split: a break could not be located"
+  "result": "partly split: some breaks could not be located",
+  "mainstem": {
+   "reaches": 263,
+   "assigned": 29
+  },
+  "tributary_reaches": 810
  },
  "ES2|Prairie Creek": {
   "water": "s1385",
@@ -985,7 +1008,12 @@
     "downD": -1
    }
   ],
-  "result": "not split: a break could not be located"
+  "result": "partly split: some breaks could not be located",
+  "mainstem": {
+   "reaches": 136,
+   "assigned": 21
+  },
+  "tributary_reaches": 358
  },
  "ES2|Ram River": {
   "water": "s2191",
@@ -1253,7 +1281,7 @@
     "downD": null
    }
   ],
-  "result": "not split: a break could not be located"
+  "result": "partly split: some breaks could not be located"
  },
  "ES3|Plante Creek": {
   "water": "s1354",
@@ -1392,7 +1420,7 @@
     "downD": -1
    }
   ],
-  "result": "not split: a break could not be located"
+  "result": "partly split: some breaks could not be located"
  },
  "ES4|Muskeg River": {
   "water": "s2146",
@@ -1446,7 +1474,7 @@
     "downD": null
    }
   ],
-  "result": "not split: a break could not be located"
+  "result": "partly split: some breaks could not be located"
  },
  "ES4|Torrens River": {
   "water": "s2246",
