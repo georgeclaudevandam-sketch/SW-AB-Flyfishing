@@ -206,7 +206,7 @@
    "title": "OpenStreetMap trails, route relations, peaks, passes, places and campsites",
    "url": "https://www.openstreetmap.org",
    "licence": "ODbL 1.0",
-   "note": "Trail lines and names, official/operator tags and hiking route names; names of towns, villages, hamlets, localities, peaks, hills, passes, ridges, glaciers, waterfalls, campsites, huts, trailheads, viewpoints and historic sites. Loaded live as you zoom in. Also: road and trail surface tags along planned routes, and parking areas."
+   "note": "Trail lines and names, official/operator tags and hiking route names; names of towns, villages, hamlets, localities, peaks, hills, passes, ridges, glaciers, waterfalls, campsites, huts, trailheads, viewpoints and historic sites. Loaded live as you zoom in. Also: road and trail surface tags along planned routes, and parking areas. Road names and numbers (highways, range roads, township roads, local road names)."
   },
   {
    "id": "R24",
@@ -427,6 +427,26 @@
     "R23"
    ],
    "how": "Public parking areas (amenity=parking, not private) from OSM near where the route leaves a road and at the route ends. 'Drive, then hike' drives to the mapped parking area within 10 km of the destination that gives the shortest walk; if none is mapped, the drive ends where the road comes closest."
+  },
+  {
+   "feature": "Road names (zoom 12+; streets and service roads from zoom 14)",
+   "refs": [
+    "R23"
+   ],
+   "how": "OSM roads with a name tag (e.g. Range Road 53, Township Road 82, Coal Camp Road) or a route number; numbered highways without a name show as 'Hwy <number>'. Roads with neither are not labelled."
+  },
+  {
+   "feature": "Species codes on hover",
+   "refs": [
+    "R1",
+    "R2",
+    "R3",
+    "R6",
+    "R7",
+    "R8",
+    "R9"
+   ],
+   "how": "Hovering (or tapping) a stream stretch or lake shows its name and the selected species recorded there. 'Always show species code labels' brings back the permanent labels."
   }
  ]
 }

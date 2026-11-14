@@ -36,8 +36,9 @@
   const spColor = c => (SP[c] ? SP[c].color : '#666');
 
   /* ---------------- Map and layers ---------------- */
-  const map = L.map('map', { zoomControl: true, preferCanvas: true }).setView([51.3, -115.6], 7);
+  // One shared canvas for every vector layer: a second canvas on top would swallow hover and taps for the one below.
   const canvas = L.canvas({ padding: 0.3, tolerance: 6 });
+  const map = L.map('map', { zoomControl: true, preferCanvas: true, renderer: canvas }).setView([51.3, -115.6], 7);
   const osmAttr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   const bases = {
     'Topo (OpenTopoMap)': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, subdomains: 'abc', attribution: osmAttr + ', SRTM | &copy; <a href="https://opentopomap.org">OpenTopoMap</a>' }),
@@ -82,8 +83,8 @@
   map.createPane('trails').style.zIndex = 390;
   const trailCanvas = L.canvas({ pane: 'trails', padding: 0.3, tolerance: 6 });
   const trailLayer = L.layerGroup().addTo(map), nameLayer = L.layerGroup().addTo(map);
-  const TRAIL_ZOOM = 13, PLACE_ZOOM = 10, TOWN_ZOOM = 8, OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
-  const osm = { trails: [], places: [], boxes: [], busy: false };  // boxes: [kind, south, west, north, east]
+  const TRAIL_ZOOM = 13, PLACE_ZOOM = 10, TOWN_ZOOM = 8, ROAD_ZOOM = 12, OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+  const osm = { trails: [], places: [], roads: [], boxes: [], busy: false };  // boxes: [kind, south, west, north, east]
   const covered = (kind, v) => osm.boxes.some(x => x[0] === kind && x[1] <= v.getSouth() && x[2] <= v.getWest() && x[3] >= v.getNorth() && x[4] >= v.getEast());
   async function overpass(q) {
     let last;
@@ -98,9 +99,10 @@
   }
   async function loadOsm() {
     const z = map.getZoom(), v = map.getBounds();
-    if (!osmReady || osm.busy || (!F.trailNames && !F.placeNames)) return;
+    if (!osmReady || osm.busy || (!F.trailNames && !F.placeNames && !F.roadNames)) return;
     const want = [];
     if (F.trailNames && z >= TRAIL_ZOOM && !covered('t', v)) want.push('t');
+    if (F.roadNames && z >= ROAD_ZOOM && !covered('r', v)) want.push('r');
     if (F.placeNames && z >= TOWN_ZOOM && !covered('P', v)) want.push('P');
     if (F.placeNames && z >= PLACE_ZOOM && !covered('p', v)) want.push('p');
     if (!want.length) return drawOsm();
@@ -108,7 +110,17 @@
     try {
       for (const kind of want) {
         const p = v.pad(kind === 't' ? 0.5 : kind === 'P' ? 0.6 : 0.3), bb = `${p.getSouth().toFixed(4)},${p.getWest().toFixed(4)},${p.getNorth().toFixed(4)},${p.getEast().toFixed(4)}`;
-        if (kind === 't') {
+        if (kind === 'r') {
+          // Roads with a name or number in OSM (highways, range and township roads, local names such as Coal Camp Road).
+          const j = await overpass(`[out:json][timeout:25];way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|track|service|road)$"]["name"](${bb});way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|track|road)$"]["ref"][!"name"](${bb});out tags geom;`);
+          const seen = new Set(osm.roads.map(t => t.id));
+          for (const e of j.elements || []) {
+            if (e.type !== 'way' || !e.geometry || seen.has(e.id)) continue;
+            const t = e.tags || {}, ref = (t.ref || '').split(';')[0];
+            const name = t.name ? (ref && /^\d/.test(ref) && !t.name.includes(ref) ? `${t.name} (${ref})` : t.name) : (/^\d+[A-Z]?$/.test(ref) ? 'Hwy ' + ref : ref);
+            if (name) osm.roads.push({ id: e.id, name, g: e.geometry.map(q => [q.lat, q.lon]), hw: t.highway, surface: t.surface || '' });
+          }
+        } else if (kind === 't') {
           // Named or officially operated trails, plus every way in a hiking route relation (takes the route's name).
           const j = await overpass(`[out:json][timeout:25];relation["route"~"^(hiking|foot)$"](${bb})->.r;.r out tags;(way(r.r)(${bb});way["highway"~"^(path|footway|track|bridleway|steps)$"]["name"](${bb});way["highway"~"^(path|footway|track|bridleway)$"]["operator"](${bb}););out tags geom;`);
           const rels = {}; (j.elements || []).filter(e => e.type === 'relation' && e.tags).forEach(e => { rels[e.id] = e.tags; });
@@ -154,6 +166,18 @@
     if (!osmReady) return;
     trailLayer.clearLayers(); nameLayer.clearLayers();
     const z = map.getZoom(), v = map.getBounds();
+    if (F.roadNames && z >= ROAD_ZOOM) {
+      // One label per road name per map cell (~2 km at zoom 13), on a visible vertex near the middle of that piece.
+      const cell = 0.25 / Math.pow(2, z - 10), used = new Set(); let n = 0;
+      const minor = /^(residential|service)$/;
+      for (const r of osm.roads) {
+        if (minor.test(r.hw) && z < 14) continue;
+        const vis = r.g.filter(q => v.contains(q)); if (!vis.length) continue;
+        const at = vis[Math.floor(vis.length / 2)], key = r.name + '|' + Math.round(at[0] / cell) + '|' + Math.round(at[1] / (cell * 1.6));
+        if (used.has(key) || n > 220) continue; used.add(key); n++;
+        L.tooltip({ permanent: true, direction: 'center', className: 'road-lbl' + (/^(motorway|trunk|primary|secondary)$/.test(r.hw) ? ' major' : ''), interactive: false }).setLatLng(at).setContent(esc(r.name)).addTo(nameLayer);
+      }
+    }
     if (F.trailNames && z >= TRAIL_ZOOM) {
       const labelled = new Map();
       for (const t of osm.trails) {
@@ -184,14 +208,15 @@
   let hiLayer = null;
 
   /* ---------------- Filters ---------------- */
-  const F = Object.assign({ species: null, match: 'any', lakes: true, streams: true, minOrder: 1, noRecord: false, onlyStocked: false, labels: true, since: 0, sites: true, trailNames: true, placeNames: true }, store.get('filters3', {}));
+  const F = Object.assign({ species: null, match: 'any', lakes: true, streams: true, minOrder: 1, noRecord: false, onlyStocked: false, labels: false, since: 0, sites: true, trailNames: true, placeNames: true, roadNames: true }, store.get('filters3', {}));
+  if (!store.get('labelsHover', false)) { F.labels = false; store.set('labelsHover', true); }
   function readFilters() {
     F.species = $$('#speciesList input:checked:not(.grp)').map(i => i.value); syncGroups();
     F.match = $('input[name=match]:checked').value;
     F.lakes = $('#showLakes').checked; F.streams = $('#showStreams').checked;
     F.minOrder = +$('#minOrder').value;
     F.noRecord = $('#showNoRecord').checked; F.onlyStocked = $('#onlyStocked').checked;
-    F.labels = $('#labels').checked; F.trailNames = $('#trailNames').checked; F.placeNames = $('#placeNames').checked; F.since = +$('#since').value; F.sites = $('#showSites').checked;
+    F.labels = $('#labels').checked; F.trailNames = $('#trailNames').checked; F.roadNames = $('#roadNames').checked; F.placeNames = $('#placeNames').checked; F.since = +$('#since').value; F.sites = $('#showSites').checked;
     store.set('filters3', F);
   }
   function writeFilters() {
@@ -199,7 +224,7 @@
     $$('input[name=match]').forEach(i => { i.checked = i.value === F.match; });
     $('#showLakes').checked = F.lakes; $('#showStreams').checked = F.streams;
     $('#minOrder').value = F.minOrder; $('#showNoRecord').checked = F.noRecord; $('#onlyStocked').checked = F.onlyStocked;
-    $('#labels').checked = F.labels; $('#trailNames').checked = F.trailNames; $('#placeNames').checked = F.placeNames; $('#since').value = F.since; $('#showSites').checked = F.sites;
+    $('#labels').checked = F.labels; $('#trailNames').checked = F.trailNames; $('#roadNames').checked = F.roadNames; $('#placeNames').checked = F.placeNames; $('#since').value = F.since; $('#showSites').checked = F.sites;
   }
   // Species in a {code: lastYear} map that pass the "records since" filter (year 0 = undated list).
   const spIn = y => Object.keys(y || {}).filter(c => !F.since || y[c] === 0 || y[c] >= F.since).sort();
@@ -286,7 +311,8 @@
       if (it.k === 'l') {
         const col = colorOf(it);
         L.polygon(swap(f.g), { renderer: canvas, color: '#ffffff', weight: 6, fill: false, opacity: 0.9, interactive: false }).addTo(waterLayer);
-        L.polygon(swap(f.g), { renderer: canvas, color: colorOfSp(selOnly(allSp(it))), weight: 3, fillColor: colorOfSp(selOnly(allSp(it))), fillOpacity: 0.5 }).on('click', () => select(it.id, false)).addTo(waterLayer);
+        L.polygon(swap(f.g), { renderer: canvas, color: colorOfSp(selOnly(allSp(it))), weight: 3, fillColor: colorOfSp(selOnly(allSp(it))), fillOpacity: 0.5 })
+          .bindTooltip(hoverCodes(dispName(it), selOnly(allSp(it))), { sticky: true, className: 'codes-lbl hover' }).on('click', () => select(it.id, false)).addTo(waterLayer);
         labels.push([it.c[1], it.c[0], selOnly(allSp(it)), 1000]);
         continue;
       }
@@ -298,7 +324,8 @@
         const lyr = selMatch(sp)
           ? L.polyline(swap(r.g), { renderer: canvas, color: colorOfSp(selOnly(sp)), weight: w + 1, opacity: 1 })
           : L.polyline(swap(r.g), { renderer: canvas, color: '#6f8f9a', weight: Math.max(1, w - 2), opacity: 0.55, dashArray: '4 5' });
-        lyr.on('click', () => select(it.id, false, r)).addTo(waterLayer);
+        lyr.bindTooltip(selMatch(sp) ? hoverCodes(dispName(it), selOnly(sp)) : `${esc(dispName(it))}<br><span class="hint">No survey record of the selected fish on this stretch</span>`, { sticky: true, className: 'codes-lbl hover' })
+          .on('click', () => select(it.id, false, r)).addTo(waterLayer);
         if (selOnly(sp).length) { const m = mid(r.g); labels.push([m[1], m[0], selOnly(sp), r.o || 1]); }
       }
     }
@@ -306,28 +333,44 @@
     drawLabels(labels);
     renderList();
   }
-  function siteLayer(s, name) {
+  // Nearest point on a set of [lon, lat] lines; returns [lat, lon, metres] or null.
+  function snapTo(lines, lon, lat) {
+    const kx = 111320 * Math.cos(lat * Math.PI / 180), ky = 110540; let best = null;
+    for (const g of lines) for (let i = 1; i < g.length; i++) {
+      const ax = (g[i - 1][0] - lon) * kx, ay = (g[i - 1][1] - lat) * ky, bx = (g[i][0] - lon) * kx, by = (g[i][1] - lat) * ky;
+      const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy, t = L2 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / L2)) : 0;
+      const px = ax + t * dx, py = ay + t * dy, d = Math.hypot(px, py);
+      if (!best || d < best[2]) best = [lat + py / ky, lon + px / kx, d];
+    }
+    return best;
+  }
+  function siteLayer(s, name, lines) {
     const sp = spIn(s[2]);
     if (!sp.length) return;
+    // Draw the dot on the stream line (sites were matched to the stream within 500 m); the popup keeps the recorded position.
+    const snap = lines && lines.length ? snapTo(lines, s[0], s[1]) : null;
+    const ll = snap && snap[2] <= 600 ? [snap[0], snap[1]] : [s[1], s[0]];
+    const where = snap && snap[2] <= 600 && snap[2] >= 15 ? `<br><span class="hint">Shown on the stream line; recorded at ${s[1].toFixed(5)}, ${s[0].toFixed(5)} (${Math.round(snap[2])} m away)</span>` : '';
     const src = s[4] && s[4].startsWith('pc:') ? `Parks Canada (${s[4].slice(3)})` : 'FWMIS survey';
-    const tip = `<b>${esc(name || 'Survey site')}</b><br>${sp.map(c => `<span class="code">${c}</span> ${esc(spName(c))}${s[2][c] ? ' (' + s[2][c] + ')' : ''}`).join('<br>')}<br><span class="hint">${src}${s[5] && s[5].length ? ' · ' + esc(s[5].join(', ')) : ''} · ${s[3]} record${s[3] > 1 ? 's' : ''}</span>`;
+    const tip = `<b>${esc(name || 'Survey site')}</b><br>${sp.map(c => `<span class="code">${c}</span> ${esc(spName(c))}${s[2][c] ? ' (' + s[2][c] + ')' : ''}`).join('<br>')}<br><span class="hint">${src}${s[5] && s[5].length ? ' · ' + esc(s[5].join(', ')) : ''} · ${s[3]} record${s[3] > 1 ? 's' : ''}</span>${where}`;
     const hit = selMatch(sp), z = map.getZoom(), r = hit ? Math.min(9, 4 + (z - 11)) : 3;
     if (hit) {  // white halo + dark ring so the selected fish stand out on any basemap
-      L.circleMarker([s[1], s[0]], { renderer: canvas, radius: r + 3, weight: 0, fillColor: '#fff', fillOpacity: 0.9, interactive: false }).addTo(siteHi);
-      L.circleMarker([s[1], s[0]], { renderer: canvas, radius: r, weight: 2, color: '#111', fillColor: colorOfSp(sp), fillOpacity: 1 })
+      L.circleMarker(ll, { renderer: canvas, radius: r + 3, weight: 0, fillColor: '#fff', fillOpacity: 0.9, interactive: false }).addTo(siteHi);
+      L.circleMarker(ll, { renderer: canvas, radius: r, weight: 2, color: '#111', fillColor: colorOfSp(sp), fillOpacity: 1 })
         .bindTooltip(tip, { direction: 'top' }).addTo(siteHi);
       if (F.labels && z >= 15) L.tooltip({ permanent: true, direction: 'right', className: 'codes-lbl', offset: [r + 2, 0], interactive: false })
-        .setLatLng([s[1], s[0]]).setContent(sp.map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ')).addTo(labelLayer);
+        .setLatLng(ll).setContent(sp.map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ')).addTo(labelLayer);
     } else {
-      L.circleMarker([s[1], s[0]], { renderer: canvas, radius: r, weight: 1, color: '#fff', fillColor: '#888', fillOpacity: 0.7 })
+      L.circleMarker(ll, { renderer: canvas, radius: r, weight: 1, color: '#fff', fillColor: '#888', fillOpacity: 0.7 })
         .bindTooltip(tip, { direction: 'top' }).addTo(waterLayer);
     }
   }
   function drawSites(keys, items) {
     const b = map.getBounds();
-    for (const it of items) { const f = (chunkData[it.ch] || {})[it.id]; (f && f.s || []).forEach(s => { if (b.contains([s[1], s[0]])) siteLayer(s, dispName(it)); }); }
+    for (const it of items) { const f = (chunkData[it.ch] || {})[it.id]; const lines = it.k === 's' && f && f.r ? f.r.map(r => r.g) : null; (f && f.s || []).forEach(s => { if (b.contains([s[1], s[0]])) siteLayer(s, dispName(it), lines); }); }
     for (const k of keys) (chunkPts[k] || []).forEach(s => { if (b.contains([s[1], s[0]])) siteLayer(s, s[6] ? s[6] + ' (not on a mapped water)' : 'Survey site not on a mapped water'); });
   }
+  const hoverCodes = (name, codes) => `<b class="hn">${esc(name)}</b><br>` + codes.map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ');
   function drawLabels(labels) {
     if (!F.labels || map.getZoom() < LABEL_ZOOM) return;
     const b = map.getBounds();
