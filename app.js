@@ -70,6 +70,7 @@
   // One shared canvas for every vector layer: a second canvas on top would swallow hover and taps for the one below.
   const canvas = L.canvas({ padding: 0.3, tolerance: 6 });
   const map = L.map('map', { zoomControl: true, preferCanvas: true, renderer: canvas }).setView([51.3, -115.6], 7);
+  window.esMap = map;  // for automated checks
   const osmAttr = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   const bases = {
     'Topo (OpenTopoMap)': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, subdomains: 'abc', attribution: osmAttr + ', SRTM | &copy; <a href="https://opentopomap.org">OpenTopoMap</a>' }),

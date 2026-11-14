@@ -1,5 +1,5 @@
 /* Offline support: app shell + data are cached; map tiles are cached as you view them. */
-const SHELL = 'shell-v28';
+const SHELL = 'shell-v29';
 const TILES = 'tiles-v1';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest',
   'data/species.json', 'data/species_names.json', 'data/references.json', 'data/regs/regs.json', 'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css',
@@ -27,7 +27,8 @@ self.addEventListener('fetch', e => {
   }
   if (url.origin === location.origin) {
     // App files: network first so updates arrive, fall back to cache offline.
-    e.respondWith(fetch(e.request).then(r => { if (r.ok) { const copy = r.clone(); caches.open(SHELL).then(c => c.put(e.request, copy)); } return r; })
+    // 'no-cache' makes the browser check with the server, so a new version is never hidden by its HTTP cache.
+    e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(r => { if (r.ok) { const copy = r.clone(); caches.open(SHELL).then(c => c.put(e.request, copy)); } return r; })
       .catch(() => caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match('index.html'))));
   }
 });
