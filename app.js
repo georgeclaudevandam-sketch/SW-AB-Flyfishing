@@ -579,7 +579,12 @@
     if (footStart < 0) return null;
     let k = footStart, d = 0;
     const len = pts => { let x = 0; for (let m = 1; m < pts.length; m++) x += pts[m - 1].distanceTo(pts[m]); return x; };
-    while (k < runs.length && runs[k].leg === 1 && runs[k].cls !== 'foot' && runs[k].drv) { runs[k].leg = 0; d += len(runs[k].pts); k++; }
+    const drivable = r => r && r.leg === 1 && r.cls !== 'foot' && r.drv;
+    // Short gaps under 40 m (a junction, a snapped route end) do not stop the drive if a drivable road follows.
+    while (k < runs.length && (drivable(runs[k]) || (runs[k].leg === 1 && len(runs[k].pts) < 40 && drivable(runs[k + 1])))) {
+      if (!drivable(runs[k])) runs[k].cls = runs[k + 1].cls;
+      runs[k].leg = 0; d += len(runs[k].pts); k++;
+    }
     if (!d || k >= runs.length) return null;
     const end = runs[k].pts[0], main = marks.find(m => m.kind === 'roadend' || m.kind === 'park');
     if (main && main.kind === 'roadend') main.at = end;
@@ -729,11 +734,14 @@
       for (let k = 1; k < r.pts.length; k++) {
         const a = r.pts[k - 1], b = r.pts[k];
         let cls = r.cls, src = r.src;
-        if (r.cls !== 'foot' || r.drv) {
+        let drv = r.drv;
+        // Road stretches take Alberta's surface. The walk is checked too: where it follows an Alberta road
+        // (paved, gravel or dry-weather) that road is drivable, so the drive can be extended along it.
+        if (r.cls !== 'foot' || r.drv || r.leg === 1) {
           const sg = abAt(ab, (a.lat + b.lat) / 2, (a.lng + b.lng) / 2);
-          if (sg) { cls = AB_CLASS[sg.ft]; src = 'ab'; }
+          if (sg) { cls = AB_CLASS[sg.ft]; src = 'ab'; if (r.leg === 1) drv = /^(paved|gravel|dryweather)$/.test(cls); }
         }
-        push(r, cls, a, b, src);
+        push({ ...r, drv }, cls, a, b, src);
       }
     }
     return out;
@@ -782,7 +790,14 @@
       this.show(quick, marks, dur, note + ' <span class="hint">Checking road surfaces and parking…</span>');
       // 2. Then add surfaces, on-foot points and nearby parking from OpenStreetMap (skipped if that is slow or offline).
       const abP = abRoads(legs.flatMap(l => l.r.path)).catch(e => { console.warn('Alberta road surfaces', e); return null; });
-      abP.then(ab => { if (ab && live() && !this.runs.some(r => r.src)) { const q = applyAB(quick.map((r, k) => ({ ...r, leg: k, drv: r.cls !== 'foot' })), ab); this.show(q, marks, dur, note + ' <span class="hint">Checking parking and trails…</span>'); } });
+      const extNote = d => ` The drive continues ${(d / 1000).toFixed(1)} km past where the car router stops, on a road that Alberta's road data or OpenStreetMap shows as drivable (check conditions; may need high clearance).`;
+      abP.then(ab => {
+        if (!ab || !live() || this.runs.some(r => r.src)) return;
+        const q = applyAB(quick.map((r, k) => ({ ...r, leg: k, drv: r.cls !== 'foot' })), ab);
+        const qm = marks.map(m => ({ ...m }));
+        const ext = mode === 'drivehike' ? extendDrive(q, qm) : null;
+        this.show(q, qm, dur, note + (ext ? extNote(ext) : '') + ' <span class="hint">Checking parking and trails…</span>');
+      });
       try {
         let runs = await classifyLegs(legs);
         if (!live()) return;
@@ -790,7 +805,7 @@
         if (!live()) return;
         if (mode === 'drivehike') {
           const ext = extendDrive(runs, marks);
-          if (ext) note += ` The drive continues ${(ext / 1000).toFixed(1)} km past where the car router stops, on a road OpenStreetMap shows as open to vehicles (check conditions; may need high clearance).`;
+          if (ext) note += extNote(ext);
         }
         marks = marks.concat(transitions(runs).filter(t => !marks.some(m => m.at.distanceTo(t.at) < 300)));
         this.show(runs, marks, dur, note);
