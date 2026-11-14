@@ -17,6 +17,7 @@ jobs:
       - run: pip install -q pdfplumber==0.11.10
       - run: python3 scripts/build_regs.py
       - run: python3 scripts/build_sections.py
+      - run: python3 -c "import json;L=json.load(open('data/regs/sections_log.json'));[print(k, v.get('result',''), json.dumps(v.get('sections',[]))) for k,v in L.items() if len(v.get('sections',[]))>1]"
       - run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

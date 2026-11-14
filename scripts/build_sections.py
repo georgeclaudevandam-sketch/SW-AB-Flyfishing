@@ -17,7 +17,7 @@ from collections import defaultdict
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 AB_ROADS = "https://geospatial.alberta.ca/titan/rest/services/transportation/access_facility_roads/MapServer/0/query"
 OVERPASS = "https://overpass-api.de/api/interpreter"
-UA = {"User-Agent": "Mozilla/5.0 (fishing map data build)"}
+UA = {"User-Agent": "sw-ab-flyfishing-data-build/1.0 (GitHub Actions)", "Accept": "*/*"}
 LOG = {}
 
 
@@ -240,9 +240,9 @@ def _ab_roads(bbox, where):
 
 
 def overpass(q):
-    for k in range(3):
+    for k in range(2):
         try:
-            return http(OVERPASS, {"data": q}, timeout=180)
+            return http(OVERPASS, {"data": q}, timeout=90)
         except Exception as e:
             print("overpass retry", e, file=sys.stderr)
     return {"elements": []}
