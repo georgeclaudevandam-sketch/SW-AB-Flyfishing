@@ -533,7 +533,7 @@
     let pos = {}, pair = {};
     if (ids.length) {
       try {
-        const j = await overpass(`[out:json][timeout:30];node(id:${ids.join(',')});out skel qt;way(bn)["highway"];out body qt;`, 30000, true);
+        const j = await overpass(`[out:json][timeout:90];node(id:${ids.join(',')});out skel qt;way(bn)["highway"];out body qt;`, 90000, true);
         for (const e of j.elements || []) {
           if (e.type === 'node') pos[e.id] = L.latLng(e.lat, e.lon);
           else if (e.type === 'way') for (let k = 1; k < e.nodes.length; k++) pair[Math.min(e.nodes[k - 1], e.nodes[k]) + ':' + Math.max(e.nodes[k - 1], e.nodes[k])] = e.tags;
