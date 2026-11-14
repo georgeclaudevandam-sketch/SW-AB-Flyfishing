@@ -242,11 +242,14 @@
     const z = map.getZoom(), v = map.getBounds();
     if (F.roadNames && z >= ROAD_ZOOM) {
       // One label per road name per map cell (~2 km at zoom 13), on a visible vertex near the middle of that piece.
-      const cell = 0.25 / Math.pow(2, z - 10), used = new Set(); let n = 0;
+      const cell = 0.25 / Math.pow(2, z - 10), used = new Set(); let n = 0, nh = 0;
       const minor = /^(residential|service)$/;
       for (const r of osm.roads) {
         if (minor.test(r.hw) && z < 14) continue;
         const vis = r.g.filter(q => v.contains(q)); if (!vis.length) continue;
+        // Hover description: an invisible, wide line over the road drawn by the base map.
+        if (nh++ < 900) L.polyline(r.g, { renderer: trailCanvas, color: '#000', weight: 12, opacity: 0.01 })
+          .bindTooltip(`<b>${esc(r.name)}</b><br>${esc(ROAD_KIND[r.hw] || 'Road')}${r.surface ? '<br>Surface: ' + esc(r.surface.replace(/_/g, ' ')) : ''}<br><span class="hint">OpenStreetMap</span>`, { sticky: true }).addTo(trailLayer);
         const at = vis[Math.floor(vis.length / 2)], key = r.name + '|' + Math.round(at[0] / cell) + '|' + Math.round(at[1] / (cell * 1.6));
         if (used.has(key) || n > 220) continue; used.add(key); n++;
         L.tooltip({ permanent: true, direction: 'center', className: 'road-lbl' + (/^(motorway|trunk|primary|secondary)$/.test(r.hw) ? ' major' : ''), interactive: false }).setLatLng(at).setContent(esc(r.name)).addTo(nameLayer);
@@ -281,6 +284,54 @@
   map.on('moveend', () => { clearTimeout(osmTimer); drawOsm(); osmTimer = setTimeout(loadOsm, 700); });
   let hiLayer = null;
 
+
+  /* ---------------- Map legend ---------------- */
+  const ROAD_KIND = { motorway: 'Freeway', trunk: 'Highway (major)', primary: 'Primary highway', secondary: 'Secondary highway', tertiary: 'Collector road',
+    unclassified: 'Rural road (range, township and other minor roads)', residential: 'Residential street', service: 'Service or access road', track: 'Track (usually unpaved; may need high clearance or 4x4)', road: 'Road (type not recorded)' };
+  const sw = (color, w, dash, op = 1, casing = false) => `<svg width="38" height="12" class="rt-sw">${casing ? `<line x1="3" y1="6" x2="35" y2="6" stroke="#fff" stroke-width="${w + 3}"/>` : ''}<line x1="3" y1="6" x2="35" y2="6" stroke="${color}" stroke-width="${w}" stroke-opacity="${op}" stroke-dasharray="${dash || ''}"/></svg>`;
+  const dotSw = (fill, ring, r = 5) => `<svg width="38" height="14" class="rt-sw"><circle cx="19" cy="7" r="${r + 2}" fill="#fff"/><circle cx="19" cy="7" r="${r}" fill="${fill}" stroke="${ring}" stroke-width="2"/></svg>`;
+  const boxSw = (fill, stroke, dash) => `<svg width="38" height="14" class="rt-sw"><rect x="6" y="2" width="26" height="10" rx="3" fill="${fill}" fill-opacity="0.5" stroke="${stroke}" stroke-width="2" stroke-dasharray="${dash || ''}"/></svg>`;
+  const lblSw = (cls, txt) => `<span class="key-lbl leaflet-tooltip ${cls}">${txt}</span>`;
+  function mapLegendHtml() {
+    const row = (sym, txt) => `<div class="key-row"><span class="key-sym">${sym}</span><span>${txt}</span></div>`;
+    const sel = (F.species || []).slice(0, 6);
+    return `<h3>Lakes and streams</h3>` +
+      row(sel.length ? sel.map(c => `<span class="dot" style="background:${spColor(c)}"></span>`).join('') : sw('#1565c0', 4), 'Stream stretch with a survey record of the selected fish, coloured by the rarest one (species colours are under Filters)') +
+      row(sw('#6f8f9a', 2, '4 5', 0.7), 'Stream stretch with no record of the selected fish') +
+      row(boxSw('#1565c0', '#1565c0'), 'Lake with the selected fish (coloured the same way)') +
+      row(dotSw('#1565c0', '#111'), 'Survey site where the selected fish were caught (zoomed in)') +
+      row(dotSw('#888', '#fff', 3), 'Survey site with other fish only') +
+      row(sw(NO_REC, 2, '', 0.6), 'Water with no fish records (if turned on in Filters)') +
+      `<h3>Fishing regulations</h3>` +
+      row('<b class="reg-tip open">Open</b>', 'Open on the day shown (hover a water, or tap it for seasons and limits)') +
+      row('<b class="reg-tip part">Partly open</b>', 'Some sections or tributaries open, others closed') +
+      row('<b class="reg-tip closed">Closed</b>', 'Closed on that day') +
+      row(sw('#9e9e9e', 2, '2 6', 0.7), 'With OPEN on: a closed stretch of a river that is open elsewhere') +
+      row(boxSw('#6a1b9a', '#6a1b9a', '10 6') + lblSw('fmz-lbl', 'ES1'), 'Fish Management Zone boundary and name (layer)') +
+      `<h3>Trails and roads</h3>` +
+      row(sw('#8b2f00', 3, '5 4', 0.85), 'Named trail with an operator, or part of a hiking route (OpenStreetMap, zoomed in)') +
+      row(sw('#6b4a2b', 2, '5 4', 0.85), 'Other named trail or path') +
+      row(sw('#6b4a2b', 2, '8 4', 0.85), 'Named track') +
+      row(lblSw('trail-lbl', 'Trail name'), 'Trail name label') +
+      row('<span class="key-note">tiles</span>', 'Layers <i>Hiking trails (Waymarked)</i> and <i>Alberta designated trails</i> are pictures drawn by those services, in their own colours, so they have no hover text. The OpenStreetMap trails above do.') +
+      row(lblSw('road-lbl major', 'Hwy 40'), 'Highway name or number') +
+      row(lblSw('road-lbl', 'Twp Rd 232'), 'Range, township and local road names (hover a road for its type and surface)') +
+      row(lblSw('place-lbl k-town', 'Town'), 'Towns, villages, hamlets; ' + ['peak', 'hill', 'pass', 'glacier', 'waterfall', 'camp_site', 'alpine_hut', 'trailhead', 'viewpoint'].map(k => `${PLACE_ICON[k].trim()} ${k.replace('_', ' ')}`).join(', ')) +
+      `<h3>Route</h3>` + Object.keys(RT_STYLE).map(c => row(rtSwatch(c), esc(RT_STYLE[c].label))).join('') +
+      row('<span class="key-note">P</span>', 'Mapped parking area at the end of the drive');
+  }
+  const KeyCtl = L.Control.extend({ options: { position: 'topleft' }, onAdd() {
+    const d = L.DomUtil.create('div', 'leaflet-bar'), a = L.DomUtil.create('a', 'max-zoom mt-key', d);
+    a.href = '#'; a.setAttribute('role', 'button'); a.title = 'Map legend: what the lines, colours and labels mean'; a.textContent = 'KEY';
+    L.DomEvent.disableClickPropagation(d);
+    // The legend panel floats over the map; clicks and scrolling inside it don't move the map.
+    const k0 = L.DomUtil.create('div', 'map-key', map.getContainer()); k0.id = 'mapKey'; k0.hidden = true;
+    k0.innerHTML = '<div class="key-head"><b>Map legend</b><button class="x" type="button" aria-label="Close legend">✕</button></div><div class="key-body"></div>';
+    L.DomEvent.disableClickPropagation(k0); L.DomEvent.disableScrollPropagation(k0);
+    k0.querySelector('.x').onclick = () => { k0.hidden = true; a.classList.remove('on'); };
+    L.DomEvent.on(a, 'click', e => { L.DomEvent.preventDefault(e); const k = document.getElementById('mapKey'); if (k.hidden) { k.querySelector('.key-body').innerHTML = mapLegendHtml(); } k.hidden = !k.hidden; a.classList.toggle('on', !k.hidden); });
+    return d; } });
+
   /* ---------------- Filters ---------------- */
   const F = Object.assign({ species: null, match: 'any', lakes: true, streams: true, minOrder: 1, noRecord: false, onlyStocked: false, labels: false, since: 0, sites: true, trailNames: true, placeNames: true, roadNames: true, openOnly: false, openDate: '' }, store.get('filters3', {}));
   if (!store.get('labelsHover', false)) { F.labels = false; store.set('labelsHover', true); }
@@ -291,7 +342,7 @@
     F.minOrder = +$('#minOrder').value;
     F.noRecord = $('#showNoRecord').checked; F.onlyStocked = $('#onlyStocked').checked;
     F.labels = $('#labels').checked; F.trailNames = $('#trailNames').checked; F.roadNames = $('#roadNames').checked; F.placeNames = $('#placeNames').checked; F.since = +$('#since').value; F.sites = $('#showSites').checked;
-    F.openOnly = $('#openOnly').checked; F.openDate = $('#openDate').value || ''; syncOpenBtn();
+    F.openOnly = $('#openOnly').checked; F.openDate = $('#openDate').value || ''; syncOpenBtn(); if (typeof regCache !== 'undefined' && regCache.size > 50000) regCache.clear();
     store.set('filters3', F);
   }
   function writeFilters() {
@@ -335,32 +386,56 @@
   // Lake listings may also carry rows for the lake's tributaries or outlet; those don't decide whether the lake is open.
   const sideSec = (L, sec) => L.kind === 'lake' && /^(tributar|outlet|inlet|all tributar)/i.test(sec.d || '');
   // All regulation pieces that apply to a water (or one stretch of it): [{zone, listing|null, possible, default}]
+  // Regulation pieces that apply to a water, or to one stretch (reach) of it. Listed rivers are split into their
+  // sections where every break could be located (w[2]: section per reach); tributaries of a listed stream carry
+  // that stream's listing (w[3]) for the section their mouth falls in.
   function regParts(it, reachIdx) {
     const w = REGS && REGS.w[it.id];
     if (!w) return [];
     let zs = Array.isArray(w[0]) ? (reachIdx != null ? [w[0][reachIdx]] : [...new Set(w[0])]) : [w[0]];
     zs = zs.filter(Boolean);
-    const kind = it.k === 'l' ? 'lake' : 'stream', out = [];
+    const kind = it.k === 'l' ? 'lake' : 'stream', out = [], split = w[2] || {}, via = w[3] || [];
     for (const z of zs) {
       const ls = ((w[1] || {})[z] || []);
-      const sure = ls.filter(i => i >= 0).map(i => REGS.list[i]), maybe = ls.filter(i => i < 0).map(i => REGS.list[-1 - i]);
+      const sure = ls.filter(i => i >= 0), maybe = ls.filter(i => i < 0).map(i => REGS.list[-1 - i]);
       const def = ((REGS.defaults[z] || {})[kind]) || null;
-      if (sure.length) sure.forEach(L => out.push({ zone: z, L }));
-      else { maybe.forEach(L => out.push({ zone: z, L, possible: true })); out.push({ zone: z, def, possible: maybe.length > 0 }); }
+      let any = false;
+      for (const li of sure) {
+        const L = REGS.list[li], sp = split[li], v = via.includes(li);
+        if (sp && reachIdx != null) {
+          const a = sp[reachIdx];
+          if (a == null) { if (!v) { out.push({ zone: z, L }); any = true; } continue; }
+          out.push({ zone: z, L, secs: [].concat(a), via: v }); any = true;
+        } else { out.push({ zone: z, L, split: !!sp, via: v }); any = true; }
+      }
+      if (!any) { maybe.forEach(L => out.push({ zone: z, L, possible: true })); out.push({ zone: z, def, possible: maybe.length > 0 }); }
     }
     return out;
   }
-  // open / closed / part (some listed sections or candidates open) / unknown (no provincial data: national parks, outside zones)
+  // open / closed / part (some sections or candidates open) / unknown (no provincial data: national parks, outside zones)
+  const regCache = new Map();
   function regStatus(it, reachIdx) {
-    const parts = regParts(it, reachIdx), { md } = regDay();
-    if (!parts.length) return { state: 'unknown', parts };
-    const states = [];
-    for (const p of parts) {
-      if (p.L) p.L.sec.filter(sc => !sideSec(p.L, sc) && sc.rows.length).forEach(sc => states.push(secOpen(sc.rows, md)));
-      else if (p.def) states.push(secOpen(p.def, md));
+    const { md } = regDay(), key = it.id + '|' + (reachIdx ?? '') + '|' + md;
+    if (regCache.has(key)) return regCache.get(key);
+    const w = REGS && REGS.w[it.id], sp = w && w[2] ? Object.values(w[2])[0] : null;
+    let res;
+    if (reachIdx == null && sp) {
+      // Split river or tributary: combine the status of every stretch.
+      const st = new Set(); for (let k = 0; k < sp.length; k++) st.add(regStatus(it, k).state);
+      st.delete('unknown');
+      res = { state: !st.size ? 'unknown' : st.size === 1 ? [...st][0] : 'part', parts: regParts(it, null) };
+    } else {
+      const parts = regParts(it, reachIdx), states = [];
+      for (const p of parts) {
+        // Several sections on one stretch are rows of one rule (e.g. a closed row and an open row): open if any is.
+        if (p.L && p.secs) states.push(p.secs.some(si => p.L.sec[si] && secOpen(p.L.sec[si].rows, md)));
+        else if (p.L) p.L.sec.filter(sc => !sideSec(p.L, sc) && sc.rows.length).forEach(sc => states.push(secOpen(sc.rows, md)));
+        else if (p.def) states.push(secOpen(p.def, md));
+      }
+      res = { state: !states.length ? 'unknown' : states.every(Boolean) ? 'open' : states.some(Boolean) ? 'part' : 'closed', parts };
     }
-    if (!states.length) return { state: 'unknown', parts };
-    return { state: states.every(Boolean) ? 'open' : states.some(Boolean) ? 'part' : 'closed', parts };
+    regCache.set(key, res);
+    return res;
   }
   const REG_WORD = { open: 'Open', closed: 'Closed', part: 'Partly open', unknown: 'No provincial regulation data' };
   const limName = h => ({ 'Trout Total': 'Trout total', 'WALL + SAUG': 'WALL + SAUG' })[h] || h;
@@ -383,13 +458,19 @@
       const pk = Object.keys(it.pk || {});
       return h + `<p class="reg-state unknown">${REG_WORD.unknown}</p><p class="hint">${pk.length ? 'This water is in ' + esc(pk.join(', ')) + ' National Park, where Parks Canada fishing regulations apply instead: ' + pk.map(p => PARKS_REGS[p] ? `<a href="${PARKS_REGS[p]}" target="_blank" rel="noopener">${esc(p)} regulations</a>` : '').join(' ') : 'This water is outside the provincial Fish Management Zones (for example inside a national park).'}</p>`;
     }
-    h += `<p class="reg-state ${st.state}">${REG_WORD[st.state]} ${when}${st.state === 'part' ? ': depends on the section, see below' : ''}</p>`;
+    h += `<p class="reg-state ${st.state}">${reachIdx != null ? 'This stretch: ' : ''}${REG_WORD[st.state]} ${when}${st.state === 'part' ? ': depends on the section, see below' : ''}</p>`;
     if (late) h += `<p class="warn">These regulations ended ${esc(m.effective[1])}. Check the current guide.</p>`;
     for (const p of st.parts) {
       const zl = `<a href="${REG_BASE}${p.zone.toLowerCase()}.html" target="_blank" rel="noopener">${p.zone}</a>`;
-      if (p.L) {
-        h += `<div class="reg-l"><div><b>${esc(p.L.name)}</b> <span class="hint">· listed in ${zl} ${p.L.kind === 'lake' ? 'Lakes' : 'Rivers'} table${p.possible ? ' · <b>possible match</b>: more than one water in ' + p.zone + ' has this name and the listing does not say which' : ''}</span></div>` +
-          p.L.sec.map(sc => `<div class="reg-sec">${sc.d ? `<div class="reg-d">${esc(sc.d)}</div>` : ''}${sc.rows.length ? regRowsHtml(sc.rows, md) : '<div class="hint">(no season on this line of the table)</div>'}</div>`).join('') + '</div>';
+      const secHtml = sc => `<div class="reg-sec">${sc.d ? `<div class="reg-d">${esc(sc.d)}</div>` : ''}${sc.rows.length ? regRowsHtml(sc.rows, md) : '<div class="hint">(no season on this line of the table)</div>'}</div>`;
+      if (p.L && p.secs) {
+        const rest = p.L.sec.filter((_, si) => !p.secs.includes(si));
+        h += `<div class="reg-l"><div><b>${esc(p.L.name)}</b> <span class="hint">· listed in ${zl} Rivers table · ${p.via ? `this stream flows into the ${esc(p.L.name)} where the listing covers its tributaries` : 'the section that covers this stretch'}</span></div>` +
+          p.secs.map(si => secHtml(p.L.sec[si])).join('') +
+          (rest.length ? `<details><summary class="hint">Other sections of the ${esc(p.L.name)} listing (${rest.length})</summary>${rest.map(secHtml).join('')}</details>` : '') + '</div>';
+      } else if (p.L) {
+        h += `<div class="reg-l"><div><b>${esc(p.L.name)}</b> <span class="hint">· listed in ${zl} ${p.L.kind === 'lake' ? 'Lakes' : 'Rivers'} table${p.possible ? ' · <b>possible match</b>: more than one water in ' + p.zone + ' has this name and the listing does not say which' : ''}${p.split && p.L.sec.length > 1 ? ' · <b>tap a stretch on the map</b> to see which section covers it' : ''}${p.via ? ' · covers this stream as a tributary' : ''}</span></div>` +
+          p.L.sec.map(secHtml).join('') + '</div>';
       } else if (p.def) {
         h += `<div class="reg-l"><div><b>${p.zone} default for ${it.k === 'l' ? 'lakes' : 'streams'}</b> <span class="hint">· ${p.possible ? 'applies if this is not the listed water above' : 'not listed by name'}</span></div>${regRowsHtml(p.def, md)}` +
           (it.k === 's' ? `<p class="hint">Small streams are often covered by a listed stream's "includes tributaries" rule. If this flows into a listed stream, that listing applies instead: check ${zl}.</p>` : '') + '</div>';
@@ -475,9 +556,15 @@
         continue;
       }
       // Streams: each stretch (reach) shows only the species caught on that stretch.
-      const rtip = regTip(it);
-      for (const r of f.r || []) {
+      for (const [ri, r] of (f.r || []).entries()) {
         const sp = spIn(r.y);
+        const rst = REGS ? regStatus(it, ri).state : null, rtip = regTip(it, ri);
+        if (F.openOnly && (rst === 'closed' || rst === 'unknown')) {
+          // Closed stretch of a river that is open elsewhere: drawn faintly so the section breaks show.
+          L.polyline(swap(r.g), { renderer: canvas, color: '#9e9e9e', weight: 2, opacity: 0.7, dashArray: '2 6' })
+            .bindTooltip(`${esc(dispName(it))}` + rtip, { sticky: true, className: 'codes-lbl hover' }).on('click', () => select(it.id, false, r)).addTo(waterLayer);
+          continue;
+        }
         const w = Math.min(1 + (r.o || it.o || 1) * 0.7, 6);
         if (selMatch(sp)) L.polyline(swap(r.g), { renderer: canvas, color: '#ffffff', weight: w + 4, opacity: 0.9, interactive: false }).addTo(waterLayer);
         const lyr = selMatch(sp)
@@ -529,7 +616,7 @@
     for (const it of items) { const f = (chunkData[it.ch] || {})[it.id]; const lines = it.k === 's' && f && f.r ? f.r.map(r => r.g) : null; (f && f.s || []).forEach(s => { if (b.contains([s[1], s[0]])) siteLayer(s, dispName(it), lines); }); }
     for (const k of keys) (chunkPts[k] || []).forEach(s => { if (b.contains([s[1], s[0]])) siteLayer(s, s[6] ? s[6] + ' (not on a mapped water)' : 'Survey site not on a mapped water'); });
   }
-  const regTip = it => { if (!REGS) return ''; const s = regStatus(it).state; return s === 'unknown' ? '' : `<br><span class="reg-tip ${s}">${REG_WORD[s]} ${F.openDate ? 'on ' + esc(F.openDate) : 'today'}</span>`; };
+  const regTip = (it, ri) => { if (!REGS) return ''; const s = regStatus(it, ri).state; return s === 'unknown' ? '' : `<br><span class="reg-tip ${s}">${REG_WORD[s]} ${F.openDate ? 'on ' + esc(F.openDate) : 'today'}</span>`; };
   const hoverCodes = (name, codes) => `<b class="hn">${esc(name)}</b><br>` + codes.map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ');
   function drawLabels(labels) {
     if (!F.labels || map.getZoom() < LABEL_ZOOM) return;
@@ -1212,6 +1299,7 @@
       if (F.species === null || !F.species.some(c => counts[c])) F.species = SPECIES.filter(s => s.group.startsWith('Trout')).map(s => s.code).concat(['MNWH']);
       writeFilters(); readFilters();
       osmReady = true; setTimeout(loadOsm, 500);
+      new KeyCtl().addTo(map);
       $('#filters').addEventListener('change', () => { readFilters(); applyFilters(); drawOsm(); loadOsm(); });
       $('#minOrder').addEventListener('input', () => { readFilters(); applyFilters(); });
       $('#speciesList').addEventListener('change', e => { if (e.target.classList.contains('grp')) $$(`#speciesList .sub[data-grp="${e.target.dataset.grp}"] input`).forEach(i => { i.checked = e.target.checked; }); }, true);

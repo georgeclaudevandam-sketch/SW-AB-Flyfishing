@@ -499,7 +499,7 @@ def main():
             continue
         mid = R.reach_mid_d()
         zx = [p for i, (k, ln) in enumerate(R.parts) if k in zone_reaches for p in ln]
-        bb = [min(p[0] for p in zx) - 0.02, min(p[1] for p in zx) - 0.02, max(p[0] for p in zx) + 0.02, max(p[1] for p in zx) + 0.02]
+        bb = [min(p[0] for p in zx) - 0.3, min(p[1] for p in zx) - 0.2, max(p[0] for p in zx) + 0.3, max(p[1] for p in zx) + 0.2]
         ctx = {"mid": mid, "bbox": bb, "by_name": Names(), "lakes": lakes}
         log = {"water": wid, "sections": []}
         iv = []

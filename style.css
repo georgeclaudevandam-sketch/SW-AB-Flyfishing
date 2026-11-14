@@ -173,3 +173,13 @@ body:not(.drawing) .leaflet-container.leaflet-drag-target,body:not(.drawing) .le
 .reg-tip{font-weight:700}.reg-tip.open{color:#2e7d32}.reg-tip.closed{color:#c62828}.reg-tip.part{color:#9a7400}
 .warn{color:#b71c1c;font-weight:700}
 @media (prefers-color-scheme:dark){.reg-state.open,.reg-row.on{background:#1b3a1e;color:#a5d6a7}.reg-state.closed{background:#3b1a1a;color:#ef9a9a}.reg-state.part{background:#3a3214;color:#ffe082}.reg-state.unknown{background:#263238;color:#b0bec5}}
+.map-key{position:absolute;z-index:1000;left:56px;top:10px;max-width:min(380px,calc(100vw - 72px));max-height:calc(100% - 30px);overflow:auto;background:var(--panel);color:var(--ink);border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.3);padding:8px 12px;font-size:13px}
+.map-key .key-head{display:flex;justify-content:space-between;align-items:center;position:sticky;top:-8px;background:inherit;padding:4px 0}
+.map-key h3{margin:.7em 0 .2em;font-size:12px;text-transform:uppercase;letter-spacing:.04em;opacity:.75}
+.key-row{display:flex;gap:8px;align-items:center;margin:3px 0}
+.key-sym{flex:0 0 auto;min-width:44px;display:flex;align-items:center;gap:2px}
+.key-sym .dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+.key-lbl.leaflet-tooltip{position:static;display:inline-block;pointer-events:none;white-space:nowrap}
+.key-lbl.leaflet-tooltip::before{display:none}
+.key-note{font:700 11px system-ui;border:1px solid #999;border-radius:4px;padding:0 4px}
+.mt-key.on{background:#1565c0!important;color:#fff!important}
