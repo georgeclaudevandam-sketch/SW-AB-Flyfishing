@@ -33,6 +33,7 @@ const { chromium } = require('playwright');
     await d.screenshot({ path: `route-check-${water.replace(/\W+/g, '_')}.png` });
     await d.click('button[data-tab=list]');
   }
+  console.log('fish zones (end):', await d.$$eval('.fmz-lbl', e => e.map(x => x.textContent).join(' ')), await d.evaluate(() => document.querySelectorAll('path.leaflet-interactive, svg path').length));
   console.log('--- log ---\n' + log.join('\n'));
   await b.close();
 })();
