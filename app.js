@@ -813,7 +813,7 @@
         `<b>${km.toFixed(1)} km</b> one way · <b>${rt.toFixed(1)} km</b> ${$('#rReturn').checked ? 'round trip' : 'total'}` +
         (dur ? `<br>About ${hrs(dur)} one way (routing estimate)` : '') +
         (footKm > 30 ? `<br><b>${footKm.toFixed(1)} km on foot${$('#rReturn').checked ? ' round trip' : ''}: plan an overnight.</b>` : '') +
-        `<div class="rt-legend">${Object.keys(RT_STYLE).filter(c => by[c]).map(c => `<div>${rtSwatch(c)} ${RT_STYLE[c].label} <b>${(by[c] / 1000).toFixed(1)} km</b></div>`).join('')}` +
+        `<div class="rt-legend">${Object.keys(RT_STYLE).filter(c => by[c] >= 50).map(c => `<div>${rtSwatch(c)} ${RT_STYLE[c].label} <b>${(by[c] / 1000).toFixed(1)} km</b></div>`).join('')}` +
         (runs.some(r => r.src === 'ab') ? `<div class="hint">Road surface: Government of Alberta Access Road data, then OpenStreetMap where Alberta has no road.</div>` : '') +
         (marks.some(m => m.kind === 'parking' || m.kind === 'park') ? `<div><span class="rt-p">P</span> Parking (OpenStreetMap)</div>` : '') +
         (marks.some(m => m.kind === 'tofoot') ? `<div><span class="rt-foot">🥾</span> Road ends, continue on foot</div>` : '') + '</div>' +
