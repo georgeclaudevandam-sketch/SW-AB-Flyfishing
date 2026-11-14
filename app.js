@@ -552,7 +552,7 @@
     return out;
   }
   async function findParking(at, radius) {
-    const j = await overpass(`[out:json][timeout:15];nwr["amenity"="parking"](around:${radius},${at.lat.toFixed(5)},${at.lng.toFixed(5)});out center tags;`, 15000);
+    const j = await overpass(`[out:json][timeout:15];nwr["amenity"="parking"](around:${radius},${at.lat.toFixed(5)},${at.lng.toFixed(5)});out center tags;`, 10000);
     return (j.elements || []).filter(e => !/^(private|no|customers)$/.test((e.tags || {}).access || '') && (e.lat || e.center)).map(e => ({ at: L.latLng(e.lat || e.center.lat, e.lon || e.center.lon), tags: e.tags || {}, id: e.type + e.id }));
   }
   async function parkingNear(points, have) {
@@ -571,12 +571,13 @@
   async function driveThenHike(pts) {
     const start = pts[0], walkPts = pts.slice(1), dest = pts[pts.length - 1];
     const tryLeg = (m, p) => osrm(m, p).catch(() => null);
-    let lots = [];
-    try { lots = (await findParking(dest, 10000)).sort((a, b) => a.at.distanceTo(dest) - b.at.distanceTo(dest)).slice(0, 4); } catch (e) { console.warn('parking', e); }
+    // Look for parking while the drive is routed; give up on it after a few seconds so the route is never held up.
+    const lotsP = findParking(dest, 10000).then(l => l.sort((a, b) => a.at.distanceTo(dest) - b.at.distanceTo(dest)).slice(0, 4)).catch(e => { console.warn('parking', e); return []; });
     // Requests go one at a time: the free routing server limits how many it accepts at once.
     const direct = await tryLeg('car', [start, dest]);  // ends where the road network comes closest to the destination
     const cands = [];
     if (direct) cands.push({ kind: 'roadend', at: direct.path[direct.path.length - 1], car: direct, tags: {}, foot: await tryLeg('foot', [direct.path[direct.path.length - 1], ...walkPts]) });
+    const lots = await Promise.race([lotsP, new Promise(r => setTimeout(() => r([]), 6000))]);
     const reach = cands[0] ? cands[0].at.distanceTo(dest) : Infinity;
     for (const c of lots.filter(c => c.at.distanceTo(dest) < reach + 1500).slice(0, 3)) {
       const car = await tryLeg('car', [start, c.at]); if (!car) continue;

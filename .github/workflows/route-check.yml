@@ -12,6 +12,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
       - run: npm i --no-save playwright@1.47.2 && npx playwright install --with-deps chromium
+      - run: curl -sS -m 30 -o /dev/null -w 'overpass %{http_code} %{time_total}s\n' --data-urlencode 'data=[out:json];node(1);out;' https://overpass-api.de/api/interpreter || true
       - run: (python3 -m http.server 8000 >/dev/null 2>&1 &) && sleep 2 && node tests/route-check.js http://localhost:8000/
       - uses: actions/upload-artifact@v4
         if: always()
