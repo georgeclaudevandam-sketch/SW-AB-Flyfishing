@@ -251,7 +251,7 @@
         if (minor.test(r.hw) && z < 14) continue;
         const vis = r.g.filter(q => v.contains(q)); if (!vis.length) continue;
         // Hover description: an invisible, wide line over the road drawn by the base map.
-        if (nh++ < 900) L.polyline(r.g, { renderer: trailCanvas, color: '#000', weight: 12, opacity: 0.01 })
+        if (nh++ < 900) L.polyline(r.g, { renderer: canvas, color: '#000', weight: 12, opacity: 0.01 })
           .bindTooltip(`<b>${esc(r.name)}</b><br>${esc(ROAD_KIND[r.hw] || 'Road')}${r.surface ? '<br>Surface: ' + esc(r.surface.replace(/_/g, ' ')) : ''}<br><span class="hint">OpenStreetMap</span>`, { sticky: true }).addTo(trailLayer);
         const at = vis[Math.floor(vis.length / 2)], key = r.name + '|' + Math.round(at[0] / cell) + '|' + Math.round(at[1] / (cell * 1.6));
         if (used.has(key) || n > 220) continue; used.add(key); n++;
@@ -263,7 +263,7 @@
       for (const t of osm.trails) {
         if (!t.g.some(q => v.contains(q))) continue;
         const tip = `<b>${esc(t.name)}</b>${t.route && t.route !== t.name ? '<br>Part of ' + esc(t.route) : ''}${t.op ? '<br>Operator: ' + esc(t.op) : ''}${t.sac ? '<br>Difficulty (SAC): ' + esc(t.sac.replace(/_/g, ' ')) : ''}<br><span class="hint">OpenStreetMap ${esc(t.hw || '')}</span>`;
-        L.polyline(t.g, { renderer: trailCanvas, color: t.official ? '#8b2f00' : '#6b4a2b', weight: t.official ? 3 : 2, opacity: 0.85, dashArray: t.hw === 'track' ? '8 4' : '5 4' }).bindTooltip(tip, { sticky: true }).addTo(trailLayer);
+        L.polyline(t.g, { renderer: canvas, color: t.official ? '#8b2f00' : '#6b4a2b', weight: t.official ? 3 : 2, opacity: 0.85, dashArray: t.hw === 'track' ? '8 4' : '5 4' }).bindTooltip(tip, { sticky: true }).addTo(trailLayer);
         // one label per trail name per ~1.5 km, placed on the longest visible piece
         const vis = t.g.filter(q => v.contains(q));
         const key = t.name + '|' + Math.round(vis[0][0] * 70) + '|' + Math.round(vis[0][1] * 50);
@@ -283,6 +283,29 @@
           .setContent((PLACE_ICON[p.kind] || '') + esc(p.name) + (p.ele && /peak|volcano|hill|pass|saddle/.test(p.kind) ? ` <small>${esc(String(p.ele).replace(/\s*m$/, ''))} m</small>` : '')).addTo(nameLayer));
     }
   }
+  // Hover text for the Government of Alberta designated trails (a picture layer): ask the service what is under the pointer.
+  const AB_TRAILS_Q = 'https://geospatial.alberta.ca/mimas/rest/services/recreation/alberta_designated_and_provincial_trails/MapServer/1/query';
+  const abTrailTip = L.tooltip({ direction: 'top', offset: [0, -10], className: 'ab-trail-tip' });
+  let abTrailTimer = 0, abTrailSeq = 0;
+  map.on('mousemove', e => {
+    clearTimeout(abTrailTimer);
+    const lyr = overlays['Alberta designated trails (Gov. of Alberta)'];
+    if (!lyr || !map.hasLayer(lyr) || map.getZoom() < 9) { map.closeTooltip(abTrailTip); return; }
+    abTrailTimer = setTimeout(async () => {
+      const seq = ++abTrailSeq, tol = 8 * 40075016 * Math.cos(e.latlng.lat * Math.PI / 180) / Math.pow(2, map.getZoom() + 8);
+      const q = new URLSearchParams({ geometry: `${e.latlng.lng.toFixed(5)},${e.latlng.lat.toFixed(5)}`, geometryType: 'esriGeometryPoint', inSR: '4326', spatialRel: 'esriSpatialRelIntersects',
+        distance: String(Math.round(tol)), units: 'esriSRUnit_Meter', outFields: 'name,designation,legislation', returnGeometry: 'false', resultRecordCount: '5', f: 'json' });
+      try {
+        const j = await (await fetch(AB_TRAILS_Q + '?' + q, { signal: withTimeout(8000) })).json();
+        if (seq !== abTrailSeq) return;
+        const fs = (j.features || []).map(f => f.attributes || {});
+        if (!fs.length) { map.closeTooltip(abTrailTip); return; }
+        abTrailTip.setLatLng(e.latlng).setContent(fs.slice(0, 3).map(a => `<b>${esc(a.name || 'Unnamed trail')}</b>${a.designation ? '<br>' + esc(a.designation) : ''}${a.legislation ? '<br><span class="hint">' + esc(a.legislation) + '</span>' : ''}`).join('<hr>') + '<br><span class="hint">Alberta designated trail (Gov. of Alberta)</span>');
+        map.openTooltip(abTrailTip);
+      } catch (err) { /* offline or slow: no hover text */ }
+    }, 350);
+  });
+  map.on('mouseout movestart', () => { clearTimeout(abTrailTimer); abTrailSeq++; map.closeTooltip(abTrailTip); });
   let osmTimer = 0;
   map.on('moveend', () => { clearTimeout(osmTimer); drawOsm(); osmTimer = setTimeout(loadOsm, 700); });
   let hiLayer = null;

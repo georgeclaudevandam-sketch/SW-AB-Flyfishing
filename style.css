@@ -187,3 +187,4 @@ body:not(.drawing) .leaflet-container.leaflet-drag-target,body:not(.drawing) .le
 .leaflet-container.pointer-mode .leaflet-interactive{cursor:pointer}
 .leaflet-container.pointer-mode.leaflet-dragging .leaflet-grab{cursor:grabbing}
 .drawing .leaflet-container.pointer-mode{cursor:crosshair}
+.ab-trail-tip hr{border:0;border-top:1px solid #ccc;margin:3px 0}
