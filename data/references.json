@@ -216,6 +216,15 @@
    "url": "https://www.arcgis.com/home/item.html?id=f8a4a8e2d4d64d8ea3b06cf1f7e5ef8e",
    "licence": "Esri terms of use",
    "note": "Overlay 'Place names (Esri)', on by default."
+  },
+  {
+   "id": "R25",
+   "type": "Regulation",
+   "author": "Government of Canada (Justice Laws)",
+   "title": "Alberta Fishery Regulations, 1998 (SOR/98-246), Schedule 1 Part 1: Species of Game Fish",
+   "url": "https://laws-lois.justice.gc.ca/eng/regulations/SOR-98-246/page-3.html",
+   "licence": "Open Government Licence - Canada",
+   "note": "Which species are listed as game fish; all other codes are grouped as non-game in the species filter."
   }
  ],
  "features": [
@@ -394,6 +403,14 @@
     "R24"
    ],
    "how": "Esri reference label tiles drawn above the faded basemap."
+  },
+  {
+   "feature": "Species filter groups (game fish vs non-game species)",
+   "refs": [
+    "R25",
+    "R1"
+   ],
+   "how": "Codes from FWMIS whose species is on Schedule 1 Part 1 (Arctic grayling, goldeye, lake sturgeon, mooneye, sauger, tullibee/cisco, plus the trout, whitefish, pike, walleye, perch and burbot already listed) are game fish. All other codes go in the Non-game species group; amphibian, mollusc, crayfish and family-level or unknown records are listed separately inside it. Hybrids and kokanee keep the groups in data/species.json."
   }
  ]
 }

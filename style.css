@@ -131,3 +131,7 @@ dialog.wide{max-width:min(980px,calc(100vw - 32px));width:100%}
 .leaflet-tooltip.place-lbl.k-town,.leaflet-tooltip.place-lbl.k-city{font-size:14px;font-weight:800}
 .leaflet-tooltip.place-lbl.k-peak,.leaflet-tooltip.place-lbl.k-ridge,.leaflet-tooltip.place-lbl.k-saddle,.leaflet-tooltip.place-lbl.k-pass{color:#5a3a1a;font-style:italic}
 .leaflet-tooltip.place-lbl.k-camp_site,.leaflet-tooltip.place-lbl.k-alpine_hut,.leaflet-tooltip.place-lbl.k-wilderness_hut,.leaflet-tooltip.place-lbl.k-trailhead{color:#1d5a2a}
+.sp-group.ng{border-top:1px solid rgba(0,0,0,.1);margin-top:10px;padding-top:4px}
+.sp-group.ng details summary{cursor:pointer;font-size:12px;color:var(--muted);margin:2px 0 2px 24px}
+.sp-group.ng .sub{padding-left:14px;border-left:2px solid rgba(0,0,0,.1);margin-left:8px}
+.leaflet-bar a.max-zoom{font:700 10px/30px system-ui,sans-serif;width:30px;text-align:center}

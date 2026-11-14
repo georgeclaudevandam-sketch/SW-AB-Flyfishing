@@ -23,6 +23,14 @@
   const sort = store.get('sort2', { key: 'name', desc: false });
   const dispName = it => it.n || it.a || 'Unnamed ' + (it.k === 'l' ? 'lake' : 'stream');
   let NAMES = {};
+  // Codes outside data/species.json that are game fish in Alberta Fishery Regulations, 1998 (SOR/98-246), Schedule 1 Part 1.
+  const GAME_EXTRA = new Set(['AGMN', 'GOLD', 'LKST', 'MOON', 'SAUG', 'CISC']);
+  // FWMIS codes that are not fish (amphibians, molluscs, crustaceans) or only identified to family / unknown.
+  const NOT_FISH = new Set(['ANOG', 'BOTO', 'CICH', 'FAM1', 'GEN1', 'NOCY', 'TISA', 'WOFR', 'TESTFISH', 'UNKN', 'TEMP355', 'SLMN', 'FAMCATO', 'FAMCYPR']);
+  const syncGroups = () => document.querySelectorAll('#speciesList .grp').forEach(g => {
+    const subs = [...document.querySelectorAll(`#speciesList .sub[data-grp="${g.dataset.grp}"] input`)], on = subs.filter(i => i.checked).length;
+    g.checked = on > 0 && on === subs.length; g.indeterminate = on > 0 && on < subs.length;
+  });
   const cap = t => t.toLowerCase().replace(/(^|[ (-])([a-z])/g, (m, p, l) => p + l.toUpperCase());
   const spName = c => (SP[c] ? SP[c].name : NAMES[c] ? cap(NAMES[c]) : c);
   const spColor = c => (SP[c] ? SP[c].color : '#666');
@@ -55,6 +63,13 @@
   store.get('overlays', []).forEach(n => overlays[n] && overlays[n].addTo(map));
   L.control.layers(bases, overlays, { position: 'topright', collapsed: true }).addTo(map);
   L.control.scale({ imperial: false }).addTo(map);
+  const MaxZoom = L.Control.extend({ options: { position: 'topleft' }, onAdd() {
+    const d = L.DomUtil.create('div', 'leaflet-bar'), a = L.DomUtil.create('a', 'max-zoom', d);
+    a.href = '#'; a.title = 'Zoom all the way in'; a.setAttribute('role', 'button'); a.textContent = 'MAX';
+    L.DomEvent.disableClickPropagation(d);
+    L.DomEvent.on(a, 'click', e => { L.DomEvent.preventDefault(e); const lyr = bases[baseName]; map.setZoom(Math.min((lyr && lyr.options.maxZoom) || 18, map.getMaxZoom() || 18)); });
+    return d; } });
+  new MaxZoom().addTo(map);
   map.on('baselayerchange', e => { baseName = e.name; store.set('base', e.name); applyFade(); });
   document.getElementById('fade').value = fade;
   document.getElementById('fade').addEventListener('input', e => { fade = +e.target.value; store.set('fade', fade); applyFade(); });
@@ -162,7 +177,7 @@
   /* ---------------- Filters ---------------- */
   const F = Object.assign({ species: null, match: 'any', lakes: true, streams: true, minOrder: 1, noRecord: false, onlyStocked: false, labels: true, since: 0, sites: true, trailNames: true, placeNames: true }, store.get('filters3', {}));
   function readFilters() {
-    F.species = $$('#speciesList input:checked').map(i => i.value);
+    F.species = $$('#speciesList input:checked:not(.grp)').map(i => i.value); syncGroups();
     F.match = $('input[name=match]:checked').value;
     F.lakes = $('#showLakes').checked; F.streams = $('#showStreams').checked;
     F.minOrder = +$('#minOrder').value;
@@ -171,7 +186,7 @@
     store.set('filters3', F);
   }
   function writeFilters() {
-    $$('#speciesList input').forEach(i => { i.checked = !F.species || F.species.includes(i.value); });
+    $$('#speciesList input:not(.grp)').forEach(i => { i.checked = !F.species || F.species.includes(i.value); }); syncGroups();
     $$('input[name=match]').forEach(i => { i.checked = i.value === F.match; });
     $('#showLakes').checked = F.lakes; $('#showStreams').checked = F.streams;
     $('#minOrder').value = F.minOrder; $('#showNoRecord').checked = F.noRecord; $('#onlyStocked').checked = F.onlyStocked;
@@ -603,8 +618,16 @@
       const groups = [...new Set(SPECIES.map(s => s.group))];
       $('#speciesList').innerHTML = groups.map(g => `<div class="sp-group"><h3>${esc(g)}</h3>` + SPECIES.filter(s => s.group === g && counts[s.code]).map(s =>
         `<label class="sp"><input type="checkbox" value="${s.code}"><span class="dot" style="background:${s.color}"></span><span class="code">${s.code}</span><span class="n">${esc(s.name)}<span class="c">${counts[s.code]}</span></span></label>`).join('') + '</div>').join('') +
-        (extra.length ? `<details class="sp-group"><summary>Other species codes (${extra.length})</summary>` + extra.map(c =>
-          `<label class="sp"><input type="checkbox" value="${c}"><span class="dot" style="background:#666"></span><span class="code">${c}</span><span class="n">${esc(spName(c) !== c ? spName(c) : '')}<span class="c">${counts[c]}</span></span></label>`).join('') + '</details>' : '');
+        (() => {
+          // Game fish per Alberta Fishery Regulations, 1998, Schedule 1 Part 1 (R25); everything else is grouped as non-game.
+          const otherGame = extra.filter(c => GAME_EXTRA.has(c)), nonGame = extra.filter(c => !GAME_EXTRA.has(c));
+          const row = c => `<label class="sp"><input type="checkbox" value="${c}"><span class="dot" style="background:#666"></span><span class="code">${c}</span><span class="n">${esc(spName(c) !== c ? spName(c) : '')}<span class="c">${counts[c]}</span></span></label>`;
+          const fish = nonGame.filter(c => !NOT_FISH.has(c)), notFish = nonGame.filter(c => NOT_FISH.has(c));
+          return (otherGame.length ? `<div class="sp-group"><h3>More game fish</h3>${otherGame.map(row).join('')}</div>` : '') +
+            (nonGame.length ? `<div class="sp-group ng"><label class="sp grp-row"><input type="checkbox" class="grp" data-grp="ng"><span></span><span class="code">ALL</span><span class="n"><b>Non-game species</b><span class="c">${nonGame.length} kinds</span></span></label>` +
+              `<details><summary>Show each non-game species</summary><div class="sub" data-grp="ng">${fish.map(row).join('')}` +
+              (notFish.length ? `<h3>Not fish, or not identified to species</h3>${notFish.map(row).join('')}` : '') + '</div></details></div>' : '');
+        })();
       $('#legend').innerHTML = SPECIES.filter(s => counts[s.code]).map(s => `<div class="row"><span class="dot" style="background:${s.color}"></span><span class="code">${s.code}</span> ${esc(s.name)}</div>`).join('') +
         `<div class="row"><span class="dot" style="background:${NO_REC}"></span> No fish records</div>`;
       $('#dataInfo').textContent = `Data downloaded ${META.built}: ${(META.total || ITEMS.length).toLocaleString()} waters.`;
@@ -613,6 +636,7 @@
       osmReady = true; setTimeout(loadOsm, 500);
       $('#filters').addEventListener('change', () => { readFilters(); applyFilters(); drawOsm(); loadOsm(); });
       $('#minOrder').addEventListener('input', () => { readFilters(); applyFilters(); });
+      $('#speciesList').addEventListener('change', e => { if (e.target.classList.contains('grp')) $$(`#speciesList .sub[data-grp="${e.target.dataset.grp}"] input`).forEach(i => { i.checked = e.target.checked; }); }, true);
       $('#spAll').onclick = () => { $$('#speciesList input').forEach(i => i.checked = true); readFilters(); applyFilters(); };
       $('#spNone').onclick = () => { $$('#speciesList input').forEach(i => i.checked = false); readFilters(); applyFilters(); };
       $('#q').addEventListener('input', renderList);
