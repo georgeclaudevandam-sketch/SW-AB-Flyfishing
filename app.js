@@ -565,6 +565,13 @@
         const t = pair[Math.min(a, b) + ':' + Math.max(a, b)];
         return [surfaceClass(t, l.mode), l.mode === 'foot' ? carOk(t) : true];
       };
+      // Guard: if the OSM nodes do not trace the same line as the routed geometry (length off by >5%), keep the geometry.
+      let nl = 0; for (let k = 1; k < n.length; k++) nl += pos[n[k - 1]].distanceTo(pos[n[k]]);
+      if (l.r.dist && Math.abs(nl - l.r.dist) > Math.max(200, l.r.dist * 0.05)) {
+        console.warn('OSM nodes do not match route geometry; keeping geometry', nl, l.r.dist);
+        const g = l.r.path; for (let k = 1; k < g.length; k++) push(l.mode === 'foot' ? 'foot' : 'unchecked', g[k - 1], g[k], li, l.mode !== 'foot');
+        return;
+      }
       let [c0, d0] = seg(n[0], n[1]);
       push(c0, l.r.path[0], pos[n[0]], li, d0);
       for (let k = 1; k < n.length; k++) { const [c, d] = seg(n[k - 1], n[k]); push(c, pos[n[k - 1]], pos[n[k]], li, d); }
