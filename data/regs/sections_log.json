@@ -1,0 +1,1494 @@
+{
+ "ES1|Belly River": {
+  "water": "s1979",
+  "sections": [
+   {
+    "d": "Mainstem upstream of Sec. Rd. 800 and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Highway 800 crosses at 49.21735, -113.62899",
+    "upD": 51884,
+    "downD": 21355
+   },
+   {
+    "d": "Mainstem and tributaries; downstream of Sec. Rd. 800",
+    "up": "Highway 800 crosses at 49.21735, -113.62899",
+    "down": "mouth",
+    "upD": 21355,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 50,
+   "assigned": 50
+  },
+  "tributary_reaches": 1363
+ },
+ "ES1|Boulton Creek": {
+  "water": "s177",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 12026,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 8,
+   "assigned": 8
+  },
+  "tributary_reaches": 56
+ },
+ "ES1|Canmore Creek": {
+  "water": "s256",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 3817,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 4,
+   "assigned": 4
+  },
+  "tributary_reaches": 22
+ },
+ "ES1|Canyon Creek": {
+  "water": "s257",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 25896,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 50,
+   "assigned": 50
+  },
+  "tributary_reaches": 926
+ },
+ "ES1|Carbondale River": {
+  "water": "s2000",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 26447,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 57,
+   "assigned": 57
+  },
+  "tributary_reaches": 2462
+ },
+ "ES1|Castle River": {
+  "result": "single section with its own limits; tributaries not inherited",
+  "d": "Mainstem from Hwy. 3 to West Castle River and includes tributaries except Mill, Beaver Mines, and Screwdriver creeks and Carbondale River"
+ },
+ "ES1|Crowsnest River": {
+  "water": "s2021",
+  "sections": [
+   {
+    "d": "Mainstem from outlet of Crowsnest Lake downstream to the Cowley Bridge",
+    "up": "Crowsnest Lake outlet at 49.63357, -114.60985",
+    "down": "not located: Cowley Bridge (which crossing is not identified in the table)",
+    "upD": 59940,
+    "downD": null
+   },
+   {
+    "d": "All tributaries of Crowsnest River except Gold Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 63510,
+    "downD": -1
+   }
+  ],
+  "result": "not split: a break could not be located"
+ },
+ "ES1|Elbow River": {
+  "water": "s2035",
+  "sections": [
+   {
+    "d": "Headwater downstream to Elbow Falls and tributaries except Quirk Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Elbow Falls: not found in OpenStreetMap",
+    "upD": 122119,
+    "downD": null
+   },
+   {
+    "d": "Mainstem, Elbow Falls downstream to Canyon Creek",
+    "up": "Elbow Falls: not found in OpenStreetMap",
+    "down": "mouth of Canyon Creek at 50.86595, -114.75067",
+    "upD": null,
+    "downD": 81959
+   },
+   {
+    "d": "Mainstem, Canyon Creek downstream to Hwy. 22",
+    "up": "mouth of Canyon Creek at 50.86595, -114.75067",
+    "down": "Highway 22 crosses at 51.03291, -114.46671",
+    "upD": 81959,
+    "downD": 48727
+   },
+   {
+    "d": "Mainstem, Hwy. 22 downstream to Glenmore Reservoir and tributaries",
+    "up": "Highway 22 crosses at 51.03291, -114.46671",
+    "down": "Glenmore Reservoir inlet at 50.99234, -114.14819",
+    "upD": 48727,
+    "downD": 16599
+   },
+   {
+    "d": "Mainstem, from Glenmore Reservoir downstream to Bow River",
+    "up": "Glenmore Reservoir outlet at 50.99968, -114.09708",
+    "down": "mouth",
+    "upD": 11233,
+    "downD": -1
+   }
+  ],
+  "result": "not split: a break could not be located"
+ },
+ "ES1|Fish Creek": {
+  "water": "s587",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 88800,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 70,
+   "assigned": 70
+  },
+  "tributary_reaches": 1314
+ },
+ "ES1|Ghost River": {
+  "water": "s2049",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries except Waiparous Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 72839,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 89,
+   "assigned": 89
+  },
+  "tributary_reaches": 1518
+ },
+ "ES1|Gold Creek": {
+  "water": "s670",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 18986,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 36,
+   "assigned": 36
+  },
+  "tributary_reaches": 808
+ },
+ "ES1|Highwood River": {
+  "water": "s2065",
+  "sections": [
+   {
+    "d": "Headwater originating at Storm Ck and Mist Ck confluence downstream to Kananaskis Country boundary; Includes tributaries except Storm Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Kananaskis Country boundary: 0 crossings",
+    "upD": 159297,
+    "downD": null
+   },
+   {
+    "d": "Mainstem from K-Country boundary downstream to 500m above the mouth & tributaries except Sheep R",
+    "up": "Kananaskis Country boundary: 0 crossings",
+    "down": "500 m above the mouth",
+    "upD": null,
+    "downD": 500
+   },
+   {
+    "d": "Mainstem within 500m of Bow River (see Bow River)",
+    "up": "500 m above the mouth",
+    "down": "mouth",
+    "upD": 500,
+    "downD": -1
+   }
+  ],
+  "result": "not split: a break could not be located"
+ },
+ "ES1|Jumpingpound Creek": {
+  "water": "s877",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 84388,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 73,
+   "assigned": 73
+  },
+  "tributary_reaches": 1688
+ },
+ "ES1|Kananaskis River": {
+  "water": "s2081",
+  "sections": [
+   {
+    "d": "Headwater downstream to Hwy. 1 including tributaries except Smith-Dorrien Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Highway 1 crosses at 51.08583, -115.05476",
+    "upD": 65381,
+    "downD": 1634
+   },
+   {
+    "d": "Mainstem from Hwy. 1 downstream to Bow River",
+    "up": "Highway 1 crosses at 51.08583, -115.05476",
+    "down": "mouth",
+    "upD": 1634,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 84,
+   "assigned": 84
+  },
+  "tributary_reaches": 2930
+ },
+ "ES1|Livingstone River": {
+  "water": "s2108",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 31275,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 54,
+   "assigned": 54
+  },
+  "tributary_reaches": 2874
+ },
+ "ES1|Mill Creek": {
+  "water": "s1120",
+  "sections": [
+   {
+    "d": "Including Gladstone and Whitney creeks",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 42873,
+    "downD": -1
+   },
+   {
+    "d": "Includes tributaries including Gladstone and Whitney creeks",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 42873,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 61,
+   "assigned": 61
+  },
+  "tributary_reaches": 654
+ },
+ "ES1|Oldman River": {
+  "water": "s2166",
+  "sections": [
+   {
+    "d": "Tributaries of Oldman River from headwater downstream to Sec. Rd. 510 excluding Livingstone River and Hidden Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Highway 510 crosses at 49.61213, -114.05510",
+    "upD": 187084,
+    "downD": 82028
+   },
+   {
+    "d": "Mainstem - headwater downstream to Racehorse Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth of Racehorse Creek at 49.86778, -114.37164",
+    "upD": 187084,
+    "downD": 137937
+   },
+   {
+    "d": "Mainstem - Racehorse Creek downstream to Hwy. 22",
+    "up": "mouth of Racehorse Creek at 49.86778, -114.37164",
+    "down": "Highway 22 crosses at 49.79844, -114.15181",
+    "upD": 137937,
+    "downD": 111973
+   },
+   {
+    "d": "Mainstem - Hwy. 22 downstream to Sec. Rd. 510",
+    "up": "Highway 22 crosses at 49.79844, -114.15181",
+    "down": "Highway 510 crosses at 49.61213, -114.05510",
+    "upD": 111973,
+    "downD": 82028
+   },
+   {
+    "d": "Mainstem downstream from Sec. Rd. 510 - see Oldman Reservoir",
+    "up": "Highway 510 crosses at 49.61213, -114.05510",
+    "down": "Oldman Reservoir inlet at 49.63303, -114.06876",
+    "upD": 82028,
+    "downD": 85277
+   },
+   {
+    "d": "Oldman Reservoir dam downstream to Sec. Rd. 509",
+    "up": "Oldman Reservoir outlet at 49.56721, -113.89731",
+    "down": "Highway 509: 0 crossings",
+    "upD": 65720,
+    "downD": null
+   }
+  ],
+  "result": "not split: a break could not be located"
+ },
+ "ES1|Pincher Creek": {
+  "water": "s1335",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 73396,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 57,
+   "assigned": 57
+  },
+  "tributary_reaches": 1314
+ },
+ "ES1|Policeman Creek": {
+  "water": "s1365",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 5014,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 5,
+   "assigned": 5
+  },
+  "tributary_reaches": 53
+ },
+ "ES1|Quirk Creek": {
+  "water": "s1403",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 15349,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 22,
+   "assigned": 22
+  },
+  "tributary_reaches": 194
+ },
+ "ES1|Sheep River": {
+  "water": "s2209",
+  "sections": [
+   {
+    "d": "Includes tributaries; Headwater downstream to the bridge at Indian Oils Day-use Site",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Indian Oils (OpenStreetMap): no road crossing within 2.5 km",
+    "upD": 105365,
+    "downD": null
+   },
+   {
+    "d": "Bridge at Indian Oils Day-use Site downstream to Gorge Creek and tributaries (except Gorge Creek)",
+    "up": "Indian Oils (OpenStreetMap): no road crossing within 2.5 km",
+    "down": "mouth of Gorge Creek at 50.64441, -114.64563",
+    "upD": null,
+    "downD": 81164
+   },
+   {
+    "d": "Mainstem and tributaries (except Threepoint Creek) - Gorge Creek downstream to Highwood River",
+    "up": "mouth of Gorge Creek at 50.64441, -114.64563",
+    "down": "mouth",
+    "upD": 81164,
+    "downD": -1
+   }
+  ],
+  "result": "not split: a break could not be located"
+ },
+ "ES1|Silvester Creek": {
+  "water": "s1582",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 6853,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 10,
+   "assigned": 10
+  },
+  "tributary_reaches": 82
+ },
+ "ES1|Smith-Dorrien Creek": {
+  "water": "s1603",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 18945,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 31,
+   "assigned": 31
+  },
+  "tributary_reaches": 328
+ },
+ "ES1|Storm Creek": {
+  "result": "single section with its own limits; tributaries not inherited",
+  "d": "Upstream of Mist Creek confluence; Includes tributaries (18-7-W5)"
+ },
+ "ES1|Threepoint Creek": {
+  "water": "s1777",
+  "sections": [
+   {
+    "d": "Includes tributaries and Ware Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 71816,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 93,
+   "assigned": 93
+  },
+  "tributary_reaches": 3282
+ },
+ "ES1|Waiparous Creek": {
+  "water": "s1841",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 49337,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 51,
+   "assigned": 51
+  },
+  "tributary_reaches": 1242
+ },
+ "ES1|Waterton River": {
+  "water": "s2258",
+  "sections": [
+   {
+    "d": "Tributaries upstream of Waterton Reservoir including Drywood Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Waterton Reservoir inlet at 49.26756, -113.67407",
+    "upD": 81232,
+    "downD": 54080
+   },
+   {
+    "d": "Mainstem - upstream of Waterton Reservoir",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Waterton Reservoir inlet at 49.26756, -113.67407",
+    "upD": 81232,
+    "downD": 54080
+   },
+   {
+    "d": "Mainstem and tributaries - downstream of Waterton Reservoir",
+    "up": "Waterton Reservoir outlet at 49.32721, -113.67377",
+    "down": "mouth",
+    "upD": 46464,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 68,
+   "assigned": 59
+  },
+  "tributary_reaches": 1289
+ },
+ "ES1|West Castle River": {
+  "water": "s2260",
+  "sections": [
+   {
+    "d": "Includes tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 32565,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 66,
+   "assigned": 66
+  },
+  "tributary_reaches": 860
+ },
+ "ES1|Willow Creek": {
+  "water": "s1924",
+  "sections": [
+   {
+    "d": "Mainstream and tributaries upstream of Pine Coulee Reservoir Diversion Headpond.",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "not located: Pine Coulee Reservoir Diversion Headpond",
+    "upD": 186901,
+    "downD": null
+   },
+   {
+    "d": "Mainstem only downstream of Pine Coulee Reservoir Diversion Headpond",
+    "up": "not located: Pine Coulee Reservoir Diversion Headpond",
+    "down": "mouth",
+    "upD": null,
+    "downD": -1
+   },
+   {
+    "d": "Tributaries downstream of Pine Coulee Reservoir Diversion Headpond",
+    "up": "not located: Pine Coulee Reservoir Diversion Headpond",
+    "down": "mouth",
+    "upD": null,
+    "downD": -1
+   }
+  ],
+  "result": "not split: a break could not be located"
+ },
+ "ES2|Alford Creek": {
+  "water": "s14",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 25888,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 26,
+   "assigned": 26
+  },
+  "tributary_reaches": 104
+ },
+ "ES2|Bighorn River": {
+  "water": "s1981",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries upstream of Crescent Falls",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Crescent Falls: several places beside the river",
+    "upD": 37278,
+    "downD": null
+   },
+   {
+    "d": "Mainstem and tributaries downstream of Crescent Falls",
+    "up": "Crescent Falls: several places beside the river",
+    "down": "mouth",
+    "upD": null,
+    "downD": -1
+   }
+  ],
+  "result": "not split: a break could not be located"
+ },
+ "ES2|Blackstone River": {
+  "water": "s1984",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries upstream of Mons Creek including Mons Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth of Mons Creek at 52.59767, -116.66872",
+    "upD": 92259,
+    "downD": 83872
+   },
+   {
+    "d": "Mainstem downstream of Mons Creek and tributaries (except Rundell Creek)",
+    "up": "mouth of Mons Creek at 52.59767, -116.66872",
+    "down": "mouth",
+    "upD": 83872,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 101,
+   "assigned": 101
+  },
+  "tributary_reaches": 6132
+ },
+ "ES2|Brazeau River": {
+  "water": "s1990",
+  "sections": [
+   {
+    "d": "Mainstem upstream of Forestry Trunk Road (bridge at 6-16-45-18-W5) and tributaries (except Cardinal River), outside of Jasper National Park",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "road crossing nearest location 6-16-45-18-W5 at 52.87808, -116.55810 (2063 m away)",
+    "upD": 242030,
+    "downD": 152756
+   },
+   {
+    "d": "Mainstem downstream of the Forestry Trunk Road (bridge at 6-16-45-18-W5) to the Brazeau Reservoir",
+    "up": "road crossing nearest location 6-16-45-18-W5 at 52.87808, -116.55810 (2063 m away)",
+    "down": "Brazeau Reservoir inlet at 52.88339, -115.67847",
+    "upD": 152756,
+    "downD": 67824
+   },
+   {
+    "d": "Mainstem downstream of Brazeau Reservoir",
+    "up": "Brazeau Reservoir outlet at 52.97063, -115.58160",
+    "down": "mouth",
+    "upD": 47771,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 120,
+   "assigned": 112
+  },
+  "tributary_reaches": 1626
+ },
+ "ES2|Burnt Timber Creek": {
+  "water": "s222",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries (except Pinto Creek)",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 42047,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 76,
+   "assigned": 76
+  },
+  "tributary_reaches": 2736
+ },
+ "ES2|Cardinal River": {
+  "water": "s2001",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 71582,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 79,
+   "assigned": 79
+  },
+  "tributary_reaches": 1374
+ },
+ "ES2|Clear Creek": {
+  "water": "s322",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 2814,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 2,
+   "assigned": 2
+  },
+  "tributary_reaches": 6
+ },
+ "ES2|Clearwater River": {
+  "water": "s2013",
+  "sections": [
+   {
+    "d": "Mainstem from the Banff National Park boundary downstream to Timber Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth of Timber Creek at 51.93330, -115.69058",
+    "upD": 166091,
+    "downD": 142614
+   },
+   {
+    "d": "Tributaries from the Banff National Park boundary downstream to and including Timber Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth of Timber Creek at 51.93330, -115.69058",
+    "upD": 166091,
+    "downD": 142614
+   },
+   {
+    "d": "Mainstem from Timber Creek downstream to the Forestry Trunk Road (bridge at 5-35-09-W5) and tributaries (except Elk Creek)",
+    "up": "mouth of Timber Creek at 51.93330, -115.69058",
+    "down": "road crossing nearest location 5-35-9-W5 at 51.97046, -115.23937 (2393 m away)",
+    "upD": 142614,
+    "downD": 84748
+   },
+   {
+    "d": "Mainstem from Forestry Trunk Road (bridge at 5-35-09-W5) downstream to the North Saskatchewan River",
+    "up": "road crossing nearest location 5-35-9-W5 at 51.97046, -115.23937 (2393 m away)",
+    "down": "mouth",
+    "upD": 84748,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 207,
+   "assigned": 207
+  },
+  "tributary_reaches": 7284
+ },
+ "ES2|Cline River": {
+  "result": "single section with its own limits; tributaries not inherited",
+  "d": "Mainstem and tributaries downstream to the Highway 11 (Cline River) bridge except tributaries to Coral Lake, Pinto Lake, all water within the White Goat Wilderness Area and the outlet of Pinto Lake for 1.5 km downstream."
+ },
+ "ES2|Dogpound Creek": {
+  "water": "s475",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 149200,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 104,
+   "assigned": 104
+  },
+  "tributary_reaches": 1836
+ },
+ "ES2|Elk Creek": {
+  "result": "single section with its own limits; tributaries not inherited",
+  "d": "Mainstem and tributaries; 33-35-12-W5"
+ },
+ "ES2|Fall Creek": {
+  "water": "s566",
+  "sections": [
+   {
+    "d": "Mainstem and tribuatries; Upstream of the falls at 11-31-37-11-W5",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "waterfall (OpenStreetMap) at 52.22435, -115.56627, near location 11-31-37-11-W5",
+    "upD": 25086,
+    "downD": 7192
+   },
+   {
+    "d": "Mainstem and tributaries downstream of the falls at 11-31-37-11-W5",
+    "up": "waterfall (OpenStreetMap) at 52.22435, -115.56627, near location 11-31-37-11-W5",
+    "down": "mouth",
+    "upD": 7192,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 50,
+   "assigned": 50
+  },
+  "tributary_reaches": 650
+ },
+ "ES2|Fallentimber Creek": {
+  "water": "s567",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 108814,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 116,
+   "assigned": 116
+  },
+  "tributary_reaches": 1886
+ },
+ "ES2|James River": {
+  "water": "s2078",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 99358,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 156,
+   "assigned": 156
+  },
+  "tributary_reaches": 3790
+ },
+ "ES2|Little Red Deer River": {
+  "result": "single section with its own limits; tributaries not inherited",
+  "d": "Headwater downstream to Twp. Rd. 352 (Cottonwood Road) and tributaries except Dogpound Creek. See PP2 for Little Red Deer River downstream of Twp. Rd. 352."
+ },
+ "ES2|Lynx Creek": {
+  "water": "s1024",
+  "sections": [
+   {
+    "d": "Mainstem and Tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 21693,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 16,
+   "assigned": 16
+  },
+  "tributary_reaches": 166
+ },
+ "ES2|Nordegg River": {
+  "water": "s2153",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 145147,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 117,
+   "assigned": 117
+  },
+  "tributary_reaches": 2202
+ },
+ "ES2|North Ram River": {
+  "water": "s2160",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 74292,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 136,
+   "assigned": 136
+  },
+  "tributary_reaches": 4238
+ },
+ "ES2|North Raven River": {
+  "water": "s2161",
+  "sections": [
+   {
+    "d": "STAUFFER CREEK; Mainstem and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 34255,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 16,
+   "assigned": 16
+  },
+  "tributary_reaches": 174
+ },
+ "ES2|North Saskatchewan River": {
+  "water": "s2162",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries from Banff National Park boundary downstream to Abraham Lake (2-18-36-17-W5) and tributaries including tributaries to Abraham Lake, except Cline River and Siffleur River",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Abraham Lake inlet at 52.08720, -116.41607",
+    "upD": 279731,
+    "downD": 250918
+   },
+   {
+    "d": "Mainstem from Bighorn Dam downstream to Hwy 22/39",
+    "up": "Abraham Lake outlet at 52.30774, -116.33100",
+    "down": "Highway 22: 0 crossings",
+    "upD": 221732,
+    "downD": null
+   },
+   {
+    "d": "Tributaries from Bighorn Dam downstream to Hwy 22/39 (except Baptiste River, Bighorn River, Brazeau River, Clearwater River, Ram River, Wolf Creek and Washout Creek)",
+    "up": "Abraham Lake outlet at 52.30774, -116.33100",
+    "down": "Highway 22: 0 crossings",
+    "upD": 221732,
+    "downD": null
+   }
+  ],
+  "result": "not split: a break could not be located"
+ },
+ "ES2|Prairie Creek": {
+  "water": "s1385",
+  "sections": [
+   {
+    "d": "Mainstem upstream of the North Fork Road and all tributaries (except Swan Creek and tributaries between Vetch and Swan Creek)",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "North Fork Road: 0 crossings",
+    "upD": 115331,
+    "downD": null
+   },
+   {
+    "d": "The portion of the mainstem and tributaries between Vetch and Swan Creeks",
+    "up": "mouth of Vetch Creek at 52.21227, -115.08089",
+    "down": "mouth of Swan Creek at 52.19469, -115.01268",
+    "upD": 55781,
+    "downD": 43935
+   },
+   {
+    "d": "The remainder of the mainstem downstream of the North Fork Road (except the portion between Vetch and Swan Creeks)",
+    "up": "North Fork Road: 0 crossings",
+    "down": "mouth",
+    "upD": null,
+    "downD": -1
+   }
+  ],
+  "result": "not split: a break could not be located"
+ },
+ "ES2|Ram River": {
+  "water": "s2191",
+  "sections": [
+   {
+    "d": "Also known as South Ram River; Mainstem and tributaries (except Fall Creek)",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 120078,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 152,
+   "assigned": 152
+  },
+  "tributary_reaches": 3746
+ },
+ "ES2|Raven River": {
+  "water": "s2192",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries except North Raven River (Stauffer Creek)",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 111894,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 71,
+   "assigned": 71
+  },
+  "tributary_reaches": 646
+ },
+ "ES2|Red Deer River": {
+  "water": "s2193",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries from Banff National Park boundary downstream to the Forestry Trunk Road (13-31-10-W5)",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "road crossing nearest location 13-31-10-W5 at 51.65693, -115.28691 (1366 m away)",
+    "upD": 154031,
+    "downD": 114655
+   },
+   {
+    "d": "Mainstem from Forestry Trunk Road downstream to Gleniffer (Reservoir) Lake and tributaries (except Fallentimber Creek, Raven River, North Raven River and Pinto Creek)",
+    "up": "road crossing nearest location 13-31-10-W5 at 51.65693, -115.28691 (1366 m away)",
+    "down": "Gleniffer Lake inlet at 52.01524, -114.34760",
+    "upD": 114655,
+    "downD": 7943
+   }
+  ],
+  "mainstem": {
+   "reaches": 167,
+   "assigned": 166
+  },
+  "tributary_reaches": 7406
+ },
+ "ES2|Rundell Creek": {
+  "result": "single section with its own limits; tributaries not inherited",
+  "d": "27-44-15-W5; Mainstem and tributaries"
+ },
+ "ES2|Siffleur River": {
+  "result": "single section with its own limits; tributaries not inherited",
+  "d": "Mainstem and tributaries downstream from Banff National Park boundary"
+ },
+ "ES2|Swan Creek": {
+  "water": "s1733",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries; Downstream for 2 km below Swan Lake",
+    "up": "Swan Lake outlet at 52.11972, -115.16181",
+    "down": "Swan Lake outlet at 52.11972, -115.16181, -2000 m",
+    "upD": 27778,
+    "downD": 25778
+   },
+   {
+    "d": "The remainder including tributaries to Swan Lake",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 51944,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 53,
+   "assigned": 53
+  },
+  "tributary_reaches": 330
+ },
+ "ES2|Tay River": {
+  "water": "s2243",
+  "sections": [
+   {
+    "d": "Mainstem and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 58531,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 54,
+   "assigned": 54
+  },
+  "tributary_reaches": 414
+ },
+ "ES2|Washout Creek": {
+  "result": "single section with its own limits; tributaries not inherited",
+  "d": "24-47-8-W5; Mainstem and tributaries"
+ },
+ "ES2|Wolf Creek": {
+  "result": "single section with its own limits; tributaries not inherited",
+  "d": "13-47-8-W5; Rose Creek; Mainstem and tributaries"
+ },
+ "ES3|Deerlick Creek": {
+  "water": "s448",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 10463,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 25,
+   "assigned": 25
+  },
+  "tributary_reaches": 80
+ },
+ "ES3|Dismal Creek": {
+  "water": "s464",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries; See Pembina River",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 103026,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 99,
+   "assigned": 99
+  },
+  "tributary_reaches": 550
+ },
+ "ES3|Embarras River": {
+  "water": "s2040",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries except Erith River",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 112130,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 95,
+   "assigned": 95
+  },
+  "tributary_reaches": 3148
+ },
+ "ES3|Eunice Creek": {
+  "result": "single section with its own limits; tributaries not inherited",
+  "d": "23-48-23-W5, includes tributaries"
+ },
+ "ES3|Gregg River": {
+  "water": "s2054",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 49794,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 47,
+   "assigned": 47
+  },
+  "tributary_reaches": 1912
+ },
+ "ES3|Lobstick River": {
+  "result": "single section with its own limits; tributaries not inherited",
+  "d": "Portion upstream of Chip Lake including tributaries to Chip Lake"
+ },
+ "ES3|Luscar Creek": {
+  "water": "s1017",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 6618,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 16,
+   "assigned": 16
+  },
+  "tributary_reaches": 114
+ },
+ "ES3|Mackenzie Creek": {
+  "water": "s1031",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 25137,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 41,
+   "assigned": 41
+  },
+  "tributary_reaches": 634
+ },
+ "ES3|Mcleod River": {
+  "water": "s2125",
+  "sections": [
+   {
+    "d": "Mainstem only; Headwater downstream to Hwy 47",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Highway 47 crosses at 53.46118, -116.62091",
+    "upD": 254211,
+    "downD": 90028
+   },
+   {
+    "d": "Mainstem only; Hwy 47 downstream to the Athabasca River",
+    "up": "Highway 47 crosses at 53.46118, -116.62091",
+    "down": "mouth",
+    "upD": 90028,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 231,
+   "assigned": 231
+  }
+ },
+ "ES3|Pembina River": {
+  "water": "s2179",
+  "sections": [
+   {
+    "d": "Headwater downstream to Sec. Rd. 753 near Lodgepole, includes Dismal and Rat creeks and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Highway 753: 0 crossings",
+    "upD": 220683,
+    "downD": null
+   },
+   {
+    "d": "Mainstem only - downstream from Sec. Rd. 753 (near Lodgepole) to Hwy. 43 (near Sangudo)",
+    "up": "Highway 753: 0 crossings",
+    "down": "Highway 43: 0 crossings",
+    "upD": null,
+    "downD": null
+   }
+  ],
+  "result": "not split: a break could not be located"
+ },
+ "ES3|Plante Creek": {
+  "water": "s1354",
+  "sections": [
+   {
+    "d": "Mainstem including Apetowun Creek and tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 18599,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 14,
+   "assigned": 14
+  },
+  "tributary_reaches": 270
+ },
+ "ES3|Wampus Creek": {
+  "water": "s1848",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 15363,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 27,
+   "assigned": 27
+  },
+  "tributary_reaches": 142
+ },
+ "ES3|Wildhay River": {
+  "water": "s2268",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries and Jarvis Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 183336,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 234,
+   "assigned": 234
+  },
+  "tributary_reaches": 14410
+ },
+ "ES3|Windfall Creek": {
+  "water": "s1936",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 7276,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 12,
+   "assigned": 12
+  },
+  "tributary_reaches": 67
+ },
+ "ES4|Cutbank River": {
+  "water": "s2022",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 131748,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 132,
+   "assigned": 132
+  },
+  "tributary_reaches": 3856
+ },
+ "ES4|Deep Valley Creek": {
+  "water": "s443",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 75048,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 76,
+   "assigned": 76
+  },
+  "tributary_reaches": 2157
+ },
+ "ES4|Kakwa River": {
+  "water": "s2080",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries except Lynx Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 193906,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 315,
+   "assigned": 315
+  },
+  "tributary_reaches": 16000
+ },
+ "ES4|Little Smoky River": {
+  "water": "s2107",
+  "sections": [
+   {
+    "d": "Headwaters downstream to Hwy. 43",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Highway 43: 0 crossings",
+    "upD": 247444,
+    "downD": null
+   },
+   {
+    "d": "Mainstem; Downstream of Hwy. 43",
+    "up": "Highway 43: 0 crossings",
+    "down": "mouth",
+    "upD": null,
+    "downD": -1
+   }
+  ],
+  "result": "not split: a break could not be located"
+ },
+ "ES4|Muskeg River": {
+  "water": "s2146",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 105822,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 160,
+   "assigned": 160
+  },
+  "tributary_reaches": 4888
+ },
+ "ES4|Simonette River": {
+  "water": "s2212",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries except Deep Valley Creek",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 259147,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 261,
+   "assigned": 261
+  },
+  "tributary_reaches": 7384
+ },
+ "ES4|Smoky River": {
+  "water": "s2214",
+  "sections": [
+   {
+    "d": "Headwater downstream to Hwy. 43 and tributaries except Kakwa, Muskeg, Simonette rivers",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "Highway 43: 0 crossings",
+    "upD": 274964,
+    "downD": null
+   },
+   {
+    "d": "Mainstem - downstream of Hwy. 43 to 21st Base Line",
+    "up": "Highway 43: 0 crossings",
+    "down": "not located: 21st Base Line",
+    "upD": null,
+    "downD": null
+   }
+  ],
+  "result": "not split: a break could not be located"
+ },
+ "ES4|Torrens River": {
+  "water": "s2246",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 34274,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 55,
+   "assigned": 55
+  },
+  "tributary_reaches": 2547
+ },
+ "ES4|Wapiti River": {
+  "water": "s2256",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 83163,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 87,
+   "assigned": 87
+  },
+  "tributary_reaches": 7686
+ },
+ "PP1|Lee Creek": {
+  "water": "s934",
+  "sections": [
+   {
+    "d": "Mainstem including tributaries",
+    "up": "uppermost mapped stretch in the zone",
+    "down": "mouth",
+    "upD": 47809,
+    "downD": -1
+   }
+  ],
+  "mainstem": {
+   "reaches": 60,
+   "assigned": 60
+  },
+  "tributary_reaches": 767
+ }
+}
