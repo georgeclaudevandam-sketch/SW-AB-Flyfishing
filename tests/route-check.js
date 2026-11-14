@@ -33,6 +33,11 @@ const { chromium } = require('playwright');
     await d.screenshot({ path: `route-check-${water.replace(/\W+/g, '_')}.png` });
     await d.click('button[data-tab=list]');
   }
+  await d.click('.max-zoom >> text=MIN'); await d.waitForTimeout(1500);
+  for (let i = 0; i < 4; i++) { await d.click('.leaflet-control-zoom-in'); await d.waitForTimeout(800); }
+  await d.waitForTimeout(4000);
+  console.log('trail tiles:', await d.$$eval('img.leaflet-tile', e => e.filter(x => /alberta_designated/.test(x.src)).map(x => x.complete && x.naturalWidth).join(',')));
+  await d.screenshot({ path: 'route-check-trails.png' });
   console.log('fish zones (end):', await d.$$eval('.fmz-lbl', e => e.map(x => x.textContent).join(' ')), await d.evaluate(() => document.querySelectorAll('path.leaflet-interactive, svg path').length));
   console.log('--- log ---\n' + log.join('\n'));
   await b.close();

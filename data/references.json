@@ -243,6 +243,15 @@
    "url": "https://geospatial.alberta.ca/titan/rest/services/fisheries/fisheries_regulations/MapServer/4",
    "licence": "Open Government Licence - Alberta",
    "note": "Overlay 'Fish management zones (ES1, ES2…)': ES1-ES4, PP1-PP2, NB1-NB4 boundaries and names, simplified to about 200 m."
+  },
+  {
+   "id": "R28",
+   "type": "Overlay",
+   "author": "Government of Alberta (Forestry and Parks)",
+   "title": "Alberta Designated and Provincial Trails, recreation/alberta_designated_and_provincial_trails MapServer",
+   "url": "https://geospatial.alberta.ca/mimas/rest/services/recreation/alberta_designated_and_provincial_trails/MapServer",
+   "licence": "Copyright Government of Alberta (open data)",
+   "note": "Overlay 'Alberta designated trails (Gov. of Alberta)': trails designated under the Public Lands Act, drawn from the service's map images. The service notes trail names are not fully validated."
   }
  ],
  "features": [
@@ -473,6 +482,15 @@
     "R27"
    ],
    "how": "Zone polygons drawn as a dashed outline with the zone name; loaded live and kept for offline use."
+  },
+  {
+   "feature": "Hiking trail layers",
+   "refs": [
+    "R28",
+    "R17",
+    "R23"
+   ],
+   "how": "Two trail overlays, on by default: Alberta designated and provincial trails (Government of Alberta) and Waymarked Trails hiking routes (OpenStreetMap). Named OpenStreetMap trails are also drawn and labelled from zoom 13."
   }
  ]
 }

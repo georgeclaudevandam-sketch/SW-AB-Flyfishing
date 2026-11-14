@@ -36,6 +36,16 @@
   const spName = c => (SP[c] ? SP[c].name : NAMES[c] ? cap(NAMES[c]) : c);
   const spColor = c => (SP[c] ? SP[c].color : '#666');
 
+  // An ArcGIS MapServer drawn as ordinary map tiles (its 'export' operation, one 256 px image per tile, Web Mercator).
+  function agsTiles(service, opts) {
+    const T = L.TileLayer.extend({
+      getTileUrl(c) {
+        const sz = 2 * Math.PI * 6378137 / Math.pow(2, c.z), x0 = -Math.PI * 6378137 + c.x * sz, y1 = Math.PI * 6378137 - c.y * sz;
+        return `${service}/export?bbox=${x0},${y1 - sz},${x0 + sz},${y1}&bboxSR=3857&imageSR=3857&size=256,256&format=png32&transparent=true&dpi=96&f=image`;
+      }
+    });
+    return new T('', Object.assign({ maxZoom: 19 }, opts));
+  }
   /* Alberta Fish Management Zones (ES1-ES4, PP1-PP2, NB1-NB4) from the Government of Alberta fisheries regulations service.
      Loaded the first time the layer is turned on; the service worker keeps a copy for offline use. */
   function fmzLayer() {
@@ -74,6 +84,7 @@
     'Roads & place names': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Esri' }),
     'Place names (Esri)': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Esri' }),
     'Fish management zones (ES1, ES2…)': fmzLayer(),
+    'Alberta designated trails (Gov. of Alberta)': agsTiles('https://geospatial.alberta.ca/mimas/rest/services/recreation/alberta_designated_and_provincial_trails/MapServer', { minZoom: 8, opacity: 0.95, attribution: '&copy; Government of Alberta' }),
     'Hillshade': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', { maxZoom: 16, opacity: 0.35, attribution: 'Esri' })
   };
   let baseName = store.get('base', 'Topo (OpenTopoMap)');
@@ -83,6 +94,7 @@
   const applyFade = () => { Object.values(bases).forEach(l => l.setOpacity(1 - fade / 100)); const o = document.getElementById('fadeOut'); if (o) o.textContent = fade + '%'; };
   applyFade();
   if (store.get('overlaysV', 0) < 2) { store.set('overlays', [...new Set([...store.get('overlays', []), 'Place names (Esri)'])]); store.set('overlaysV', 2); }
+  if (store.get('overlaysV', 0) < 4) { store.set('overlays', [...new Set([...store.get('overlays', []), 'Hiking trails (Waymarked)', 'Alberta designated trails (Gov. of Alberta)'])]); store.set('overlaysV', 4); }
   if (store.get('overlaysV', 0) < 3) { store.set('overlays', [...new Set([...store.get('overlays', []), 'Fish management zones (ES1, ES2…)'])]); store.set('overlaysV', 3); }
   store.get('overlays', []).forEach(n => overlays[n] && overlays[n].addTo(map));
   L.control.layers(bases, overlays, { position: 'topright', collapsed: true }).addTo(map);
@@ -90,6 +102,9 @@
   const MaxZoom = L.Control.extend({ options: { position: 'topleft' }, onAdd() {
     const d = L.DomUtil.create('div', 'leaflet-bar'), a = L.DomUtil.create('a', 'max-zoom', d);
     a.href = '#'; a.title = 'Zoom all the way in'; a.setAttribute('role', 'button'); a.textContent = 'MAX';
+    const b = L.DomUtil.create('a', 'max-zoom', d);
+    b.href = '#'; b.title = 'Zoom out to the whole Eastern Slopes'; b.setAttribute('role', 'button'); b.textContent = 'MIN';
+    L.DomEvent.on(b, 'click', e => { L.DomEvent.preventDefault(e); map.fitBounds([[48.99, -120.1], [54.4, -113.6]]); });
     L.DomEvent.disableClickPropagation(d);
     L.DomEvent.on(a, 'click', e => { L.DomEvent.preventDefault(e); const lyr = bases[baseName]; map.setZoom(Math.min((lyr && lyr.options.maxZoom) || 18, map.getMaxZoom() || 18)); });
     return d; } });
