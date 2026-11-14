@@ -639,8 +639,19 @@
   }
   function drawSites(keys, items) {
     const b = map.getBounds();
-    for (const it of items) { const f = (chunkData[it.ch] || {})[it.id]; const lines = it.k === 's' && f && f.r ? f.r.map(r => r.g) : null; (f && f.s || []).forEach(s => { if (b.contains([s[1], s[0]])) siteLayer(s, dispName(it), lines); }); }
-    for (const k of keys) (chunkPts[k] || []).forEach(s => { if (b.contains([s[1], s[0]])) siteLayer(s, s[6] ? s[6] + ' (not on a mapped water)' : 'Survey site not on a mapped water'); });
+    for (const it of items) {
+      const f = (chunkData[it.ch] || {})[it.id]; const lines = it.k === 's' && f && f.r ? f.r.map(r => r.g) : null;
+      // With OPEN on, a survey dot on a closed stretch of stream is hidden along with the stretch.
+      const closedAt = s => {
+        if (!F.openOnly || !REGS || !f || !f.r) return false;
+        let best = -1, bd = Infinity;
+        f.r.forEach((r, k) => { const m = snapTo(r.g, s[0], s[1]); if (m && m[2] < bd) { bd = m[2]; best = k; } });
+        const st = best >= 0 ? regStatus(it, best).state : 'unknown';
+        return st === 'closed' || st === 'unknown';
+      };
+      (f && f.s || []).forEach(s => { if (b.contains([s[1], s[0]]) && !closedAt(s)) siteLayer(s, dispName(it), lines); });
+    }
+    if (!F.openOnly) for (const k of keys) (chunkPts[k] || []).forEach(s => { if (b.contains([s[1], s[0]])) siteLayer(s, s[6] ? s[6] + ' (not on a mapped water)' : 'Survey site not on a mapped water'); });
   }
   const regTip = (it, ri) => { if (!REGS) return ''; const s = regStatus(it, ri).state; return s === 'unknown' ? '' : `<br><span class="reg-tip ${s}">${REG_WORD[s]} ${F.openDate ? 'on ' + esc(F.openDate) : 'today'}</span>`; };
   const hoverCodes = (name, codes) => `<b class="hn">${esc(name)}</b><br>` + codes.map(c => `<span style="color:${spColor(c)}">${c}</span>`).join(' ');
