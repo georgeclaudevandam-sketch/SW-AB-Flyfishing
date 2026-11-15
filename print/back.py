@@ -59,7 +59,7 @@ def _build(path, fs, title, subtitle, zones, gridref, in_map, page_w=594, page_h
     margin = 14
     head_h = 34
     gap = 8
-    ncol = 2
+    ncol = 2 if page_w > 500 else 1
     cw = (page_w - 2 * margin - gap * (ncol - 1)) / ncol
     frames = [PFrame((margin + i * (cw + gap)) * MM, (margin + 8) * MM, cw * MM, (page_h - 2 * margin - head_h - 8) * MM,
                      leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, id=f"c{i}") for i in range(ncol)]

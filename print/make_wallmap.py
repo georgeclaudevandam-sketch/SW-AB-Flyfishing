@@ -57,6 +57,17 @@ MAPS = {
                 "sub": "Fish Management Zones ES2 and ES3 · West-central Alberta · Trout, char, grayling and other game fish · Roads, trails and access"},
 }
 
+# ES2 and ES3 in A0 sheets at 1:125,000: rectangles from a rotated grid that covers each zone with the fewest sheets
+# (print/sheets/es2_es3_sheets.json); each sheet shows only its piece of the zone
+_ZTITLE = {"ES2": "Eastern Slopes: Red Deer, Clearwater and North Saskatchewan",
+           "ES3": "Eastern Slopes: Pembina, McLeod, Athabasca and Berland"}
+for _k, _v in jload(os.path.join(ROOT, "print", "sheets", "es2_es3_sheets.json")).items():
+    _z, _part = _k.split("-", 1)
+    MAPS[_k] = {"zones": [_z], "clip": _v["clip"], "fixed_rot": _v["rot"], "fixed_scale": 125000, "landscape": _v["landscape"],
+                "rotate": True, "hide_outside": True, "legend_back": True, "sheet": _part,
+                "title": f"{_z} {_part}: {_ZTITLE[_z]}",
+                "sub": f"Fish Management Zone {_z}, {_part.lower()} sheet · West-central Alberta · Trout, char, grayling and other game fish · Roads, trails and access"}
+
 # ---------- styles ----------
 C = HexColor
 ROAD = {  # class: (casing width, line width, colour, dash) -- kept light so the fishing waters stand out
@@ -160,6 +171,8 @@ class WallMap:
         self.key, self.cfg, self.draft = key, MAPS[key], draft
         self.zones_all = load_zones()
         self.zone_ll = unary_union([self.zones_all[z] for z in self.cfg["zones"]])
+        if self.cfg.get("clip"):
+            self.zone_ll = self.zone_ll.intersection(Polygon(self.cfg["clip"])).buffer(0)
         if self.cfg.get("band"):
             # this sheet's latitude band; small detached pieces go to the neighbouring sheet they touch
             whole = self.zone_ll
@@ -200,13 +213,13 @@ class WallMap:
                 need = max((b2[2] - b2[0]) / (fw - 6), (b2[3] - b2[1]) / (fh - 6))
                 if best is None or need < best[0] - 1e-9 or (abs(need - best[0]) < 1e-9 and abs(a) < abs(best[1])):
                     best = (need, a)
-            rot = float(best[1])
+            rot = float(best[1]) if self.cfg.get("fixed_rot") is None else float(self.cfg["fixed_rot"])
             fr = Frame(lon0, lat0, 1, 0, 0, 1, 1, 0, 0, rot=rot)
         self.rot = rot
         zp = fr.geom(self.zone_ll)  # in "mm at 1:1"... k = 1000 mm/m; we just need metres
         zb = zp.bounds
         wm, hm = (zb[2] - zb[0]) / 1000, (zb[3] - zb[1]) / 1000  # metres
-        pad = 2 if self.cfg.get("fixed_scale") else (6 if self.cfg.get("rotate") else 8)
+        pad = 0 if self.cfg.get("fixed_scale") else (6 if self.cfg.get("rotate") else 8)
         need = max(wm / (fw - pad) * 1000, hm / (fh - pad) * 1000)
         step = 5000 if self.cfg.get("rotate") else 25000
         scale = int(math.ceil(need / step) * step)
@@ -242,6 +255,8 @@ class WallMap:
     def gridref(self, lon, lat):
         i = int((lon - self.g_w) // self.gd)
         j = int((self.g_n - lat) // self.gd)
+        if i < 0 or j < 0 or lon > self.g_e or lat < self.g_s:
+            return "off map"
         return f"{self.col_letter(i)}{j + 1}"
 
     @staticmethod
@@ -1258,6 +1273,32 @@ class WallMap:
     def draw_continuations(self):
         """'Continued on ... sheet' beside each cut edge of a multi-sheet zone."""
         c = self.c
+        if self.cfg.get("clip"):
+            whole = self.zones_all[self.cfg["zones"][0]]
+            mine = Polygon(self.cfg["clip"])
+            for k2, c2 in MAPS.items():
+                if k2 == self.key or not c2.get("clip") or c2["zones"] != self.cfg["zones"]:
+                    continue
+                edge = mine.boundary.intersection(Polygon(c2["clip"]).buffer(1e-7)).intersection(whole)
+                parts = [g for g in getattr(edge, "geoms", [edge]) if g.geom_type == "LineString" and g.length > 0.03]
+                for g in parts:
+                    gm = LineString(self.P(list(g.coords)))
+                    if gm.length < 40:
+                        continue
+                    mid = gm.interpolate(0.5, normalized=True)
+                    a0 = gm.interpolate(0.45, normalized=True); a1 = gm.interpolate(0.55, normalized=True)
+                    ang = math.degrees(math.atan2(a1.y - a0.y, a1.x - a0.x))
+                    if ang > 90: ang -= 180
+                    if ang < -90: ang += 180
+                    nx, ny = -math.sin(math.radians(ang)), math.cos(math.radians(ang))
+                    # put the note on the side away from this sheet's piece
+                    test = Point(mid.x + nx * 4, mid.y + ny * 4)
+                    d = 3.0 if not self.zone_mm.contains(test) else -5.5
+                    txt = f"Continued on the {c2['zones'][0]} {c2['sheet']} sheet"
+                    c.saveState(); c.translate(mid.x + nx * d, mid.y + ny * d); c.rotate(ang)
+                    c.setFillColor(hexrgb(ZONE_COL)); c.setFont(FB, 9.0 * PT); c.drawCentredString(0, 0, txt)
+                    c.restoreState()
+            return
         band = self.cfg.get("band")
         for side, other in (self.cfg.get("next") or {}).items():
             lat = band[0] if side == "S" else band[1]
@@ -1460,7 +1501,7 @@ def main():
         bk = os.path.join(OUTDIR, f"_back_{key}.pdf")
         zones = m.cfg["zones"]
         eff = (REGS.get("meta") or {}).get("effective") or ["", ""]
-        if m.cfg.get("band"):
+        if m.cfg.get("band") or m.cfg.get("clip"):
             zl = m.zone_ll.buffer(0.005)
             in_map = lambda it: (box(*it["b"]) if it.get("b") else Point(*it["c"])).intersects(zl)
             btitle = f"{m.cfg['title'].split(':')[0]} sheet: water-specific fishing regulations"
