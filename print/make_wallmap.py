@@ -30,6 +30,12 @@ PAGE_W, PAGE_H = 594.0, 841.0           # A1 portrait, mm
 A0 = "--a1" not in sys.argv              # A0 by default (George, 2026-11-15): the A1 layout enlarged by sqrt(2); --a1 for the old size
 ENL = math.sqrt(2)
 FX0, FY0, FX1, FY1 = 11.0, 11.0, 583.0, 830.0  # map frame (neatline)
+
+
+def set_page(landscape):
+    global PAGE_W, PAGE_H, FX1, FY1
+    PAGE_W, PAGE_H = (841.0, 594.0) if landscape else (594.0, 841.0)
+    FX1, FY1 = PAGE_W - 11.0, PAGE_H - 11.0
 F, FB, FI, FBI = "Carlito", "Carlito-Bold", "Carlito-Italic", "Carlito-BoldItalic"
 DEM_TILES = os.environ.get("DEM_TILES", "/tmp/claude-0/dem")
 OUTDIR = os.environ.get("OUTDIR", os.path.join(ROOT, "print", "out"))
@@ -37,6 +43,16 @@ OUTDIR = os.environ.get("OUTDIR", os.path.join(ROOT, "print", "out"))
 MAPS = {
     "ES1": {"zones": ["ES1"], "title": "ES1 Eastern Slopes: Waterton to the Bow", "rotate": True, "hide_outside": True,
             "sub": "Fish Management Zone ES1 · Southwest Alberta · Trout, char, grayling and other game fish · Roads, trails and access"},
+    # ES1 in three A0 landscape sheets at 1:125,000 (George, 2026-11-15); legend and that sheet's regulations on the back
+    "ES1-North": {"zones": ["ES1"], "band": (50.6, 52.0), "fixed_scale": 125000, "landscape": True, "rotate": True, "hide_outside": True,
+                  "legend_back": True, "title": "ES1 North: Bow River to the Highwood", "next": {"S": "ES1 Central"},
+                  "sub": "Fish Management Zone ES1, north sheet · Southwest Alberta · Trout, char, grayling and other game fish · Roads, trails and access"},
+    "ES1-Central": {"zones": ["ES1"], "band": (49.85, 50.6), "fixed_scale": 125000, "landscape": True, "rotate": True, "hide_outside": True,
+                    "legend_back": True, "title": "ES1 Central: Highwood to the Crowsnest", "next": {"N": "ES1 North", "S": "ES1 South"},
+                    "sub": "Fish Management Zone ES1, central sheet · Southwest Alberta · Trout, char, grayling and other game fish · Roads, trails and access"},
+    "ES1-South": {"zones": ["ES1"], "band": (48.5, 49.85), "fixed_scale": 125000, "landscape": True, "rotate": True, "hide_outside": True,
+                  "legend_back": True, "title": "ES1 South: Crowsnest to Waterton", "next": {"N": "ES1 Central"},
+                  "sub": "Fish Management Zone ES1, south sheet · Southwest Alberta · Trout, char, grayling and other game fish · Roads, trails and access"},
     "ES2-ES3": {"zones": ["ES2", "ES3"], "title": "ES2 + ES3 Eastern Slopes: Red Deer to the Athabasca",
                 "sub": "Fish Management Zones ES2 and ES3 · West-central Alberta · Trout, char, grayling and other game fish · Roads, trails and access"},
 }
@@ -144,6 +160,9 @@ class WallMap:
         self.key, self.cfg, self.draft = key, MAPS[key], draft
         self.zones_all = load_zones()
         self.zone_ll = unary_union([self.zones_all[z] for z in self.cfg["zones"]])
+        if self.cfg.get("band"):
+            s0, n0 = self.cfg["band"]
+            self.zone_ll = self.zone_ll.intersection(box(-125, s0, -105, n0)).buffer(0)
         self.setup_frame()
         self.occ = Occupancy(6.0)
         self.labels = []   # ('curve', glyphs, size, halo) | ('text', x, y, runs, size, halo, angle)
@@ -161,7 +180,8 @@ class WallMap:
             from shapely import affinity
             zm = fr.geom(self.zone_ll)  # mm at 1:1 (= metres x 1000)
             best = None
-            for a in np.arange(-90, 90.01, 0.5):
+            lim = 15 if self.cfg.get("fixed_scale") else 90
+            for a in np.arange(-lim, lim + 0.01, 0.5):
                 b2 = affinity.rotate(zm, a, origin=(0, 0)).bounds
                 need = max((b2[2] - b2[0]) / (fw - 6), (b2[3] - b2[1]) / (fh - 6))
                 if best is None or need < best[0] - 1e-9 or (abs(need - best[0]) < 1e-9 and abs(a) < abs(best[1])):
@@ -172,12 +192,17 @@ class WallMap:
         zp = fr.geom(self.zone_ll)  # in "mm at 1:1"... k = 1000 mm/m; we just need metres
         zb = zp.bounds
         wm, hm = (zb[2] - zb[0]) / 1000, (zb[3] - zb[1]) / 1000  # metres
-        pad = 6 if self.cfg.get("rotate") else 8
+        pad = 2 if self.cfg.get("fixed_scale") else (6 if self.cfg.get("rotate") else 8)
         need = max(wm / (fw - pad) * 1000, hm / (fh - pad) * 1000)
         step = 5000 if self.cfg.get("rotate") else 25000
         scale = int(math.ceil(need / step) * step)
         self.print_scale = scale
-        if A0:
+        if self.cfg.get("fixed_scale"):
+            self.print_scale = self.cfg["fixed_scale"]
+            scale = self.print_scale * (ENL if A0 else 1)
+            if need > scale:
+                print(f"WARNING: zone needs 1:{need:,.0f} (layout) but scale is 1:{scale:,.0f}; edges will be cut", file=sys.stderr)
+        elif A0:
             # laid out on A1 and enlarged by sqrt(2) to A0: choose a round A0 scale, map it back to the A1 layout
             self.print_scale = int(math.ceil(need / ENL / step) * step)
             scale = self.print_scale * ENL
@@ -317,6 +342,7 @@ class WallMap:
         if self.cfg.get("hide_outside"):
             stroke_lines(c, geom_lines(self.zone_mm.boundary), 0.6, ZONE_COL, cap=1)
             self.draw_graticule_edge_labels()
+            self.draw_continuations()
         self.draw_frame()
         self.draw_panels()
         c.showPage()
@@ -1215,6 +1241,28 @@ class WallMap:
                 c.setFillColor(white if major else hexrgb("#c62828")); c.setFont(FB, size * PT)
                 c.drawCentredString(x, y - size * PT * 0.33, txt)
 
+    def draw_continuations(self):
+        """'Continued on ... sheet' beside each cut edge of a multi-sheet zone."""
+        c = self.c
+        band = self.cfg.get("band")
+        for side, other in (self.cfg.get("next") or {}).items():
+            lat = band[0] if side == "S" else band[1]
+            b = self.zone_ll.bounds
+            seg = LineString([(b[0] - 1, lat), (b[2] + 1, lat)]).intersection(self.zones_all[self.cfg["zones"][0]])
+            parts = [g for g in getattr(seg, "geoms", [seg]) if g.geom_type == "LineString"]
+            if not parts:
+                continue
+            g = max(parts, key=lambda q: q.length)
+            mid = g.interpolate(0.5, normalized=True)
+            x, y = self.fr.p(mid.x, mid.y)
+            ang = self.rot
+            nx, ny = -math.sin(math.radians(ang)), math.cos(math.radians(ang))
+            d = -5.5 if side == "S" else 3.5
+            txt = f"Continued on the {other} sheet " + ("↓" if side == "S" else "↑")
+            c.saveState(); c.translate(x + nx * d, y + ny * d); c.rotate(ang)
+            c.setFillColor(hexrgb(ZONE_COL)); c.setFont(FB, 9.0 * PT); c.drawCentredString(0, 0, txt)
+            c.restoreState()
+
     def draw_graticule_edge_labels(self):
         """Lat/long values where each graticule line leaves the zone: a short tick continuing the line outward,
         then the value, on the blank paper outside the zone."""
@@ -1345,6 +1393,16 @@ class WallMap:
                 out.append((x, FY1 - h, x + w, FY1))
             return out
         best = None
+        if self.cfg.get("legend_back"):
+            tw, th = 200.0, 162.0
+            for tb in spots(tw, th):
+                to = box(*tb).intersection(zone).area
+                if best is None or to < best[0]:
+                    best = (to, tb, None)
+            self.title_box, self.legend_box = best[1], None
+            print("panels", [round(v) for v in self.title_box], "overlap", round(best[0]), file=sys.stderr)
+            self.add_panel(*self.title_box)
+            return
         for tb in spots(tw, th):
             to = box(*tb).intersection(zone).area
             if best and to > best[0]:
@@ -1363,7 +1421,8 @@ class WallMap:
     def draw_panels(self):
         from panels import draw_title, draw_legend
         draw_title(self, *self.title_box)
-        draw_legend(self, *self.legend_box)
+        if self.legend_box:
+            draw_legend(self, *self.legend_box)
 
 
 def main():
@@ -1372,6 +1431,7 @@ def main():
     from pypdf import PdfWriter, PdfReader
     for key in keys:
         t0 = time.time()
+        set_page(MAPS[key].get("landscape", False))
         m = WallMap(key, draft)
         m.missed = []
         m.load()
@@ -1386,11 +1446,36 @@ def main():
         bk = os.path.join(OUTDIR, f"_back_{key}.pdf")
         zones = m.cfg["zones"]
         eff = (REGS.get("meta") or {}).get("effective") or ["", ""]
-        build_back(bk, f"{' + '.join(zones)} water-specific fishing regulations",
+        if m.cfg.get("band"):
+            zl = m.zone_ll.buffer(0.005)
+            in_map = lambda it: (box(*it["b"]) if it.get("b") else Point(*it["c"])).intersects(zl)
+            btitle = f"{m.cfg['title'].split(':')[0]} sheet: water-specific fishing regulations"
+        else:
+            in_map = lambda it: m.in_frame_ll(*it["c"])
+            btitle = f"{' + '.join(zones)} water-specific fishing regulations"
+        legend_w = 205.0 if m.cfg.get("legend_back") else 0.0
+        build_back(bk, btitle,
                    f"Alberta Guide to Sportfishing Regulations, {eff[0]} to {eff[1]} · tables as in the guide · map grid squares refer to the other side",
-                   zones, m.gridref, lambda it: m.in_frame_ll(*it["c"]),
+                   zones, m.gridref, in_map, page_w=PAGE_W - legend_w, page_h=PAGE_H,
                    footer=f"Eastern Slopes Trout Map wall map {key} · back · printed {datetime.date.today().isoformat()} · "
                           "georgeclaudevandam-sketch.github.io/SW-AB-Flyfishing", tags=m.tags)
+        if legend_w:
+            from panels import draw_legend, draw_locator, panel_bg
+            from pypdf import Transformation as T0
+            lg = os.path.join(OUTDIR, f"_legend_{key}.pdf")
+            c2 = rl_canvas.Canvas(lg, pagesize=(PAGE_W * MM, PAGE_H * MM))
+            c2.scale(MM, MM)
+            m.c = c2
+            lx0, lx1 = PAGE_W - legend_w + 2, PAGE_W - 14
+            draw_legend(m, lx0, PAGE_H - 14 - 330, lx1, PAGE_H - 14)
+            panel_bg(c2, lx0, 14, lx1, PAGE_H - 14 - 336)
+            draw_locator(m, lx0 + 6, 18, lx1 - 6, PAGE_H - 14 - 342)
+            c2.showPage(); c2.save()
+            base = PdfReader(lg).pages[0]
+            base.merge_page(PdfReader(bk).pages[0])
+            w2 = PdfWriter(); w2.add_page(base)
+            with open(bk, "wb") as f:
+                w2.write(f)
         size = "A0" if A0 else "A1"
         out = os.path.join(OUTDIR, f"Eastern-Slopes-Trout-Map_{key}_{size}.pdf")
         w = PdfWriter()

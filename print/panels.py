@@ -63,6 +63,8 @@ def draw_title(m, x0, y0, x1, y1):
     km_mm = 1e6 / m.scale  # mm per km
     total = 40 if m.scale <= 400000 else 50
     step = 5 if total == 40 else 10
+    if total * km_mm > (x1 - x0) - 2 * pad - 22:
+        total, step = 20, 2
     bx = lx
     for i in range(0, total, step):
         c.setFillColor(black if (i // step) % 2 == 0 else white); c.setStrokeColor(black); c.setLineWidth(0.2)
@@ -73,8 +75,8 @@ def draw_title(m, x0, y0, x1, y1):
     c.drawString(bx + total * km_mm + 2.5, yy - 0.2, "kilometres")
     yy -= 7.5
     mi_mm = km_mm * 1.609344
-    tmi = 25 if total == 40 else 30
-    smi = 5
+    tmi = 25 if total == 40 else (12 if total == 20 else 30)
+    smi = 5 if total != 20 else 2
     for i in range(0, tmi, smi):
         c.setFillColor(black if (i // smi) % 2 == 0 else white)
         c.rect(bx + i * mi_mm, yy, smi * mi_mm, 1.2, stroke=1, fill=1)
