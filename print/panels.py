@@ -56,8 +56,8 @@ def draw_title(m, x0, y0, x1, y1):
     lx = x
     colw = (x1 - x0) * 0.60
     yy = y - 3
-    c.setFillColor(black); c.setFont(FB, 12 * PT); c.drawString(lx, yy, f"Scale 1:{m.scale:,}")
-    c.setFont(F, 7 * PT); c.drawString(lx + 52, yy, "1 cm on the map = %s km on the ground" % (f"{m.scale / 100000:g}"))
+    c.setFillColor(black); c.setFont(FB, 12 * PT); c.drawString(lx, yy, f"Scale 1:{getattr(m, 'print_scale', m.scale):,}")
+    c.setFont(F, 7 * PT); c.drawString(lx + 52, yy, "1 cm on the map = %s km on the ground" % (f"{getattr(m, 'print_scale', m.scale) / 100000:g}"))
     yy -= 8
     # scale bar in km
     km_mm = 1e6 / m.scale  # mm per km

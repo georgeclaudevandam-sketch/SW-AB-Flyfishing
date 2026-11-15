@@ -27,6 +27,8 @@ from labels import Occupancy, line_candidates, point_shape, runs_w, PT
 from back import build_back
 
 PAGE_W, PAGE_H = 594.0, 841.0           # A1 portrait, mm
+A0 = "--a0" in sys.argv               # same layout enlarged by sqrt(2) onto A0 (841 x 1189 mm)
+ENL = math.sqrt(2)
 FX0, FY0, FX1, FY1 = 11.0, 11.0, 583.0, 830.0  # map frame (neatline)
 F, FB, FI, FBI = "Carlito", "Carlito-Bold", "Carlito-Italic", "Carlito-BoldItalic"
 DEM_TILES = os.environ.get("DEM_TILES", "/tmp/claude-0/dem")
@@ -52,6 +54,8 @@ LABEL_DROP = 4.0  # points taken off every map label (George: smaller lettering 
 
 
 def shrink(size):
+    if A0:  # George: at least 4 pt on the printed A0 sheet
+        return max(4.0 / ENL, size * 0.6) if size < 8 else size - LABEL_DROP
     return max(1.8, size * 0.5) if size < 8 else size - LABEL_DROP
 
 
@@ -172,6 +176,11 @@ class WallMap:
         need = max(wm / (fw - pad) * 1000, hm / (fh - pad) * 1000)
         step = 5000 if self.cfg.get("rotate") else 25000
         scale = int(math.ceil(need / step) * step)
+        self.print_scale = scale
+        if A0:
+            # laid out on A1 and enlarged by sqrt(2) to A0: choose a round A0 scale, map it back to the A1 layout
+            self.print_scale = int(math.ceil(need / ENL / step) * step)
+            scale = self.print_scale * ENL
         self.scale = scale
         # centre the zone in the frame
         mx, my = (zb[0] + zb[2]) / 2 / 1000, (zb[1] + zb[3]) / 2 / 1000  # metres from projection origin
@@ -269,10 +278,11 @@ class WallMap:
     def render(self):
         os.makedirs(OUTDIR, exist_ok=True)
         self.front = os.path.join(OUTDIR, f"_front_{self.key}.pdf")
-        c = rl_canvas.Canvas(self.front, pagesize=(PAGE_W * MM, PAGE_H * MM), pageCompression=1)
+        f = ENL if A0 else 1.0
+        c = rl_canvas.Canvas(self.front, pagesize=(PAGE_W * MM * f, PAGE_H * MM * f), pageCompression=1)
         c.setTitle(f"{self.cfg['title']} (wall map)")
         c.setAuthor("Eastern Slopes Trout Map")
-        c.scale(MM, MM)
+        c.scale(MM * f, MM * f)
         self.c = c
         self.panels = []
         self.layout_panels()
@@ -313,7 +323,7 @@ class WallMap:
 
     # relief
     def draw_relief(self):
-        dpmm = 3.0 if self.draft else 6.0
+        dpmm = 3.0 if self.draft else (8.5 if A0 else 6.0)
         W, H = int((FX1 - FX0) * dpmm), int((FY1 - FY0) * dpmm)
         fr = self.fr
 
@@ -1257,7 +1267,7 @@ class WallMap:
             lat -= self.gd
         # fold marks (A1 folds to A4 panels: 2 across, 4 down)
         c.setStrokeColor(hexrgb("#9e9e9e")); c.setLineWidth(0.2)
-        for x in (PAGE_W / 2,):
+        for x in ((PAGE_W / 4, PAGE_W / 2, PAGE_W * 3 / 4) if A0 else (PAGE_W / 2,)):
             c.line(x, 1.5, x, 6.0); c.line(x, PAGE_H - 1.5, x, PAGE_H - 6.0)
         for k in (1, 2, 3):
             y = PAGE_H * k / 4
@@ -1327,12 +1337,19 @@ def main():
                    zones, m.gridref, lambda it: m.in_frame_ll(*it["c"]),
                    footer=f"Eastern Slopes Trout Map wall map {key} · back · printed {datetime.date.today().isoformat()} · "
                           "georgeclaudevandam-sketch.github.io/SW-AB-Flyfishing", tags=m.tags)
-        out = os.path.join(OUTDIR, f"Eastern-Slopes-Trout-Map_{key}_A1.pdf")
+        size = "A0" if A0 else "A1"
+        out = os.path.join(OUTDIR, f"Eastern-Slopes-Trout-Map_{key}_{size}.pdf")
         w = PdfWriter()
+        from pypdf import Transformation
+        from pypdf.generic import RectangleObject
         for p in (m.front, bk):
             for pg in PdfReader(p).pages:
+                if A0 and p == bk:
+                    pg.add_transformation(Transformation().scale(ENL, ENL))
+                    W0, H0 = float(pg.mediabox.width) * ENL, float(pg.mediabox.height) * ENL
+                    pg.mediabox = RectangleObject([0, 0, W0, H0]); pg.cropbox = RectangleObject([0, 0, W0, H0])
                 w.add_page(pg)
-        w.add_metadata({"/Title": m.cfg["title"] + " (A1 wall map)", "/Author": "Eastern Slopes Trout Map"})
+        w.add_metadata({"/Title": m.cfg["title"] + f" ({size} wall map)", "/Author": "Eastern Slopes Trout Map"})
         with open(out, "wb") as f:
             w.write(f)
         print(f"wrote {out} ({os.path.getsize(out) // 1024} KB) in {round(time.time() - t0)} s", file=sys.stderr)
