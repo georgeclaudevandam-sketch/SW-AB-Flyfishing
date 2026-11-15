@@ -316,6 +316,7 @@ class WallMap:
         c.restoreState()
         if self.cfg.get("hide_outside"):
             stroke_lines(c, geom_lines(self.zone_mm.boundary), 0.6, ZONE_COL, cap=1)
+            self.draw_graticule_edge_labels()
         self.draw_frame()
         self.draw_panels()
         c.showPage()
@@ -1213,6 +1214,59 @@ class WallMap:
                 c.roundRect(x - w / 2, y - h / 2, w, h, 0.5, stroke=1, fill=1)
                 c.setFillColor(white if major else hexrgb("#c62828")); c.setFont(FB, size * PT)
                 c.drawCentredString(x, y - size * PT * 0.33, txt)
+
+    def draw_graticule_edge_labels(self):
+        """Lat/long values where each graticule line leaves the zone: a short tick continuing the line outward,
+        then the value, on the blank paper outside the zone."""
+        c = self.c
+        size = 3.6  # pt in layout units (about 5 pt on the A0 print)
+        sz = size * PT
+        zone = self.zone_mm
+        placed = []
+        panels = [box(*p) for p in self.panels]
+        inner = box(FX0 + 1, FY0 + 1, FX1 - 1, FY1 - 1)
+
+        def fmt(v, h):
+            d, m = int(abs(v) + 1e-9), round((abs(v) - int(abs(v) + 1e-9)) * 60)
+            return f"{d}°{m:02d}'{h}"
+        items = []
+        lon = self.g_w
+        while lon <= self.g_e + 1e-9:
+            items.append((self.P([(lon, la) for la in np.linspace(self.g_s, self.g_n, 300)]), fmt(lon, "W")))
+            lon += self.gd
+        lat = self.g_s
+        while lat <= self.g_n + 1e-9:
+            items.append((self.P([(lo, lat) for lo in np.linspace(self.g_w, self.g_e, 300)]), fmt(lat, "N")))
+            lat += self.gd
+        c.saveState()
+        for pts, txt in items:
+            ln = LineString(pts)
+            inside = ln.intersection(zone)
+            pieces = [g for g in getattr(inside, "geoms", [inside]) if g.geom_type == "LineString" and g.length > 30]
+            for g in pieces:
+                cs = list(g.coords)
+                for end, nxt in ((cs[0], cs[1]), (cs[-1], cs[-2])):
+                    ux, uy = end[0] - nxt[0], end[1] - nxt[1]
+                    n = math.hypot(ux, uy) or 1
+                    ux, uy = ux / n, uy / n
+                    tw = stringWidth(txt, F, size) * PT
+                    p0 = (end[0] + ux * 1.0, end[1] + uy * 1.0)
+                    p1 = (end[0] + ux * 3.5, end[1] + uy * 3.5)
+                    q0 = (end[0] + ux * 4.2, end[1] + uy * 4.2)
+                    q1 = (q0[0] + ux * tw, q0[1] + uy * tw)
+                    shp = LineString([p0, q1]).buffer(sz * 0.6)
+                    if (not inner.contains(shp) or shp.intersects(zone) or any(shp.intersects(b) for b in panels)
+                            or any(shp.intersects(o) for o in placed)):
+                        continue
+                    placed.append(shp)
+                    c.setStrokeColor(hexrgb("#37474f")); c.setLineWidth(0.15); c.line(*p0, *p1)
+                    ang = math.degrees(math.atan2(uy, ux)) % 360
+                    flip = 90 < ang <= 270
+                    c.saveState(); c.translate(*q0); c.rotate(ang - 180 if flip else ang)
+                    c.setFillColor(hexrgb("#37474f")); c.setFont(F, sz)
+                    (c.drawRightString if flip else c.drawString)(0, -sz * 0.33, txt)
+                    c.restoreState()
+        c.restoreState()
 
     # ----- frame, margins, panels -----
     def draw_frame(self):
