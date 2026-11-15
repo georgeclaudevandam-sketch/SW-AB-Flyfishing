@@ -42,12 +42,19 @@ MAPS = {
 # ---------- styles ----------
 C = HexColor
 ROAD = {  # class: (casing width, line width, colour, dash) -- kept light so the fishing waters stand out
-    "hwy": (0.72, 0.52, "#c62828", None),
-    "major": (0.58, 0.40, "#d9662b", None),
-    "paved": (0.42, 0.28, "#e8894a", None),
-    "gravel": (0.36, 0.22, "#eb9a5e", (1.4, 0.7)),
-    "track": (0.0, 0.15, "#8d6e63", (0.9, 0.6)),
+    "hwy": (0.50, 0.34, "#c62828", None),
+    "major": (0.40, 0.26, "#d9662b", None),
+    "paved": (0.30, 0.18, "#e8894a", None),
+    "gravel": (0.26, 0.14, "#eb9a5e", (1.2, 0.6)),
+    "track": (0.0, 0.10, "#8d6e63", (0.8, 0.5)),
 }
+LABEL_DROP = 2.0  # points taken off every map label (George: smaller lettering hides less detail)
+
+
+def shrink(size):
+    return max(2.4, size - LABEL_DROP) if size < 8 else size - LABEL_DROP * 1.5
+
+
 TRAIL_COL = "#8b2f00"
 WATER = "#1f78b4"
 LAKE_FILL = "#bcdcf0"
@@ -418,8 +425,8 @@ class WallMap:
                     else:
                         for part in r["g"]:
                             base[o].append(part)
-        W = lambda o: [0, 0.12, 0.16, 0.22, 0.30, 0.40, 0.52, 0.62, 0.72][min(o, 8)]
-        WF = lambda o: [0, 0.42, 0.48, 0.58, 0.70, 0.85, 1.0, 1.15, 1.3][min(o, 8)]
+        W = lambda o: [0, 0.08, 0.10, 0.14, 0.19, 0.26, 0.34, 0.40, 0.46][min(o, 8)]
+        WF = lambda o: [0, 0.26, 0.30, 0.36, 0.44, 0.52, 0.62, 0.70, 0.80][min(o, 8)]
         # lakes without game fish
         for f, it in lakes_nofish:
             for ring in [f["g"][0]] if f.get("g") else []:
@@ -432,7 +439,7 @@ class WallMap:
         # stretches with game fish: white halo then colour, wider streams on top
         fish.sort(key=lambda x: x[0])
         for o, g, col, cl in fish:
-            stroke_lines(c, [self.P(p) for p in g], WF(o) + 0.45, "#ffffff", alpha=0.95)
+            stroke_lines(c, [self.P(p) for p in g], WF(o) + 0.25, "#ffffff", alpha=0.95)
         for o, g, col, cl in fish:
             stroke_lines(c, [self.P(p) for p in g], WF(o), col)
         for o, g, col, cl in fish:
@@ -789,6 +796,7 @@ class WallMap:
 
     # labels
     def try_line_label(self, lines, runs, size, halo, spacing, max_n=99, offset=0.0, require_zone=True, min_len_factor=1.0):
+        size = shrink(size)
         """Place labels along a set of polylines (same feature). Returns number placed."""
         # merge into chains
         try:
@@ -890,6 +898,7 @@ class WallMap:
         return True
 
     def try_point_label(self, x, y, runs, size, halo, gap=1.0, positions=("E", "W", "NE", "SE", "NW", "SW", "N", "S")):
+        size = shrink(size)
         w = runs_w(runs, size)
         h = size * PT * 0.95
         for pos in positions:
@@ -1030,7 +1039,7 @@ class WallMap:
         chains = [ml] if isinstance(ml, LineString) else list(ml.geoms)
         placed = []
         txt = ref if not ref.isdigit() else ref
-        size = 5.2 if len(ref) <= 3 else 4.6
+        size = shrink(5.2 if len(ref) <= 3 else 4.6)
         w = stringWidth(txt, FB, size) * PT + 1.4
         h = size * PT + 0.9
         for ch in sorted(chains, key=lambda g: -g.length):
@@ -1164,7 +1173,7 @@ class WallMap:
                         t.setFont(font, sz)
                         if pass_ == 0:
                             t.setTextRenderMode(1)
-                            c.setStrokeColor(white); c.setLineWidth(sz * 0.22); c.setLineJoin(1)
+                            c.setStrokeColor(white); c.setLineWidth(sz * 0.18); c.setLineJoin(1)
                         else:
                             t.setTextRenderMode(0)
                             c.setFillColor(hexrgb(col))
@@ -1181,7 +1190,7 @@ class WallMap:
                         t.setFont(font, sz)
                         if pass_ == 0:
                             t.setTextRenderMode(1)
-                            c.setStrokeColor(white); c.setLineWidth(sz * 0.22); c.setLineJoin(1)
+                            c.setStrokeColor(white); c.setLineWidth(sz * 0.18); c.setLineJoin(1)
                         else:
                             t.setTextRenderMode(0)
                             t.setFillColor(hexrgb(col))
