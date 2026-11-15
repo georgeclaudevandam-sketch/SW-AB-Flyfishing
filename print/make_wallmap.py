@@ -105,6 +105,15 @@ def fill_geom(c, g, fill, stroke=None, lw=0.1, alpha=1.0, salpha=1.0, dash=None)
         c.setDash()
 
 
+import re as _re_names
+_JUNK = _re_names.compile(r"^(''|\"\"|\d+m|\d+|\d+-\d+-\d+-\d+W\d|LOC\d+|\d{4,}\s.*|.*\bgarbage\b.*)$", _re_names.I)
+
+
+def good_name(nm):
+    nm = (nm or "").strip()
+    return bool(nm) and not _JUNK.match(nm)
+
+
 def geom_lines(g):
     if g.is_empty:
         return []
@@ -462,7 +471,7 @@ class WallMap:
                 ab_lines.append(pts)
             else:
                 osm_lines.append(pts)
-            if nm:
+            if good_name(nm):
                 self.trail_named[nm].append(pts)
         stroke_lines(c, ab_lines, 0.75, "#ffd54f", alpha=0.75)   # designated trail highlight under the dashes
         stroke_lines(c, osm_lines + ab_lines, 0.55, "#ffffff", alpha=0.7)
@@ -498,8 +507,8 @@ class WallMap:
         prio = {"hwy": 0, "major": 1, "paved": 2, "gravel": 3, "track": 4}
 
         def add_name(nm, cl, pts):
-            nm = nm.strip()
-            if not nm:
+            nm = (nm or "").strip()
+            if not good_name(nm):
                 return
             k = nm.lower()
             named[k].append(pts)
@@ -519,14 +528,14 @@ class WallMap:
             ref = (t.get("ref") or "").split(";")[0].strip()
             nm = t.get("name") or ""
             add_name(nm, cl, pts)
-            if ref and hw in ("motorway", "trunk", "primary", "secondary", "tertiary") and cl != "track":
+            if ref and _re_names.match(r"^\d{1,3}[A-Z]?$", ref) and hw in ("motorway", "trunk", "primary", "secondary", "tertiary") and cl != "track":
                 self.shields[ref].append(pts)
             elif ref and not nm:
                 add_name(ref, cl, pts)
         for cl, pts, nm, hwy in self.ab_roads_extra():
             by[cl].append(pts)
             add_name(nm, cl, pts)
-            if hwy:
+            if hwy and _re_names.match(r"^\d{1,3}[A-Z]?$", hwy):
                 self.shields[hwy].append(pts)
         self.road_named = {(ncls[k][0], ncls[k][1]): v for k, v in named.items()}
         order = ["track", "gravel", "paved", "major", "hwy"]
@@ -680,7 +689,7 @@ class WallMap:
             if not inside and kind in ("peak",) and self.scale > 400000:
                 continue
             self.symbol(kind, x, y)
-            if nm:
+            if good_name(nm):
                 ele = t.get("ele", "")
                 self.pt_labels.append((kind, nm, x, y, ele, inside))
             self.stats["pt_" + kind] += 1
@@ -792,7 +801,7 @@ class WallMap:
             pl = n["t"].get("place")
             if pl in ("city", "town"):
                 x, y = self.fr.p(*n["c"])
-                out.append((x, y, (19 if pl == "city" else 2.5) * km))
+                out.append((x, y, (19 if pl == "city" else 4.0) * km))
         return out
 
     def urban(self, x, y):

@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        part: ['roadsx', 'trailsx', 'osmx:0/3', 'osmx:1/3', 'osmx:2/3']
+        part: ['osmx:1/3']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
