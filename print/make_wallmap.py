@@ -27,13 +27,13 @@ from labels import Occupancy, line_candidates, point_shape, runs_w, PT
 from back import build_back
 
 PAGE_W, PAGE_H = 594.0, 841.0           # A1 portrait, mm
-FX0, FY0, FX1, FY1 = 16.0, 16.0, 578.0, 825.0  # map frame (neatline)
+FX0, FY0, FX1, FY1 = 11.0, 11.0, 583.0, 830.0  # map frame (neatline)
 F, FB, FI, FBI = "Carlito", "Carlito-Bold", "Carlito-Italic", "Carlito-BoldItalic"
 DEM_TILES = os.environ.get("DEM_TILES", "/tmp/claude-0/dem")
 OUTDIR = os.environ.get("OUTDIR", os.path.join(ROOT, "print", "out"))
 
 MAPS = {
-    "ES1": {"zones": ["ES1"], "title": "ES1 Eastern Slopes: Waterton to the Bow",
+    "ES1": {"zones": ["ES1"], "title": "ES1 Eastern Slopes: Waterton to the Bow", "rotate": True, "hide_outside": True,
             "sub": "Fish Management Zone ES1 · Southwest Alberta · Trout, char, grayling and other game fish · Roads, trails and access"},
     "ES2-ES3": {"zones": ["ES2", "ES3"], "title": "ES2 + ES3 Eastern Slopes: Red Deer to the Athabasca",
                 "sub": "Fish Management Zones ES2 and ES3 · West-central Alberta · Trout, char, grayling and other game fish · Roads, trails and access"},
@@ -41,12 +41,12 @@ MAPS = {
 
 # ---------- styles ----------
 C = HexColor
-ROAD = {  # class: (casing width, line width, colour, dash)
-    "hwy": (1.05, 0.80, "#c62828", None),
-    "major": (0.85, 0.62, "#e65100", None),
-    "paved": (0.70, 0.48, "#ef6c00", None),
-    "gravel": (0.62, 0.42, "#ef6c00", (1.6, 0.7)),
-    "track": (0.0, 0.30, "#6d4c41", (1.1, 0.6)),
+ROAD = {  # class: (casing width, line width, colour, dash) -- kept light so the fishing waters stand out
+    "hwy": (0.72, 0.52, "#c62828", None),
+    "major": (0.58, 0.40, "#d9662b", None),
+    "paved": (0.42, 0.28, "#e8894a", None),
+    "gravel": (0.36, 0.22, "#eb9a5e", (1.4, 0.7)),
+    "track": (0.0, 0.15, "#8d6e63", (0.9, 0.6)),
 }
 TRAIL_COL = "#8b2f00"
 WATER = "#1f78b4"
@@ -144,23 +144,38 @@ class WallMap:
         b = self.zone_ll.bounds
         lon0, lat0 = round((b[0] + b[2]) / 2, 2), round((b[1] + b[3]) / 2, 2)
         fr = Frame(lon0, lat0, 1, 0, 0, 1, 1, 0, 0)
+        fw, fh = FX1 - FX0, FY1 - FY0
+        rot = 0.0
+        if self.cfg.get("rotate"):
+            from shapely import affinity
+            zm = fr.geom(self.zone_ll)  # mm at 1:1 (= metres x 1000)
+            best = None
+            for a in np.arange(-90, 90.01, 0.5):
+                b2 = affinity.rotate(zm, a, origin=(0, 0)).bounds
+                need = max((b2[2] - b2[0]) / (fw - 6), (b2[3] - b2[1]) / (fh - 6))
+                if best is None or need < best[0] - 1e-9 or (abs(need - best[0]) < 1e-9 and abs(a) < abs(best[1])):
+                    best = (need, a)
+            rot = float(best[1])
+            fr = Frame(lon0, lat0, 1, 0, 0, 1, 1, 0, 0, rot=rot)
+        self.rot = rot
         zp = fr.geom(self.zone_ll)  # in "mm at 1:1"... k = 1000 mm/m; we just need metres
         zb = zp.bounds
         wm, hm = (zb[2] - zb[0]) / 1000, (zb[3] - zb[1]) / 1000  # metres
-        fw, fh = FX1 - FX0, FY1 - FY0
-        need = max(wm / (fw - 8) * 1000, hm / (fh - 8) * 1000)
-        scale = int(math.ceil(need / 25000.0) * 25000)
+        pad = 6 if self.cfg.get("rotate") else 8
+        need = max(wm / (fw - pad) * 1000, hm / (fh - pad) * 1000)
+        step = 5000 if self.cfg.get("rotate") else 25000
+        scale = int(math.ceil(need / step) * step)
         self.scale = scale
         # centre the zone in the frame
         mx, my = (zb[0] + zb[2]) / 2 / 1000, (zb[1] + zb[3]) / 2 / 1000  # metres from projection origin
         k = 1000.0 / scale
         cx = (FX0 + FX1) / 2 - mx * k
         cy = (FY0 + FY1) / 2 - my * k
-        self.fr = Frame(lon0, lat0, scale, FX0, FY0, FX1, FY1, cx, cy)
+        self.fr = Frame(lon0, lat0, scale, FX0, FY0, FX1, FY1, cx, cy, rot=rot)
         self.zone_mm = self.fr.geom(self.zone_ll).buffer(0)
         self.frame_box = box(FX0, FY0, FX1, FY1)
         self.llb = self.fr.lonlat_bbox()
-        print(f"{self.key}: scale 1:{scale:,}  lon0 {lon0} lat0 {lat0}  bbox {self.llb}", file=sys.stderr)
+        print(f"{self.key}: scale 1:{scale:,}  rotation {rot}  lon0 {lon0} lat0 {lat0}  bbox {self.llb}", file=sys.stderr)
         # grid: 15' cells, letters west->east, numbers north->south
         self.gd = 0.25
         w, s, e, n = self.llb
@@ -256,19 +271,34 @@ class WallMap:
         self.layout_panels()
         t = time.time()
         c.saveState()
-        clip = c.beginPath(); clip.rect(FX0, FY0, FX1 - FX0, FY1 - FY0); c.clipPath(clip, stroke=0, fill=0)
+        if self.cfg.get("hide_outside"):
+            clip = c.beginPath()
+            zc = self.zone_mm.intersection(self.frame_box)
+            for pg in ([zc] if isinstance(zc, Polygon) else list(zc.geoms)):
+                for ring in [pg.exterior] + list(pg.interiors):
+                    cs = list(ring.coords)
+                    clip.moveTo(*cs[0])
+                    for q in cs[1:]:
+                        clip.lineTo(*q)
+                    clip.close()
+            c.clipPath(clip, stroke=0, fill=0, fillMode=0)
+        else:
+            clip = c.beginPath(); clip.rect(FX0, FY0, FX1 - FX0, FY1 - FY0); c.clipPath(clip, stroke=0, fill=0)
         self.draw_relief(); print("relief", round(time.time() - t), file=sys.stderr)
         self.draw_areas()
-        self.draw_water(); print("water", round(time.time() - t), file=sys.stderr)
         self.draw_trails()
         self.draw_roads(); print("roads", round(time.time() - t), file=sys.stderr)
-        self.draw_outside_fade()
+        self.draw_water(); print("water", round(time.time() - t), file=sys.stderr)
+        if not self.cfg.get("hide_outside"):
+            self.draw_outside_fade()
         self.draw_boundaries()
         self.draw_graticule()
         self.draw_points()
         self.place_labels(); print("labels", round(time.time() - t), file=sys.stderr)
         self.flush_labels()
         c.restoreState()
+        if self.cfg.get("hide_outside"):
+            stroke_lines(c, geom_lines(self.zone_mm.boundary), 0.6, ZONE_COL, cap=1)
         self.draw_frame()
         self.draw_panels()
         c.showPage()
@@ -283,7 +313,7 @@ class WallMap:
         def inv(jj, ii):
             px = FX0 + (jj + 0.5) / dpmm
             py = FY1 - (ii + 0.5) / dpmm
-            return fr.inv_t.transform((px - fr.cx) / fr.k, (py - fr.cy) / fr.k)
+            return fr.inv(px, py)
         zooms = [10, 11] if self.scale <= 400000 else [10]
         elev = dem.relief(DEM_TILES, zooms, inv, W, H, fr.scale / 1000 / dpmm)
         self.elev = (elev, dpmm)
@@ -388,7 +418,8 @@ class WallMap:
                     else:
                         for part in r["g"]:
                             base[o].append(part)
-        W = lambda o: [0, 0.14, 0.18, 0.24, 0.32, 0.42, 0.55, 0.65, 0.75][min(o, 8)]
+        W = lambda o: [0, 0.12, 0.16, 0.22, 0.30, 0.40, 0.52, 0.62, 0.72][min(o, 8)]
+        WF = lambda o: [0, 0.42, 0.48, 0.58, 0.70, 0.85, 1.0, 1.15, 1.3][min(o, 8)]
         # lakes without game fish
         for f, it in lakes_nofish:
             for ring in [f["g"][0]] if f.get("g") else []:
@@ -401,12 +432,12 @@ class WallMap:
         # stretches with game fish: white halo then colour, wider streams on top
         fish.sort(key=lambda x: x[0])
         for o, g, col, cl in fish:
-            stroke_lines(c, [self.P(p) for p in g], W(o) + 0.42, "#ffffff", alpha=0.9)
+            stroke_lines(c, [self.P(p) for p in g], WF(o) + 0.45, "#ffffff", alpha=0.95)
         for o, g, col, cl in fish:
-            stroke_lines(c, [self.P(p) for p in g], W(o) + 0.2, col)
+            stroke_lines(c, [self.P(p) for p in g], WF(o), col)
         for o, g, col, cl in fish:
             if cl:
-                stroke_lines(c, [self.P(p) for p in g], max(0.12, (W(o) + 0.2) * 0.45), "#ffffff", (0.5, 0.6), cap=0)
+                stroke_lines(c, [self.P(p) for p in g], max(0.15, WF(o) * 0.4), "#ffffff", (0.6, 0.6), cap=0)
         self.stats["fish_reaches"] = len(fish)
         for f, it in lakes_fish:
             sp = sel_only(all_sp(it))
@@ -416,14 +447,14 @@ class WallMap:
                 continue
             c.setFillColor(hexrgb("#ffffff")); c.setStrokeColor(hexrgb("#ffffff")); c.setLineWidth(0.5)
             c.drawPath(pts2path(c, pts, True), stroke=1, fill=0)
-            c.setFillColor(hexrgb(col, 0.55)); c.setStrokeColor(hexrgb(col)); c.setLineWidth(0.22)
+            c.setFillColor(hexrgb(col, 0.8)); c.setStrokeColor(hexrgb(col)); c.setLineWidth(0.35)
             c.drawPath(pts2path(c, pts, True), stroke=1, fill=1)
             # tiny lakes: a dot so they can be seen
             pg = Polygon(pts)
             if pg.area < 1.2:
                 x, y = pg.centroid.x, pg.centroid.y
                 c.setFillColor(hexrgb(col)); c.setStrokeColor(white); c.setLineWidth(0.15)
-                c.circle(x, y, 0.55, stroke=1, fill=1)
+                c.circle(x, y, 0.75, stroke=1, fill=1)
             if year_state(it) == "closed":
                 c.setStrokeColor(black); c.setLineWidth(0.15); c.setDash(0.4, 0.4)
                 c.drawPath(pts2path(c, pts, True), stroke=1, fill=0); c.setDash()
@@ -787,7 +818,7 @@ class WallMap:
                     continue
                 if any(ctr.distance(p) < spacing for p in placed):
                     continue
-                if not self.frame_box.contains(shp) or self.occ.hits(shp):
+                if not self.label_ok(shp) or self.occ.hits(shp):
                     continue
                 self.occ.add(shp)
                 placed.append(ctr)
@@ -848,12 +879,22 @@ class WallMap:
                 return 1
         return 0
 
+    def label_ok(self, shp):
+        if not self.frame_box.contains(shp):
+            return False
+        if self.cfg.get("hide_outside"):
+            if not hasattr(self, "zone_lbl"):
+                from shapely.prepared import prep
+                self.zone_lbl = prep(self.zone_mm.buffer(0.3))
+            return self.zone_lbl.contains(shp)
+        return True
+
     def try_point_label(self, x, y, runs, size, halo, gap=1.0, positions=("E", "W", "NE", "SE", "NW", "SW", "N", "S")):
         w = runs_w(runs, size)
         h = size * PT * 0.95
         for pos in positions:
             shp, tx, ty = point_shape(x, y, w, h, pos, gap)
-            if not self.frame_box.contains(shp) or self.occ.hits(shp):
+            if not self.label_ok(shp) or self.occ.hits(shp):
                 continue
             self.occ.add(shp)
             self.labels.append(("text", tx, ty, runs, size, halo))
@@ -1003,7 +1044,7 @@ class WallMap:
                 if any(p.distance(q) < 140 for q in placed):
                     continue
                 shp = box(p.x - w / 2, p.y - h / 2, p.x + w / 2, p.y + h / 2)
-                if self.occ.hits(shp):
+                if self.occ.hits(shp) or not self.label_ok(shp):
                     continue
                 self.occ.add(shp)
                 placed.append(p)
@@ -1172,7 +1213,7 @@ class WallMap:
                 if FX0 < best[0] < FX1:
                     c.setLineWidth(0.2); c.line(best[0], edge_y, best[0], edge_y + 2.5 * dy)
                     d, m = int(abs(lon)), round((abs(lon) - int(abs(lon))) * 60)
-                    c.setFont(F, 2.0); c.drawCentredString(best[0], edge_y + (3.2 if dy > 0 else -4.8), f"{d}°{m:02d}′W")
+                    c.setFont(F, 2.0); c.drawCentredString(best[0], edge_y + (3.2 if dy > 0 else -4.8), f"{d}°{m:02d}'W")
             i += 1
             lon += self.gd
         # letters inside the outer margin band (between neatline and outer line)
@@ -1197,7 +1238,7 @@ class WallMap:
                     c.setStrokeColor(black); c.setLineWidth(0.2); c.line(edge_x, best[1], edge_x + 2.5 * dx, best[1])
                     d, m = int(lat), round((lat - int(lat)) * 60)
                     c.saveState(); c.translate(edge_x + (4.4 if dx > 0 else -3.0), best[1]); c.rotate(90)
-                    c.setFillColor(black); c.setFont(F, 2.0); c.drawCentredString(0, 0, f"{d}°{m:02d}′N"); c.restoreState()
+                    c.setFillColor(black); c.setFont(F, 2.0); c.drawCentredString(0, 0, f"{d}°{m:02d}'N"); c.restoreState()
                 ys2 = [self.fr.p(lo, lat - self.gd / 2) for lo in np.linspace(self.g_w, self.g_e, 400)]
                 b2 = min(ys2, key=lambda q: abs(q[0] - edge_x))
                 if FY0 + 2 < b2[1] < FY1 - 2:

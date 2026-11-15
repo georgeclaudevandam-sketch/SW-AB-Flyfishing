@@ -93,22 +93,34 @@ def draw_title(m, x0, y0, x1, y1):
     except Exception:
         dec, lat_c, lon_c = None, 0, 0
     ax, ay = lx + 8, yy - 20
+    rot = getattr(m, "rot", 0.0) or 0.0
+    def ray(deg, L):
+        a = math.radians(deg - rot)  # deg clockwise from true north; the map is turned rot deg counter-clockwise
+        return ax + math.sin(a) * L, ay + math.cos(a) * L
     c.setStrokeColor(black); c.setFillColor(black); c.setLineWidth(0.3)
-    c.line(ax, ay, ax, ay + 18)
-    p = c.beginPath(); p.moveTo(ax - 2.2, ay + 13); p.lineTo(ax, ay + 19); p.lineTo(ax + 2.2, ay + 13); p.close(); c.drawPath(p, stroke=0, fill=1)
-    c.setFont(FB, 9 * PT); c.drawCentredString(ax, ay + 21, "N")
+    tip = ray(0, 19)
+    c.line(ax, ay, *ray(0, 18))
+    l, r = ray(-9.6, 13.2), ray(9.6, 13.2)
+    p = c.beginPath(); p.moveTo(*l); p.lineTo(*tip); p.lineTo(*r); p.close(); c.drawPath(p, stroke=0, fill=1)
+    nx, ny = ray(0, 21)
+    c.setFont(FB, 9 * PT); c.drawCentredString(nx, ny, "N")
     if dec is not None:
-        a = math.radians(dec)
-        c.setDash(0.8, 0.5); c.line(ax, ay, ax + math.sin(a) * 16, ay + math.cos(a) * 16); c.setDash()
-        c.setFont(F, 6 * PT); c.drawString(ax + math.sin(a) * 16 + 0.8, ay + math.cos(a) * 16 - 0.8, "MN")
+        mx, my = ray(dec, 16)
+        c.setDash(0.8, 0.5); c.line(ax, ay, mx, my); c.setDash()
+        c.setFont(F, 6 * PT); c.drawString(mx + 0.8, my - 0.8, "MN")
     c.setFont(F, 6.6 * PT)
     tx = lx + 20
-    txt = (f"True north is up along the centre meridian ({abs(m.fr.lon0):.2f}°W). Magnetic north (MN) is about {dec:.1f}° east of true north "
+    if abs(rot) > 0.01:
+        turn = (f"The map is turned {abs(rot):.1f}° {'anticlockwise' if rot > 0 else 'clockwise'} to fit the zone on the sheet, "
+                f"so true north (N) points {abs(rot):.1f}° {'left' if rot > 0 else 'right'} of straight up. ")
+    else:
+        turn = f"True north is up along the centre meridian ({abs(m.fr.lon0):.2f}°W). "
+    txt = (turn + f"Magnetic north (MN) is about {dec:.1f}° east of true north "
            f"at the centre of the zone ({datetime.date.today().year}, World Magnetic Model 2025) and is decreasing by about 0.1° a year."
-           if dec is not None else "True north is up along the centre meridian.")
+           if dec is not None else turn)
     para(c, tx, ay + 16, txt, 6.6, colw - 26)
     yy = ay - 6
-    yy = para(c, lx, yy, "Projection: transverse Mercator centred on the zone, NAD83 / WGS84 coordinates. Graticule every 15′ of latitude and "
+    yy = para(c, lx, yy, "Projection: transverse Mercator centred on the zone, NAD83 / WGS84 coordinates. Graticule every 15' of latitude and "
               "longitude; the lettered columns and numbered rows in the margins name each grid square (used in the regulation tables on the back).", 6.6, colw - 4)
     yy -= 2
     built = (INDEX.get("meta") or {}).get("built", "")
@@ -266,14 +278,14 @@ def _legend(m, c, x0, y0, x1, y1):
     y = heading(c, x, y, "Boundaries and areas", W)
     for f, t in (
         (lambda xx, yy: (stroke_lines(c, [[(xx, yy + 0.9), (xx + 11, yy + 0.9)]], 1.6, ZONE_COL, alpha=0.25), stroke_lines(c, [[(xx, yy + 0.9), (xx + 11, yy + 0.9)]], 0.55, ZONE_COL, (3.0, 1.4), cap=0)),
-         "Fish Management Zone shown on this map (area outside it is paler)"),
+         ("Fish Management Zone shown on this map (nothing is shown outside it)" if getattr(m, "cfg", {}).get("hide_outside") else "Fish Management Zone shown on this map (area outside it is paler)")),
         (lambda xx, yy: stroke_lines(c, [[(xx, yy + 0.9), (xx + 11, yy + 0.9)]], 0.35, ZONE_COL, (2.0, 1.2), cap=0, alpha=0.8), "Other Fish Management Zone boundary"),
         (lambda xx, yy: (c.setFillColor(hexrgb("#4caf50", 0.12)), c.setStrokeColor(hexrgb(PARK_COL)), c.setLineWidth(0.18), c.setDash(1.5, 0.8), c.rect(xx + 1, yy - 0.6, 9, 3, stroke=1, fill=1), c.setDash()),
          "National park, provincial park or protected area (national parks: Parks Canada fishing permit and rules)"),
         (lambda xx, yy: (c.setFillColor(hexrgb("#f4fbff")), c.setStrokeColor(hexrgb("#7fb3d5")), c.setLineWidth(0.1), c.rect(xx + 1, yy - 0.6, 9, 3, stroke=1, fill=1)), "Glacier or permanent snow"),
         (lambda xx, yy: stroke_lines(c, [[(xx, yy + 0.9), (xx + 11, yy + 0.9)]], 0.3, "#212121", (2.2, 0.8, 0.4, 0.8), cap=0), "Provincial boundary"),
         (lambda xx, yy: stroke_lines(c, [[(xx, yy + 0.9), (xx + 11, yy + 0.9)]], 0.4, "#000000", (3, 1, 0.5, 1, 0.5, 1), cap=0), "International boundary"),
-        (lambda xx, yy: stroke_lines(c, [[(xx, yy + 0.9), (xx + 11, yy + 0.9)]], 0.12, "#37474f", alpha=0.6), "Graticule, every 15′ (grid squares A1, B2 ...)"),
+        (lambda xx, yy: stroke_lines(c, [[(xx, yy + 0.9), (xx + 11, yy + 0.9)]], 0.12, "#37474f", alpha=0.6), "Graticule, every 15' (grid squares A1, B2 ...)"),
     ):
         f(x, y)
         y = para(c, x + 14, y, t, 6.8, W - 14) - 0.8

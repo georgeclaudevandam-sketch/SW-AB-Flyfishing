@@ -164,28 +164,45 @@ def listing_ids(it):
 
 # ---------------- projection / page ----------------
 class Frame:
-    """Transverse Mercator centred on the map; paper coordinates in mm from the page's bottom-left corner."""
+    """Transverse Mercator centred on the map, optionally rotated by rot degrees (counter-clockwise on the paper);
+    paper coordinates in mm from the page's bottom-left corner."""
 
-    def __init__(self, lon0, lat0, scale, fx0, fy0, fx1, fy1, cx=None, cy=None):
+    def __init__(self, lon0, lat0, scale, fx0, fy0, fx1, fy1, cx=None, cy=None, rot=0.0):
+        import numpy as np
         self.scale = scale
-        self.fwd = Transformer.from_crs("EPSG:4326", f"+proj=tmerc +lon_0={lon0} +lat_0={lat0} +k=1 +x_0=0 +y_0=0 +ellps=GRS80 +units=m", always_xy=True)
-        self.inv_t = Transformer.from_crs(f"+proj=tmerc +lon_0={lon0} +lat_0={lat0} +k=1 +x_0=0 +y_0=0 +ellps=GRS80 +units=m", "EPSG:4326", always_xy=True)
+        crs = f"+proj=tmerc +lon_0={lon0} +lat_0={lat0} +k=1 +x_0=0 +y_0=0 +ellps=GRS80 +units=m"
+        self.fwd = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
+        self.inv_t = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
         self.fx0, self.fy0, self.fx1, self.fy1 = fx0, fy0, fx1, fy1
         self.cx = (fx0 + fx1) / 2 if cx is None else cx
         self.cy = (fy0 + fy1) / 2 if cy is None else cy
         self.k = 1000.0 / scale  # mm per metre
         self.lon0, self.lat0 = lon0, lat0
+        self.rot = rot
+        self.cs, self.sn = math.cos(math.radians(rot)), math.sin(math.radians(rot))
+
+    def _out(self, X, Y):
+        import numpy as np
+        X, Y = np.asarray(X, dtype=float), np.asarray(Y, dtype=float)
+        return self.cx + (X * self.cs - Y * self.sn) * self.k, self.cy + (X * self.sn + Y * self.cs) * self.k
+
+    def _in(self, px, py):
+        import numpy as np
+        u, v = (np.asarray(px, dtype=float) - self.cx) / self.k, (np.asarray(py, dtype=float) - self.cy) / self.k
+        return u * self.cs + v * self.sn, -u * self.sn + v * self.cs
 
     def p(self, lon, lat):
-        x, y = self.fwd.transform(lon, lat)
-        return self.cx + x * self.k, self.cy + y * self.k
+        x, y = self._out(*self.fwd.transform(lon, lat))
+        return float(x), float(y)
 
     def pts(self, coords):
         xs, ys = self.fwd.transform([c[0] for c in coords], [c[1] for c in coords])
-        return [(self.cx + x * self.k, self.cy + y * self.k) for x, y in zip(xs, ys)]
+        X, Y = self._out(xs, ys)
+        return list(zip(X.tolist(), Y.tolist()))
 
     def inv(self, px, py):
-        return self.inv_t.transform((px - self.cx) / self.k, (py - self.cy) / self.k)
+        lo, la = self.inv_t.transform(*self._in(px, py))
+        return lo, la
 
     def box(self):
         return box(self.fx0, self.fy0, self.fx1, self.fy1)
@@ -194,15 +211,13 @@ class Frame:
         import numpy as np
         xs = list(np.linspace(self.fx0, self.fx1, 30)) + [self.fx1] * 30 + list(np.linspace(self.fx1, self.fx0, 30)) + [self.fx0] * 30
         ys = [self.fy0] * 30 + list(np.linspace(self.fy0, self.fy1, 30)) + [self.fy1] * 30 + list(np.linspace(self.fy1, self.fy0, 30))
-        lo, la = self.inv_t.transform([(x - self.cx) / self.k for x in xs], [(y - self.cy) / self.k for y in ys])
-        return min(lo) - pad, min(la) - pad, max(lo) + pad, max(la) + pad
+        lo, la = self.inv(np.array(xs), np.array(ys))
+        return float(min(lo)) - pad, float(min(la)) - pad, float(max(lo)) + pad, float(max(la)) + pad
 
     def geom(self, g):
         """Project a shapely geometry (lon/lat) to paper mm."""
         from shapely.ops import transform
-        import numpy as np
 
         def f(x, y, z=None):
-            X, Y = self.fwd.transform(np.asarray(x), np.asarray(y))
-            return self.cx + np.asarray(X) * self.k, self.cy + np.asarray(Y) * self.k
+            return self._out(*self.fwd.transform(x, y))
         return transform(f, g)
