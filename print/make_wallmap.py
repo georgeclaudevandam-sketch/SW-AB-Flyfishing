@@ -893,6 +893,8 @@ class WallMap:
         # 3. highway shields
         for ref, lines in self.shields.items():
             self.place_shields(ref, lines)
+        # 3c. lakes (short labels; the fishing waters come first)
+        self.place_water_labels(sm, "lakes")
         # 4. road names (all named roads in the zone)
         rprio = {"hwy": 0, "major": 1, "paved": 2, "gravel": 3, "track": 4}
         import re as _re
@@ -933,7 +935,7 @@ class WallMap:
             if not n:
                 self.missed.append(("trail", nm))
         # 6. waters: lakes then streams (name + species codes)
-        self.place_water_labels(sm)
+        self.place_water_labels(sm, "streams")
         # 7. peaks, passes and other points
         self.place_pois(("peak", "pass", "lookout", "falls", "dam", "view", "parking", "info"), sm)
         for nm, gm in getattr(self, "glaciers", []):
@@ -1008,7 +1010,7 @@ class WallMap:
                 major = ref.isdigit() and int(ref) < 100
                 self.labels.append(("shield", p.x, p.y, txt, size, w, h, major))
 
-    def place_water_labels(self, sm):
+    def place_water_labels(self, sm, part="all"):
         st = self.stats
         lake_items, stream_items = [], []
         for ch, arr in self.chunks.items():
@@ -1040,6 +1042,8 @@ class WallMap:
             except Exception:
                 return 0
         lake_items.sort(key=lambda x: (-len(x[2]) > 0, -lake_area(x[0])))
+        if part == "streams":
+            lake_items, nofish = [], []
         for f, it, sp in lake_items:
             pts = self.P(f["g"][0])
             pg = Polygon(pts) if len(pts) > 2 else None
@@ -1076,6 +1080,8 @@ class WallMap:
                 continue
             if self.try_point_label(p.x, p.y, [(f["n"], FI, "#0b4f7c")], 4.2 * sm, True, gap=math.sqrt(pg.area / math.pi) + 0.4):
                 st["lbl_lake_nofish"] += 1
+        if part == "lakes":
+            return
         # streams: by order, name + codes along the stream, repeated on long rivers
         stream_items.sort(key=lambda x: -(x[1].get("o") or 1))
         for f, it, sp in stream_items:
