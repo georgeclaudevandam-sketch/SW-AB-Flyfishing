@@ -27,7 +27,7 @@ from labels import Occupancy, line_candidates, point_shape, runs_w, PT
 from back import build_back
 
 PAGE_W, PAGE_H = 594.0, 841.0           # A1 portrait, mm
-A0 = "--a0" in sys.argv               # same layout enlarged by sqrt(2) onto A0 (841 x 1189 mm)
+A0 = "--a1" not in sys.argv              # A0 by default (George, 2026-11-15): the A1 layout enlarged by sqrt(2); --a1 for the old size
 ENL = math.sqrt(2)
 FX0, FY0, FX1, FY1 = 11.0, 11.0, 583.0, 830.0  # map frame (neatline)
 F, FB, FI, FBI = "Carlito", "Carlito-Bold", "Carlito-Italic", "Carlito-BoldItalic"
