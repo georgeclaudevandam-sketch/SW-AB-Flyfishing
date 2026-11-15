@@ -42,17 +42,17 @@ MAPS = {
 # ---------- styles ----------
 C = HexColor
 ROAD = {  # class: (casing width, line width, colour, dash) -- kept light so the fishing waters stand out
-    "hwy": (0.50, 0.34, "#c62828", None),
-    "major": (0.40, 0.26, "#d9662b", None),
-    "paved": (0.30, 0.18, "#e8894a", None),
-    "gravel": (0.26, 0.14, "#eb9a5e", (1.2, 0.6)),
-    "track": (0.0, 0.10, "#8d6e63", (0.8, 0.5)),
+    "hwy": (0.36, 0.24, "#c62828", None),
+    "major": (0.28, 0.18, "#d9662b", None),
+    "paved": (0.21, 0.13, "#e8894a", None),
+    "gravel": (0.18, 0.10, "#eb9a5e", (1.0, 0.5)),
+    "track": (0.0, 0.07, "#8d6e63", (0.7, 0.45)),
 }
-LABEL_DROP = 2.0  # points taken off every map label (George: smaller lettering hides less detail)
+LABEL_DROP = 4.0  # points taken off every map label (George: smaller lettering hides less detail)
 
 
 def shrink(size):
-    return max(2.4, size - LABEL_DROP) if size < 8 else size - LABEL_DROP * 1.5
+    return max(1.8, size * 0.5) if size < 8 else size - LABEL_DROP
 
 
 TRAIL_COL = "#8b2f00"
@@ -425,8 +425,8 @@ class WallMap:
                     else:
                         for part in r["g"]:
                             base[o].append(part)
-        W = lambda o: [0, 0.08, 0.10, 0.14, 0.19, 0.26, 0.34, 0.40, 0.46][min(o, 8)]
-        WF = lambda o: [0, 0.26, 0.30, 0.36, 0.44, 0.52, 0.62, 0.70, 0.80][min(o, 8)]
+        W = lambda o: [0, 0.06, 0.08, 0.11, 0.15, 0.21, 0.27, 0.32, 0.37][min(o, 8)]
+        WF = lambda o: [0, 0.21, 0.24, 0.29, 0.35, 0.42, 0.50, 0.56, 0.64][min(o, 8)]
         # lakes without game fish
         for f, it in lakes_nofish:
             for ring in [f["g"][0]] if f.get("g") else []:
@@ -439,7 +439,7 @@ class WallMap:
         # stretches with game fish: white halo then colour, wider streams on top
         fish.sort(key=lambda x: x[0])
         for o, g, col, cl in fish:
-            stroke_lines(c, [self.P(p) for p in g], WF(o) + 0.25, "#ffffff", alpha=0.95)
+            stroke_lines(c, [self.P(p) for p in g], WF(o) + 0.2, "#ffffff", alpha=0.95)
         for o, g, col, cl in fish:
             stroke_lines(c, [self.P(p) for p in g], WF(o), col)
         for o, g, col, cl in fish:
@@ -511,9 +511,9 @@ class WallMap:
                 osm_lines.append(pts)
             if good_name(nm):
                 self.trail_named[nm].append(pts)
-        stroke_lines(c, ab_lines, 0.75, "#ffd54f", alpha=0.75)   # designated trail highlight under the dashes
-        stroke_lines(c, osm_lines + ab_lines, 0.55, "#ffffff", alpha=0.7)
-        stroke_lines(c, osm_lines + ab_lines, 0.30, TRAIL_COL, (0.9, 0.45), cap=0)
+        stroke_lines(c, ab_lines, 0.48, "#ffd54f", alpha=0.75)   # designated trail highlight under the dashes
+        stroke_lines(c, osm_lines + ab_lines, 0.36, "#ffffff", alpha=0.7)
+        stroke_lines(c, osm_lines + ab_lines, 0.18, TRAIL_COL, (0.8, 0.4), cap=0)
         self.stats["trails"] = len(osm_lines) + len(ab_lines)
 
     # roads
