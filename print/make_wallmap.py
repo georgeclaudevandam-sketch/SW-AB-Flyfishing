@@ -161,8 +161,22 @@ class WallMap:
         self.zones_all = load_zones()
         self.zone_ll = unary_union([self.zones_all[z] for z in self.cfg["zones"]])
         if self.cfg.get("band"):
-            s0, n0 = self.cfg["band"]
-            self.zone_ll = self.zone_ll.intersection(box(-125, s0, -105, n0)).buffer(0)
+            # this sheet's latitude band; small detached pieces go to the neighbouring sheet they touch
+            whole = self.zone_ll
+
+            def split(band):
+                g = whole.intersection(box(-125, band[0], -105, band[1])).buffer(0)
+                parts = sorted(getattr(g, "geoms", [g]), key=lambda q: -q.area)
+                keep = [q for q in parts if q.area >= 0.1 * parts[0].area]
+                return keep, [q for q in parts if q.area < 0.1 * parts[0].area]
+            keep, _ = split(self.cfg["band"])
+            mine = unary_union(keep)
+            for k2, c2 in MAPS.items():
+                if k2 != self.key and c2.get("band") and c2["zones"] == self.cfg["zones"]:
+                    for q in split(c2["band"])[1]:
+                        if q.buffer(1e-6).intersects(mine):
+                            keep.append(q)
+            self.zone_ll = unary_union(keep).buffer(0)
         self.setup_frame()
         self.occ = Occupancy(6.0)
         self.labels = []   # ('curve', glyphs, size, halo) | ('text', x, y, runs, size, halo, angle)
